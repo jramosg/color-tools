@@ -4,7 +4,7 @@
             [deps-deploy.deps-deploy :as dd]))
 
 (def lib 'net.clojars.jon/color-tools)
-(def version "0.1.0-SNAPSHOT")
+(def version "0.1.0")
 #_ ; alternatively, use MAJOR.MINOR.COMMITS:
 (def version (format "1.0.%s" (b/git-count-revs nil)))
 (def class-dir "target/classes")
@@ -20,7 +20,7 @@
   opts)
 
 (defn- pom-template [version]
-  [[:description "FIXME: my new library."]
+  [[:description "A comprehensive color manipulation library for Clojure and ClojureScript. Provides utilities for color format conversions, color manipulation, palette generation, accessibility checking, and color analysis."]
    [:url "https://github.com/jon/color-tools"]
    [:licenses
     [:license
