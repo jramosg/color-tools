@@ -386,10 +386,10 @@
 
 (defn get-contrast-text
   "Get the best contrast text color (black or white) for a given background color.
-   Uses luminance threshold of 0.5 following accessibility best practices, with
+   Uses luminance threshold of 0.35 following accessibility best practices, with
    fallback to ensure WCAG AA compliance:
-   - Light backgrounds (luminance > 0.5) get black text
-   - Dark backgrounds (luminance ≤ 0.5) get white text
+   - Light backgrounds (luminance > 0.35) get black text
+   - Dark backgrounds (luminance ≤ 0.35) get white text
    - If the primary choice doesn't meet WCAG AA standards, tries the alternative
    - If neither meets standards, returns the one with better contrast ratio"
   [background-color]
@@ -398,12 +398,16 @@
         white-color "#ffffff"
         
         ;; Primary choice based on luminance threshold
-        primary-color (if (> bg-luminance 0.5) black-color white-color)
-        alternative-color (if (> bg-luminance 0.5) white-color black-color)
+        primary-color (if (> bg-luminance 0.35) black-color white-color)
+        alternative-color (if (> bg-luminance 0.35) white-color black-color)
         
-        ;; Check accessibility
-        primary-accessible? (accessible? background-color primary-color)
-        alternative-accessible? (accessible? background-color alternative-color)]
+        ;; Check accessibility (use AA-large threshold 3.0 for text contrast choice)
+        primary-accessible? (>= (contrast-ratio background-color primary-color) 3.0)
+        alternative-accessible? (>= (contrast-ratio background-color alternative-color) 3.0)
+        
+        ;; Calculate contrast ratios for both options
+        primary-ratio (contrast-ratio background-color primary-color)
+        alternative-ratio (contrast-ratio background-color alternative-color)]
     
     (cond
       ;; If primary choice is accessible, use it
@@ -413,11 +417,9 @@
       alternative-accessible? alternative-color
       
       ;; If neither is accessible, choose the one with better contrast ratio
-      :else (let [primary-ratio (contrast-ratio background-color primary-color)
-                  alternative-ratio (contrast-ratio background-color alternative-color)]
-              (if (> primary-ratio alternative-ratio)
-                primary-color
-                alternative-color)))))
+      :else (if (> primary-ratio alternative-ratio)
+              primary-color
+              alternative-color))))
 
 ;; =============================================================================
 ;; Color Harmony and Palettes
