@@ -181,7 +181,37 @@
   (testing "Find accessible color"
     (let [accessible (sut/find-accessible-color "#ffffff" "#777777")]
       (is (string? accessible))
-      (is (sut/accessible? "#ffffff" accessible)))))
+      (is (sut/accessible? "#ffffff" accessible))))
+
+  (testing "Get contrast text color"
+    ; Light backgrounds should get black text
+    (is (= "#000000" (sut/get-contrast-text "#ffffff")))  ; white bg -> black text
+    (is (= "#000000" (sut/get-contrast-text "#ffff00")))  ; yellow bg -> black text
+    (is (= "#000000" (sut/get-contrast-text "#00ff00")))  ; green bg -> black text
+    (is (= "#000000" (sut/get-contrast-text "#00ffff")))  ; cyan bg -> black text
+
+    ; Dark backgrounds should get white text
+    (is (= "#ffffff" (sut/get-contrast-text "#000000")))  ; black bg -> white text
+    (is (= "#ffffff" (sut/get-contrast-text "#0000ff")))  ; blue bg -> white text
+    (is (= "#ffffff" (sut/get-contrast-text "#800080")))  ; purple bg -> white text
+    (is (= "#ffffff" (sut/get-contrast-text "#008000")))  ; dark green bg -> white text
+
+    ; Gray tones
+    (is (= "#000000" (sut/get-contrast-text "#c0c0c0")))  ; light gray -> black text
+    (is (= "#ffffff" (sut/get-contrast-text "#404040")))  ; dark gray -> white text
+
+    ; Test with RGB input
+    (is (= "#000000" (sut/get-contrast-text [255 255 255])))  ; white RGB -> black text
+    (is (= "#ffffff" (sut/get-contrast-text [0 0 0])))       ; black RGB -> white text
+
+    ; Test that result is always accessible
+    (let [bg-colors ["#ff0000" "#00ff00" "#0000ff" "#ffff00" "#ff00ff"
+                     "#00ffff" "#800000" "#008000" "#000080" "#808000"
+                     "#800080" "#008080" "#c0c0c0" "#808080" "#000000" "#ffffff"]
+          test-accessibility (fn [bg]
+                               (let [text-color (sut/get-contrast-text bg)]
+                                 (sut/accessible? bg text-color)))]
+      (is (every? test-accessibility bg-colors)))))
 
 (deftest test-color-harmony
   (testing "Complementary color"

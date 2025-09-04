@@ -384,6 +384,17 @@
         (try-color 100)  ; Then white
         (some try-color (range 0 101 5))))) ; Then try other lightness values
 
+(defn get-contrast-text
+  "Get the best contrast text color (black or white) for a given background color"
+  [background-color]
+  (let [black-color "#000000"
+        white-color "#ffffff"
+        black-ratio (contrast-ratio background-color black-color)
+        white-ratio (contrast-ratio background-color white-color)]
+    (if (> black-ratio white-ratio)
+      black-color
+      white-color)))
+
 ;; =============================================================================
 ;; Color Harmony and Palettes
 ;; =============================================================================
@@ -555,3 +566,7 @@
   "Check if a color is muted (low saturation)"
   [color & [threshold]]
   (not (vibrant? color threshold)))
+
+(comment 
+  (find-accessible-color "#fff" "#000")
+  (find-accessible-color "#ff6060" "#000"))
