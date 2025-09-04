@@ -211,6 +211,7 @@
           test-accessibility (fn [bg]
                                (let [text-color (sut/get-contrast-text bg)]
                                  (sut/accessible? bg text-color)))]
+      (prn "aaa " (remove test-accessibility bg-colors))
       (is (every? test-accessibility bg-colors)))))
 
 (deftest test-color-harmony

@@ -385,15 +385,39 @@
         (some try-color (range 0 101 5))))) ; Then try other lightness values
 
 (defn get-contrast-text
-  "Get the best contrast text color (black or white) for a given background color"
+  "Get the best contrast text color (black or white) for a given background color.
+   Uses luminance threshold of 0.5 following accessibility best practices, with
+   fallback to ensure WCAG AA compliance:
+   - Light backgrounds (luminance > 0.5) get black text
+   - Dark backgrounds (luminance ≤ 0.5) get white text
+   - If the primary choice doesn't meet WCAG AA standards, tries the alternative
+   - If neither meets standards, returns the one with better contrast ratio"
   [background-color]
-  (let [black-color "#000000"
+  (let [bg-luminance (luminance background-color)
+        black-color "#000000"
         white-color "#ffffff"
-        black-ratio (contrast-ratio background-color black-color)
-        white-ratio (contrast-ratio background-color white-color)]
-    (if (> black-ratio white-ratio)
-      black-color
-      white-color)))
+        
+        ;; Primary choice based on luminance threshold
+        primary-color (if (> bg-luminance 0.5) black-color white-color)
+        alternative-color (if (> bg-luminance 0.5) white-color black-color)
+        
+        ;; Check accessibility
+        primary-accessible? (accessible? background-color primary-color)
+        alternative-accessible? (accessible? background-color alternative-color)]
+    
+    (cond
+      ;; If primary choice is accessible, use it
+      primary-accessible? primary-color
+      
+      ;; If primary fails but alternative is accessible, use alternative
+      alternative-accessible? alternative-color
+      
+      ;; If neither is accessible, choose the one with better contrast ratio
+      :else (let [primary-ratio (contrast-ratio background-color primary-color)
+                  alternative-ratio (contrast-ratio background-color alternative-color)]
+              (if (> primary-ratio alternative-ratio)
+                primary-color
+                alternative-color)))))
 
 ;; =============================================================================
 ;; Color Harmony and Palettes
