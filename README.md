@@ -2,7 +2,7 @@
 
 A comprehensive color manipulation library for Clojure and ClojureScript. Provides utilities for color format conversions, color manipulation, palette generation, accessibility checking, and color analysis.
 
-[![Clojars Project](https://img.shields.io/clojars/v/net.clojars.jon/color-tools.svg)](https://clojars.org/net.clojars.jon/color-tools)
+[![Clojars Project](https://img.shields.io/clojars/v/com.github.jramosg/color-tools.svg)](https://clojars.org/com.github.jramosg/color-tools)
 
 ## Overview
 
@@ -22,13 +22,13 @@ A comprehensive color manipulation library for Clojure and ClojureScript. Provid
 Add the following dependency to your `deps.edn`:
 
 ```clojure
-{:deps {net.clojars.jon/color-tools {:mvn/version "0.1.0-SNAPSHOT"}}}
+{:deps com.github.jramosg/color-tools {:mvn/version "1.0.0"}}
 ```
 
 Or for Leiningen, add to your `project.clj`:
 
 ```clojure
-[net.clojars.jon/color-tools "0.1.0-SNAPSHOT"]
+[com.github.jramosg/color-tools "1.0.0"]
 ```
 
 ## Quick Start
