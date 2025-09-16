@@ -2,9 +2,15 @@ name: Deploy to Clojars
 
 on:
   push:
-    branches: [ master ]
+    # run checks on every branch; releases (tags) still trigger
+    branches: [ '**' ]
     tags: [ 'v*' ]
   workflow_dispatch:  # Allow manual trigger
+    inputs:
+      skip_deploy:
+        description: 'Set to "true" to skip deployment when run manually'
+        required: false
+        default: 'false'
 
 jobs:
   checks:
@@ -55,7 +61,13 @@ jobs:
     name: Deploy to Clojars
     runs-on: ubuntu-latest
     needs: checks
-    if: "contains(github.event.head_commit.message, '[skip deploy]') == false"
+    # Only deploy from master. For push events, allow skipping via commit message '[skip deploy]'.
+    # For manual workflow_dispatch, allow skipping via the skip_deploy input.
+    if: >
+      startsWith(github.ref, 'refs/heads/master') && (
+        (github.event_name == 'push' && contains(github.event.head_commit.message, '[skip deploy]') == false) ||
+        (github.event_name == 'workflow_dispatch' && (github.event.inputs.skip_deploy != 'true'))
+      )
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

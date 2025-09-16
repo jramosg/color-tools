@@ -314,3 +314,12 @@ Copyright © 2025 Jon
 Distributed under the Eclipse Public License version 1.0.
 
 The Eclipse Public License is available at http://www.eclipse.org/legal/epl-v10.html
+
+## CI / Deployment
+
+The repository runs GitHub Actions checks on every branch. Deployments to Clojars only run from the `master` branch after the checks job completes.
+
+- To skip a deploy when pushing, include `[skip deploy]` in the commit message.
+- To run deployment manually, use the `workflow_dispatch` trigger and set the `skip_deploy` input to `true` to avoid deploying.
+
+Ensure `CLOJARS_USERNAME` and `CLOJARS_PASSWORD` are set in the repository secrets for automatic deploys from `master`.
