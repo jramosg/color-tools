@@ -24,13 +24,13 @@ A comprehensive color manipulation library for Clojure and ClojureScript. Provid
 Add the following dependency to your `deps.edn`:
 
 ```clojure
-{:deps com.github.jramosg/color-tools {:mvn/version "1.0.2.1"}}
+{:deps com.github.jramosg/color-tools {:mvn/version "1.0.3"}}
 ```
 
 Or for Leiningen, add to your `project.clj`:
 
 ```clojure
-[com.github.jramosg/color-tools "1.0.2.1"]
+[com.github.jramosg/color-tools "1.0.3"]
 ```
 
 ## Quick Start
