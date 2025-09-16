@@ -1,5 +1,5 @@
 # Use the official Clojure image based on OpenJDK
-FROM clojure:openjdk-21-tools-deps
+FROM clojure:tools-deps
 
 # Set working directory
 WORKDIR /app
