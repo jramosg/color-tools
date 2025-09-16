@@ -22,13 +22,13 @@ A comprehensive color manipulation library for Clojure and ClojureScript. Provid
 Add the following dependency to your `deps.edn`:
 
 ```clojure
-{:deps com.github.jramosg/color-tools {:mvn/version "1.0.0"}}
+{:deps com.github.jramosg/color-tools {:mvn/version "1.0.2.1"}}
 ```
 
 Or for Leiningen, add to your `project.clj`:
 
 ```clojure
-[com.github.jramosg/color-tools "1.0.0"]
+[com.github.jramosg/color-tools "1.0.2.1"]
 ```
 
 ## Quick Start
@@ -232,6 +232,7 @@ Or for Leiningen, add to your `project.clj`:
 ## API Documentation
 
 Key namespaces:
+
 - `jon.color-tools` - Main API with all color manipulation functions
 
 ## Development
@@ -267,14 +268,15 @@ Contributions are welcome! Please feel free to submit issues, feature requests, 
 ## Acknowledgements
 
 This library draws inspiration from various color manipulation libraries across different programming languages:
+
 - [Sass color functions](https://sass-lang.com/documentation/modules/color) - Advanced color manipulation and modern color space support
 - [Chroma.js](https://gka.github.io/chroma.js/) for JavaScript - Color scales, interpolation, and Delta E calculations
 - [colorsys](https://github.com/vaab/colour) for Python - Color space conversions and color picking algorithms
 
-
 ### Planned Features (Inspired by these libraries)
 
 **Advanced Color Spaces:**
+
 - Lab/CIE Lab color space for perceptually uniform calculations
 - LCH (Lightness, Chroma, Hue) cylindrical color space
 - OKLab/OKLCh modern perceptually uniform color spaces
