@@ -262,9 +262,9 @@
 (defn ->color
   "Create a Color record from RGB values with optional alpha"
   ([r g b] (->color r g b 1.0))
-  ([r g b a] 
+  ([r g b a]
    {:pre [(and (>= r 0) (<= r 255))
-          (and (>= g 0) (<= g 255)) 
+          (and (>= g 0) (<= g 255))
           (and (>= b 0) (<= b 255))
           (and (>= a 0) (<= a 1))]}
    (->Color (int r) (int g) (int b) (float a))))
@@ -354,7 +354,7 @@
    (color \"#ff0000\")         ; Hex string
    (color [255 0 0])         ; RGB vector
    (color [255 0 0 0.8])     ; RGBA vector"
-  ([input] 
+  ([input]
    (cond
      (string? input) (color-from-hex input)
      (vector? input) (if (= 4 (count input))
@@ -371,9 +371,9 @@
 (defn lighten
   "Lighten a color by a percentage (0-1)"
   [color amount]
-  (let [hsl (cond 
+  (let [hsl (cond
               (color? color) (->hsl color)
-              (string? color) (hex->hsl color) 
+              (string? color) (hex->hsl color)
               (vector? color) (rgb->hsl color)
               :else (throw (ex-info "Invalid color input" {:color color})))
         [h s l] hsl
@@ -387,9 +387,9 @@
 (defn darken
   "Darken a color by a percentage (0-1)"
   [color amount]
-  (let [hsl (cond 
+  (let [hsl (cond
               (color? color) (->hsl color)
-              (string? color) (hex->hsl color) 
+              (string? color) (hex->hsl color)
               (vector? color) (rgb->hsl color)
               :else (throw (ex-info "Invalid color input" {:color color})))
         [h s l] hsl
@@ -423,9 +423,9 @@
 (defn adjust-hue
   "Adjust the hue of a color by degrees"
   [color degrees]
-  (let [hsl (cond 
+  (let [hsl (cond
               (color? color) (->hsl color)
-              (string? color) (hex->hsl color) 
+              (string? color) (hex->hsl color)
               (vector? color) (rgb->hsl color)
               :else (throw (ex-info "Invalid color input" {:color color})))
         [h s l] hsl
@@ -439,9 +439,9 @@
 (defn invert
   "Invert a color"
   [color]
-  (let [rgb (cond 
+  (let [rgb (cond
               (color? color) (->rgb color)
-              (string? color) (hex->rgb color) 
+              (string? color) (hex->rgb color)
               (vector? color) color
               :else (throw (ex-info "Invalid color input" {:color color})))
         [r g b] rgb
@@ -470,14 +470,14 @@
   "Mix two colors with optional ratio (0-1, default 0.5)"
   [color1 color2 & [ratio]]
   (let [ratio (or ratio 0.5)
-        rgb1 (cond 
+        rgb1 (cond
                (color? color1) (->rgb color1)
-               (string? color1) (hex->rgb color1) 
+               (string? color1) (hex->rgb color1)
                (vector? color1) color1
                :else (throw (ex-info "Invalid color1 input" {:color color1})))
-        rgb2 (cond 
+        rgb2 (cond
                (color? color2) (->rgb color2)
-               (string? color2) (hex->rgb color2) 
+               (string? color2) (hex->rgb color2)
                (vector? color2) color2
                :else (throw (ex-info "Invalid color2 input" {:color color2})))
         [r1 g1 b1] rgb1
@@ -497,9 +497,9 @@
 (defn luminance
   "Calculate relative luminance of a color"
   [color]
-  (let [rgb (cond 
+  (let [rgb (cond
               (color? color) (->rgb color)
-              (string? color) (hex->rgb color) 
+              (string? color) (hex->rgb color)
               (vector? color) color
               :else (throw (ex-info "Invalid color input" {:color color})))
         [r g b] (map #(let [val (/ % 255)]
@@ -563,26 +563,26 @@
   (let [bg-luminance (luminance background-color)
         black-color "#000000"
         white-color "#ffffff"
-        
+
         ;; Primary choice based on luminance threshold
         primary-color (if (> bg-luminance 0.35) black-color white-color)
         alternative-color (if (> bg-luminance 0.35) white-color black-color)
-        
+
         ;; Check accessibility (use AA-large threshold 3.0 for text contrast choice)
         primary-accessible? (>= (contrast-ratio background-color primary-color) 3.0)
         alternative-accessible? (>= (contrast-ratio background-color alternative-color) 3.0)
-        
+
         ;; Calculate contrast ratios for both options
         primary-ratio (contrast-ratio background-color primary-color)
         alternative-ratio (contrast-ratio background-color alternative-color)]
-    
+
     (cond
       ;; If primary choice is accessible, use it
       primary-accessible? primary-color
-      
+
       ;; If primary fails but alternative is accessible, use alternative
       alternative-accessible? alternative-color
-      
+
       ;; If neither is accessible, choose the one with better contrast ratio
       :else (if (> primary-ratio alternative-ratio)
               primary-color
@@ -683,7 +683,6 @@
   (let [threshold (or threshold 50)]
     (<= (color-distance color1 color2) threshold)))
 
-
 ;; =============================================================================
 ;; Utility Functions for Color Names
 ;; =============================================================================
@@ -703,7 +702,6 @@
                      (sort-by second)
                      first)]
     (first closest)))
-
 
 ;; =============================================================================
 ;; Color Temperature and Warmth
