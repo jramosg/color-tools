@@ -43,6 +43,9 @@ jobs:
       - name: Run cljfmt check
         run: cljfmt check
 
+      - name: Run clj-kondo linter
+        run: clj-kondo --lint src test
+
       - name: Run tests
         run: |
           clojure -T:build test
