@@ -1,0 +1,29 @@
+# Ignore version control
+.git
+.gitignore
+
+# Ignore build artifacts
+target/
+.clj-kondo/
+.lsp/
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore CI/CD files (they're not needed in the container)
+.github/
+
+# Ignore documentation that's not needed for building
+doc/
+*.md
+
+# Ignore local development files
+.env
+.env.local

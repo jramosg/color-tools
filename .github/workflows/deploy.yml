@@ -1,0 +1,38 @@
+name: Deploy to Clojars
+
+on:
+  push:
+    branches: [ master ]
+    tags: [ 'v*' ]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Install cljfmt and check formatting
+      run: |
+        clojure -Ttools install io.github.weavejester/cljfmt '{:git/tag "0.13.1"}' :as cljfmt
+        clojure -Tcljfmt check
+      
+    - name: Build Docker image
+      run: |
+        docker build -t color-tools-deploy .
+        
+    - name: Deploy to Clojars
+      env:
+        CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+        CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
+      run: |
+        docker run --rm \
+          -e CLOJARS_USERNAME="$CLOJARS_USERNAME" \
+          -e CLOJARS_PASSWORD="$CLOJARS_PASSWORD" \
+          color-tools-deploy \
+          clojure -T:build deploy
