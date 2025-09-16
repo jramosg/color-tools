@@ -212,7 +212,6 @@
           test-accessibility (fn [bg]
                                (let [text-color (sut/get-contrast-text bg)]
                                  (sut/accessible? bg text-color :aa-large)))]
-      (prn "aaa " (remove test-accessibility bg-colors))
       (is (every? test-accessibility bg-colors)))))
 
 (deftest test-color-harmony
@@ -400,3 +399,151 @@
   (testing "Color name functions work correctly"
     (is (= "#ff0000" (sut/name->hex "red")))
     (is (= "red" (sut/hex->name "#ff0000")))))
+
+(deftest test-color-record
+  (testing "Color record creation and conversion"
+    ; Test creating colors
+    (let [red-color (sut/->color 255 0 0)
+          blue-hex (sut/color-from-hex "#0000ff")
+          green-rgb (sut/color-from-rgb [0 255 0])
+          yellow-hsl (sut/color-from-hsl [60 100 50])]
+
+      ; Test color? predicate
+      (is (sut/color? red-color))
+      (is (not (sut/color? "#ff0000")))
+      (is (not (sut/color? [255 0 0])))
+
+      ; Test conversions from Color records
+      (is (= [255 0 0] (sut/->rgb red-color)))
+      (is (= "#ff0000" (sut/->hex red-color)))
+      (is (= [0 100 50] (sut/->hsl red-color)))
+      (is (= [255 0 0 1.0] (sut/->rgba red-color)))
+
+      ; Test different creation methods
+      (is (= [0 0 255] (sut/->rgb blue-hex)))
+      (is (= [0 255 0] (sut/->rgb green-rgb)))
+      (is (= [255 255 0] (sut/->rgb yellow-hsl)))))
+
+  (testing "color-from-hsv conversion and factory"
+    ; Ensure color-from-hsv creates a Color and converts properly
+    (let [black (sut/color-from-hsv [0 0 0])
+          white (sut/color-from-hsv [0 0 100])
+          red (sut/color-from-hsv [0 100 100])
+          green (sut/color-from-hsv [120 100 100])
+          blue (sut/color-from-hsv [240 100 100])]
+      (is (sut/color? black))
+      (is (sut/color? white))
+      (is (sut/color? red))
+      (is (sut/color? green))
+      (is (sut/color? blue))
+
+      (is (= [0 0 0] (sut/->rgb black)))
+      (is (= [255 255 255] (sut/->rgb white)))
+      (is (= [255 0 0] (sut/->rgb red)))
+      (is (= [0 255 0] (sut/->rgb green)))
+      (is (= [0 0 255] (sut/->rgb blue)))
+
+      (is (= "#000000" (sut/->hex black)))
+      (is (= "#ffffff" (sut/->hex white)))
+      (is (= "#ff0000" (sut/->hex red)))
+      (is (= "#00ff00" (sut/->hex green)))
+      (is (= "#0000ff" (sut/->hex blue)))))
+
+  (testing "Color record with existing functions"
+    (let [red-color (sut/->color 255 0 0)
+          blue-color (sut/->color 0 0 255)]
+
+      ; Test luminance calculation
+      (is (> (sut/luminance red-color) 0))
+      (is (< (sut/luminance red-color) 1))
+
+      ; Test contrast calculation
+      (is (> (sut/contrast-ratio red-color blue-color) 1))
+
+      ; Test color manipulation returns Color records
+      (let [lighter-red (sut/lighten red-color 0.2)
+            darker-red (sut/darken red-color 0.2)]
+        (is (sut/color? lighter-red))
+        (is (sut/color? darker-red))
+        (is (not= (sut/->rgb red-color) (sut/->rgb lighter-red)))
+        (is (not= (sut/->rgb red-color) (sut/->rgb darker-red))))
+
+      ; Test get-contrast-text with Color input
+      (let [contrast-text (sut/get-contrast-text red-color)]
+        (is (string? contrast-text))  ; Should return hex string for consistency
+        (is (or (= contrast-text "#000000") (= contrast-text "#ffffff"))))))
+
+  (testing "Color record toString"
+    (let [red-color (sut/->color 255 0 0)
+          red-alpha (sut/->color 255 0 0 0.5)]
+      (is (= "#ff0000" (str red-color)))
+      (is (= "rgba(255,0,0,0.5)" (str red-alpha)))))
+
+  (testing "Mixed input types work together"
+    ; Test that Color records, strings, and vectors can be used interchangeably
+    (let [red-color (sut/->color 255 0 0)
+          red-string "#ff0000"
+          red-vector [255 0 0]]
+
+      ; All should have same luminance
+      (is (= (sut/luminance red-color)
+             (sut/luminance red-string)
+             (sut/luminance red-vector)))
+
+      ; All should have same contrast with white
+      (is (= (sut/contrast-ratio red-color "#ffffff")
+             (sut/contrast-ratio red-string "#ffffff")
+             (sut/contrast-ratio red-vector "#ffffff")))))
+
+  (testing "Color factory function"
+    ; Test various input formats
+    (is (sut/color? (sut/color 255 0 0)))
+    (is (sut/color? (sut/color 255 0 0 0.8)))
+    (is (sut/color? (sut/color "#00ff00")))
+    (is (sut/color? (sut/color [0 0 255])))
+    (is (sut/color? (sut/color [255 255 0 0.5])))
+
+    ; Test that they create the right colors
+    (is (= [255 0 0] (sut/->rgb (sut/color 255 0 0))))
+    (is (= [0 255 0] (sut/->rgb (sut/color "#00ff00"))))
+    (is (= [0 0 255] (sut/->rgb (sut/color [0 0 255]))))
+    (is (= 0.5 (:a (sut/color [255 255 0 0.5])))))
+
+  (testing "->hsv conversion consistency"
+      ; Test that ->hsv produces same results as rgb->hsv
+    (let [test-colors [[255 0 0]     ; red
+                       [0 255 0]     ; green  
+                       [0 0 255]     ; blue
+                       [255 255 0]   ; yellow
+                       [255 0 255]   ; magenta
+                       [0 255 255]   ; cyan
+                       [255 255 255] ; white
+                       [0 0 0]       ; black
+                       [128 128 128] ; gray
+                       [255 87 51]]] ; orange
+      (doseq [rgb test-colors]
+        (let [color-rec (sut/color-from-rgb rgb)
+              hsv-from-color (sut/->hsv color-rec)
+              hsv-from-rgb (sut/rgb->hsv rgb)]
+          (is (= hsv-from-rgb hsv-from-color)))))))
+
+(deftest test-normalize-color-input
+  (testing "normalize-color-input with Color record returns a Color"
+    (let [c (sut/->color 10 20 30)
+          out (sut/normalize-color-input c)]
+      (is (sut/color? out))
+      (is (= (sut/->rgb c) (sut/->rgb out)))))
+
+  (testing "normalize-color-input with hex string returns a Color"
+    (let [out (sut/normalize-color-input "#0a141e")]
+      (is (sut/color? out))
+      (is (= [10 20 30] (sut/->rgb out)))))
+
+  (testing "normalize-color-input with RGB vector returns a Color"
+    (let [out (sut/normalize-color-input [10 20 30])]
+      (is (sut/color? out))
+      (is (= [10 20 30] (sut/->rgb out)))))
+
+  (testing "normalize-color-input throws on invalid input"
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (sut/normalize-color-input :invalid-input)))))

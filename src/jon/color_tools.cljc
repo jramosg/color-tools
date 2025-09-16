@@ -26,7 +26,6 @@
    "silver" "#c0c0c0"
    "teal" "#008080"})
 
-
 ;; =============================================================================
 ;; Utility Functions
 ;; =============================================================================
@@ -84,6 +83,16 @@
          (and (number? h) (<= 0 h 360)
               (number? s) (<= 0 s 100)
               (number? l) (<= 0 l 100)))))
+
+(defn valid-hsv?
+  "Check if vector is a valid HSV color"
+  [hsv]
+  (and (vector? hsv)
+       (= 3 (count hsv))
+       (let [[h s v] hsv]
+         (and (number? h) (<= 0 h 360)
+              (number? s) (<= 0 s 100)
+              (number? v) (<= 0 v 100)))))
 
 ;; =============================================================================
 ;; Color Format Conversions
@@ -235,28 +244,161 @@
      (round-int (* (+ b' m) 255))]))
 
 ;; =============================================================================
+;; Color Record Type
+;; =============================================================================
+
+(defrecord Color [r g b a]
+  Object
+  (toString [_]
+    (if (= a 1.0)
+      (rgb->hex [r g b])
+      (str "rgba(" r "," g "," b "," a ")"))))
+
+(defn color?
+  "Check if value is a Color record"
+  [x]
+  (instance? Color x))
+
+(defn ->color
+  "Create a Color record from RGB values with optional alpha"
+  ([r g b] (->color r g b 1.0))
+  ([r g b a] 
+   {:pre [(and (>= r 0) (<= r 255))
+          (and (>= g 0) (<= g 255)) 
+          (and (>= b 0) (<= b 255))
+          (and (>= a 0) (<= a 1))]}
+   (->Color (int r) (int g) (int b) (float a))))
+
+(defn color-from-hex
+  "Create a Color record from hex string"
+  [hex-str]
+  {:pre [(valid-hex? hex-str)]}
+  (let [[r g b] (hex->rgb hex-str)]
+    (->color r g b)))
+
+(defn color-from-rgb
+  "Create a Color record from RGB vector"
+  [rgb-vec]
+  {:pre [(valid-rgb? rgb-vec)]}
+  (let [[r g b] rgb-vec]
+    (->color r g b)))
+
+(defn color-from-rgba
+  "Create a Color record from RGBA vector"
+  [rgba-vec]
+  {:pre [(valid-rgba? rgba-vec)]}
+  (let [[r g b a] rgba-vec]
+    (->color r g b a)))
+
+(defn color-from-hsl
+  "Create a Color record from HSL vector"
+  [hsl-vec]
+  {:pre [(valid-hsl? hsl-vec)]}
+  (let [rgb (hsl->rgb hsl-vec)]
+    (color-from-rgb rgb)))
+
+(defn color-from-hsv
+  "Create a Color record from HSV vector"
+  [hsv-vec]
+  {:pre [(valid-hsv? hsv-vec)]}
+  (let [rgb (hsv->rgb hsv-vec)]
+    (color-from-rgb rgb)))
+
+(defn ->rgb
+  "Convert Color record to RGB vector"
+  [color]
+  {:pre [(color? color)]}
+  ((juxt :r :g :b) color))
+
+(defn ->rgba
+  "Convert Color record to RGBA vector"
+  [color]
+  {:pre [(color? color)]}
+  [(:r color) (:g color) (:b color) (:a color)])
+
+(defn ->hex
+  "Convert Color record to hex string"
+  [color]
+  {:pre [(color? color)]}
+  (rgb->hex (->rgb color)))
+
+(defn ->hsl
+  "Convert Color record to HSL vector"
+  [color]
+  {:pre [(color? color)]}
+  (rgb->hsl (->rgb color)))
+
+(defn ->hsv
+  "Convert Color record to HSV vector"
+  [color]
+  {:pre [(color? color)]}
+  (rgb->hsv (->rgb color)))
+
+;; Helper function to normalize color inputs
+(defn normalize-color-input
+  "Convert various color inputs to Color record"
+  [color-input]
+  (cond
+    (color? color-input) color-input
+    (string? color-input) (color-from-hex color-input)
+    (vector? color-input) (color-from-rgb color-input)
+    :else (throw (ex-info "Invalid color input" {:input color-input}))))
+
+;; Convenient factory function
+(defn color
+  "Create a Color record from various input formats.
+   
+   Usage:
+   (color 255 0 0)           ; RGB values
+   (color 255 0 0 0.8)       ; RGBA values  
+   (color \"#ff0000\")         ; Hex string
+   (color [255 0 0])         ; RGB vector
+   (color [255 0 0 0.8])     ; RGBA vector"
+  ([input] 
+   (cond
+     (string? input) (color-from-hex input)
+     (vector? input) (if (= 4 (count input))
+                       (color-from-rgba input)
+                       (color-from-rgb input))
+     :else (throw (ex-info "Invalid color input" {:input input}))))
+  ([r g b] (->color r g b))
+  ([r g b a] (->color r g b a)))
+
+;; =============================================================================
 ;; Color Manipulation
 ;; =============================================================================
 
 (defn lighten
   "Lighten a color by a percentage (0-1)"
   [color amount]
-  (let [hsl (if (string? color) (hex->hsl color) (rgb->hsl color))
+  (let [hsl (cond 
+              (color? color) (->hsl color)
+              (string? color) (hex->hsl color) 
+              (vector? color) (rgb->hsl color)
+              :else (throw (ex-info "Invalid color input" {:color color})))
         [h s l] hsl
-        new-l (clamp (+ l (* amount 100)) 0 100)]
-    (if (string? color)
-      (hsl->hex [h s new-l])
-      (hsl->rgb [h s new-l]))))
+        new-l (clamp (+ l (* amount 100)) 0 100)
+        new-hsl [h s new-l]]
+    (cond
+      (color? color) (color-from-hsl new-hsl)
+      (string? color) (hsl->hex new-hsl)
+      (vector? color) (hsl->rgb new-hsl))))
 
 (defn darken
   "Darken a color by a percentage (0-1)"
   [color amount]
-  (let [hsl (if (string? color) (hex->hsl color) (rgb->hsl color))
+  (let [hsl (cond 
+              (color? color) (->hsl color)
+              (string? color) (hex->hsl color) 
+              (vector? color) (rgb->hsl color)
+              :else (throw (ex-info "Invalid color input" {:color color})))
         [h s l] hsl
-        new-l (clamp (- l (* amount 100)) 0 100)]
-    (if (string? color)
-      (hsl->hex [h s new-l])
-      (hsl->rgb [h s new-l]))))
+        new-l (clamp (- l (* amount 100)) 0 100)
+        new-hsl [h s new-l]]
+    (cond
+      (color? color) (color-from-hsl new-hsl)
+      (string? color) (hsl->hex new-hsl)
+      (vector? color) (hsl->rgb new-hsl))))
 
 (defn saturate
   "Increase saturation of a color by a percentage (0-1)"
@@ -281,22 +423,33 @@
 (defn adjust-hue
   "Adjust the hue of a color by degrees"
   [color degrees]
-  (let [hsl (if (string? color) (hex->hsl color) (rgb->hsl color))
+  (let [hsl (cond 
+              (color? color) (->hsl color)
+              (string? color) (hex->hsl color) 
+              (vector? color) (rgb->hsl color)
+              :else (throw (ex-info "Invalid color input" {:color color})))
         [h s l] hsl
-        new-h (mod (+ h degrees) 360)]
-    (if (string? color)
-      (hsl->hex [new-h s l])
-      (hsl->rgb [new-h s l]))))
+        new-h (mod (+ h degrees) 360)
+        new-hsl [new-h s l]]
+    (cond
+      (color? color) (color-from-hsl new-hsl)
+      (string? color) (hsl->hex new-hsl)
+      (vector? color) (hsl->rgb new-hsl))))
 
 (defn invert
   "Invert a color"
   [color]
-  (let [rgb (if (string? color) (hex->rgb color) color)
+  (let [rgb (cond 
+              (color? color) (->rgb color)
+              (string? color) (hex->rgb color) 
+              (vector? color) color
+              :else (throw (ex-info "Invalid color input" {:color color})))
         [r g b] rgb
         inverted [(- 255 r) (- 255 g) (- 255 b)]]
-    (if (string? color)
-      (rgb->hex inverted)
-      inverted)))
+    (cond
+      (color? color) (color-from-rgb inverted)
+      (string? color) (rgb->hex inverted)
+      (vector? color) inverted)))
 
 (defn grayscale
   "Convert a color to grayscale"
@@ -317,16 +470,25 @@
   "Mix two colors with optional ratio (0-1, default 0.5)"
   [color1 color2 & [ratio]]
   (let [ratio (or ratio 0.5)
-        rgb1 (if (string? color1) (hex->rgb color1) color1)
-        rgb2 (if (string? color2) (hex->rgb color2) color2)
+        rgb1 (cond 
+               (color? color1) (->rgb color1)
+               (string? color1) (hex->rgb color1) 
+               (vector? color1) color1
+               :else (throw (ex-info "Invalid color1 input" {:color color1})))
+        rgb2 (cond 
+               (color? color2) (->rgb color2)
+               (string? color2) (hex->rgb color2) 
+               (vector? color2) color2
+               :else (throw (ex-info "Invalid color2 input" {:color color2})))
         [r1 g1 b1] rgb1
         [r2 g2 b2] rgb2
         mixed [(round-int (+ r1 (* (- r2 r1) ratio)))
                (round-int (+ g1 (* (- g2 g1) ratio)))
                (round-int (+ b1 (* (- b2 b1) ratio)))]]
-    (if (string? color1)
-      (rgb->hex mixed)
-      mixed)))
+    (cond
+      (color? color1) (color-from-rgb mixed)
+      (string? color1) (rgb->hex mixed)
+      (vector? color1) mixed)))
 
 ;; =============================================================================
 ;; Contrast and Accessibility
@@ -335,7 +497,11 @@
 (defn luminance
   "Calculate relative luminance of a color"
   [color]
-  (let [rgb (if (string? color) (hex->rgb color) color)
+  (let [rgb (cond 
+              (color? color) (->rgb color)
+              (string? color) (hex->rgb color) 
+              (vector? color) color
+              :else (throw (ex-info "Invalid color input" {:color color})))
         [r g b] (map #(let [val (/ % 255)]
                         (if (<= val 0.03928)
                           (/ val 12.92)
@@ -391,7 +557,8 @@
    - Light backgrounds (luminance > 0.35) get black text
    - Dark backgrounds (luminance ≤ 0.35) get white text
    - If the primary choice doesn't meet WCAG AA standards, tries the alternative
-   - If neither meets standards, returns the one with better contrast ratio"
+   - If neither meets standards, returns the one with better contrast ratio
+   Always returns a hex color string for consistency."
   [background-color]
   (let [bg-luminance (luminance background-color)
         black-color "#000000"
@@ -592,7 +759,3 @@
   "Check if a color is muted (low saturation)"
   [color & [threshold]]
   (not (vibrant? color threshold)))
-
-(comment 
-  (find-accessible-color "#fff" "#000")
-  (find-accessible-color "#ff6060" "#000"))

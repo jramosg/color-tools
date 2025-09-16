@@ -490,3 +490,264 @@ Round a number to specified decimal places.
 (round-int n) => integer
 ```
 Round a number to the nearest integer.
+
+### `->hsl`
+```clojure
+(->hsl color) => [h s l]
+```
+Convert Color record to HSL vector.
+
+**Parameters:**
+- `color` - Color record
+
+**Returns:** Vector of [hue saturation lightness]
+
+### `->hsv`
+```clojure
+(->hsv color) => [h s v]
+```
+Convert Color record to HSV vector.
+
+**Parameters:**
+- `color` - Color record
+
+**Returns:** Vector of [hue saturation value] (h: 0-360, s,v: 0-100)
+
+**Examples:**
+```clojure
+(def red-color (color 255 0 0))
+(->hsv red-color)  ;=> [0 100 100]
+
+(def blue-color (color 0 0 255))  
+(->hsv blue-color) ;=> [240 100 100]
+```
+
+## Color Analysis Functions
+
+### `luminance`
+```clojure
+(luminance color) => number
+```
+Calculate relative luminance of a color (0-1).
+
+**Parameters:**
+- `color` - Color (hex string or RGB vector)
+
+**Returns:** Relative luminance value (0-1)
+
+### `contrast-ratio`
+```clojure
+(contrast-ratio color1 color2) => number
+```
+Calculate contrast ratio between two colors.
+
+**Parameters:**
+- `color1` - First color
+- `color2` - Second color
+
+**Returns:** Contrast ratio (1-21)
+
+**Examples:**
+```clojure
+(contrast-ratio "#000000" "#ffffff")  ;=> 21.0
+(contrast-ratio "#3498db" "#ffffff")  ;=> 3.14
+```
+
+### `accessible?`
+```clojure
+(accessible? color1 color2 & [level]) => boolean
+```
+Check if two colors meet WCAG accessibility standards.
+
+**Parameters:**
+- `color1` - First color
+- `color2` - Second color
+- `level` - Optional accessibility level (`:aa`, `:aa-large`, `:aaa`)
+
+**Returns:** `true` if colors meet specified standard
+
+### `brightness`
+```clojure
+(brightness color) => number
+```
+Calculate perceived brightness of a color (0-255).
+
+### `dark?`
+```clojure
+(dark? color) => boolean
+```
+Check if a color is dark (brightness < 128).
+
+### `light?`
+```clojure
+(light? color) => boolean
+```
+Check if a color is light (brightness >= 128).
+
+### `warm?`
+```clojure
+(warm? color) => boolean
+```
+Check if a color is warm (red/orange/yellow family).
+
+### `cool?`
+```clojure
+(cool? color) => boolean
+```
+Check if a color is cool (blue/green/purple family).
+
+### `vibrant?`
+```clojure
+(vibrant? color & [threshold]) => boolean
+```
+Check if a color is vibrant (high saturation).
+
+**Parameters:**
+- `color` - Color to check
+- `threshold` - Optional saturation threshold (default 60)
+
+### `muted?`
+```clojure
+(muted? color & [threshold]) => boolean
+```
+Check if a color is muted (low saturation).
+
+## Palette Generation Functions
+
+### `complementary`
+```clojure
+(complementary color) => color
+```
+Get the complementary color (opposite on color wheel).
+
+### `triadic`
+```clojure
+(triadic color) => [color color]
+```
+Get triadic colors (120° and 240° from base).
+
+### `tetradic`
+```clojure
+(tetradic color) => [color color color]
+```
+Get tetradic colors (90°, 180°, 270° from base).
+
+### `analogous`
+```clojure
+(analogous color & [count angle]) => [color ...]
+```
+Generate analogous colors.
+
+**Parameters:**
+- `color` - Base color
+- `count` - Number of colors to generate (default 3)
+- `angle` - Angle between colors in degrees (default 30)
+
+### `monochromatic`
+```clojure
+(monochromatic color & [count]) => [color ...]
+```
+Generate monochromatic palette by varying lightness and saturation.
+
+### `split-complementary`
+```clojure
+(split-complementary color & [angle]) => [color color]
+```
+Get split-complementary colors.
+
+### `generate-palette`
+```clojure
+(generate-palette strategy base-color & [options]) => [color ...]
+```
+Generate a color palette using various strategies.
+
+**Parameters:**
+- `strategy` - Palette strategy (`:monochromatic`, `:analogous`, `:triadic`, etc.)
+- `base-color` - Base color for palette
+- `options` - Map of options (`:count`, `:angle`, etc.)
+
+## Color Mixing Functions
+
+### `mix`
+```clojure
+(mix color1 color2 & [ratio]) => color
+```
+Mix two colors with optional ratio.
+
+**Parameters:**
+- `color1` - First color
+- `color2` - Second color  
+- `ratio` - Mix ratio (0-1, default 0.5)
+
+**Returns:** Mixed color in same format as first color
+
+## Utility Functions
+
+### `color-distance`
+```clojure
+(color-distance color1 color2) => number
+```
+Calculate Euclidean distance between two colors in RGB space.
+
+### `similar?`
+```clojure
+(similar? color1 color2 & [threshold]) => boolean
+```
+Check if two colors are similar within a threshold.
+
+### `name->hex`
+```clojure
+(name->hex color-name) => string
+```
+Convert color name to hex.
+
+**Examples:**
+```clojure
+(name->hex "red")    ;=> "#ff0000"
+(name->hex "navy")   ;=> "#000080"
+```
+
+### `hex->name`
+```clojure
+(hex->name hex) => string
+```
+Find closest color name for a hex color.
+
+### `random-color`
+```clojure
+(random-color) => string
+```
+Generate a random hex color.
+
+### `find-accessible-color`
+```clojure
+(find-accessible-color background target-color & [level]) => color
+```
+Find an accessible color by adjusting lightness.
+
+**Parameters:**
+- `background` - Background color
+- `target-color` - Desired color to make accessible
+- `level` - Accessibility level (`:aa`, `:aa-large`, `:aaa`)
+
+**Returns:** Accessible version of target color, or `nil` if none found
+
+## Utility Helper Functions
+
+### `clamp`
+```clojure
+(clamp value min-val max-val) => number
+```
+Clamp a value between min and max.
+
+### `round`
+```clojure
+(round n & [decimals]) => number
+```
+Round a number to specified decimal places.
+
+### `round-int`
+```clojure
+(round-int n) => integer
+```
+Round a number to the nearest integer.

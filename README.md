@@ -10,7 +10,9 @@ A comprehensive color manipulation library for Clojure and ClojureScript. Provid
 
 ### Key Features
 
+- **Type Safety**: Proper `Color` record type for better APIs and type safety
 - **Format Conversions**: Convert between HEX, RGB, RGBA, HSL, and HSV color formats
+- **Backward Compatible**: All existing string/vector-based APIs continue to work
 - **Color Manipulation**: Lighten, darken, saturate, desaturate, invert, and adjust hue
 - **Palette Generation**: Create harmonious color palettes using various color theory principles
 - **Accessibility**: WCAG-compliant contrast checking and accessible color finding
@@ -64,7 +66,34 @@ Or for Leiningen, add to your `project.clj`:
 
 ## Usage Examples
 
-### Color Format Conversions
+### Working with the Color Record Type
+
+The library includes a proper `Color` datatype that provides type safety and cleaner APIs:
+
+```clojure
+;; Create Color records from various inputs
+(color/color 255 0 0)           ; RGB values -> Color record
+(color/color "#ff0000")         ; Hex string -> Color record  
+(color/color [255 0 0])         ; RGB vector -> Color record
+(color/color [255 0 0 0.8])     ; RGBA vector -> Color record
+
+;; Convert Color records to different formats
+(def red-color (color/color 255 0 0))
+(color/->hex red-color)         ;=> "#ff0000"
+(color/->rgb red-color)         ;=> [255 0 0]
+(color/->hsl red-color)         ;=> [0 100 50]
+(color/->rgba red-color)        ;=> [255 0 0 1.0]
+
+;; Colors work seamlessly with all library functions
+(color/lighten red-color 0.2)   ;=> Color record (lighter red)
+(color/contrast-ratio red-color (color/color "#ffffff"))  ;=> 4.0
+
+;; String representation
+(str red-color)                 ;=> "#ff0000"
+(str (color/color 255 0 0 0.5)) ;=> "rgba(255,0,0,0.5)"
+```
+
+### Traditional Format Conversions (Still Supported)
 
 ```clojure
 ;; HEX to RGB
@@ -91,31 +120,21 @@ Or for Leiningen, add to your `project.clj`:
 ### Color Manipulation
 
 ```clojure
-;; Lighten and darken
-(color/lighten "#3498db" 0.2)    ; 20% lighter
-;=> "#5dade2"
+;; Works with Color records, hex strings, or RGB vectors
+(def blue (color/color "#3498db"))
 
-(color/darken "#3498db" 0.2)     ; 20% darker
-;=> "#2980b9"
+;; Lighten and darken - returns same type as input
+(color/lighten blue 0.2)               ;=> Color record (lighter blue)
+(color/lighten "#3498db" 0.2)          ;=> "#5dade2" 
+(color/darken [52 152 219] 0.3)        ;=> [36 106 153]
 
-;; Adjust saturation
-(color/saturate "#3498db" 0.3)   ; 30% more saturated
-;=> "#1e90ff"
-
-(color/desaturate "#3498db" 0.3) ; 30% less saturated
-;=> "#5499c7"
-
-;; Hue manipulation
-(color/adjust-hue "#3498db" 180) ; Shift hue by 180 degrees
-;=> "#db7634"
+;; Adjust saturation  
+(color/saturate blue 0.4)              ;=> Color record (more saturated)
+(color/desaturate "#e74c3c" 0.3)       ;=> "#d66357"
 
 ;; Invert colors
-(color/invert "#3498db")
-;=> "#cb6724"
-
-;; Convert to grayscale
-(color/grayscale "#3498db")
-;=> "#7b7b7b"
+(color/invert blue)                    ;=> Color record (inverted)
+(color/invert "#ff0000")               ;=> "#00ffff"
 ```
 
 ### Palette Generation
