@@ -12,7 +12,6 @@ A comprehensive color manipulation library for Clojure and ClojureScript. Provid
 
 - **Type Safety**: Proper `Color` record type for better APIs and type safety
 - **Format Conversions**: Convert between HEX, RGB, RGBA, HSL, and HSV color formats
-- **Backward Compatible**: All existing string/vector-based APIs continue to work
 - **Color Manipulation**: Lighten, darken, saturate, desaturate, invert, and adjust hue
 - **Palette Generation**: Create harmonious color palettes using various color theory principles
 - **Accessibility**: WCAG-compliant contrast checking and accessible color finding
@@ -93,7 +92,7 @@ The library includes a proper `Color` datatype that provides type safety and cle
 (str (color/color 255 0 0 0.5)) ;=> "rgba(255,0,0,0.5)"
 ```
 
-### Traditional Format Conversions (Still Supported)
+### Traditional Format Conversions
 
 ```clojure
 ;; HEX to RGB
