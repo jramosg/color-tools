@@ -14,13 +14,40 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    # It is important to install java before installing clojure tools which needs java
+    - name: Prepare java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '21'
+        
+    - name: Install clojure tools
+      uses: DeLaGuardo/setup-clojure@13.4
+      with:
+        cli: latest
+        lein: 2.9.10
+        bb: latest
+        clj-kondo: 2023.05.18
+        cljfmt: 0.10.4
+        
+    # Cache clojure dependencies for faster builds
+    - name: Cache clojure dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.m2/repository
+          ~/.gitlibs
+          ~/.deps.clj
+          .cpcache
+        key: cljdeps-${{ hashFiles('deps.edn') }}
+        restore-keys: cljdeps-
+      
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       
-    - name: Install cljfmt and check formatting
+    - name: Check code formatting
       run: |
-        clojure -Ttools install io.github.weavejester/cljfmt '{:git/tag "0.13.1"}' :as cljfmt
-        clojure -Tcljfmt check
+        cljfmt check
       
     - name: Build Docker image
       run: |
