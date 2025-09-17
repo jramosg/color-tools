@@ -1,0 +1,53 @@
+name: Checks
+
+on:
+  push:
+    # run checks on every branch
+    branches: [ '**' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ '**' ]
+
+jobs:
+  checks:
+    name: Checks (format + tests)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          cli: latest
+          lein: 2.9.10
+          bb: latest
+          clj-kondo: 2023.05.18
+          cljfmt: 0.10.4
+
+      - name: Cache clojure dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+            ~/.deps.clj
+            .cpcache
+          key: cljdeps-${{ hashFiles('deps.edn') }}
+          restore-keys: cljdeps-
+
+      - name: Run cljfmt check
+        run: cljfmt check
+
+      - name: Run clj-kondo linter
+        run: clj-kondo --lint src test
+
+      - name: Run tests
+        run: |
+          clojure -T:build test
