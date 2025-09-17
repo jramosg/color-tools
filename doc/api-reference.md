@@ -2,6 +2,18 @@
 
 This document provides a comprehensive reference for all functions in `jon/color-tools`.
 
+## Color Input Types
+
+The library supports multiple color input formats:
+- **Hex strings**: `"#ff0000"`, `"#f00"`
+- **RGB vectors**: `[255 0 0]`
+- **RGBA vectors**: `[255 0 0 0.5]`
+- **CSS RGB strings**: `"rgb(255, 0, 0)"`, `"rgb(255,0,0)"`, `"rgb(255 0 0)"`
+- **CSS RGBA strings**: `"rgba(255, 0, 0, 1)"`, `"rgba(255 0 0 0.5)"`
+- **Color records**: Created with the `color` function
+
+Most functions accept any of these input types through the unified input handling system.
+
 ## Validation Functions
 
 ### `valid-hex?`
@@ -48,6 +60,51 @@ Check if vector is a valid RGBA color.
 ### `valid-hsl?`
 ```clojure
 (valid-hsl? hsl) => boolean
+```
+Check if vector is a valid HSL color.
+
+**Parameters:**
+- `hsl` - Vector of [h s l] values
+
+**Returns:** `true` if valid HSL (h: 0-360, s/l: 0-100), `false` otherwise
+
+### `valid-css-rgb?`
+```clojure
+(valid-css-rgb? css-str) => boolean
+```
+Check if string is a valid CSS rgb() color.
+
+**Parameters:**
+- `css-str` - CSS color string to validate
+
+**Returns:** `true` if valid CSS RGB format, `false` otherwise
+
+**Examples:**
+```clojure
+(valid-css-rgb? "rgb(255, 0, 0)")     ;=> true
+(valid-css-rgb? "rgb(255,0,0)")       ;=> true
+(valid-css-rgb? "RGB(255, 0, 0)")     ;=> true
+(valid-css-rgb? "rgb(255 0 0)")       ;=> true
+(valid-css-rgb? "#ff0000")            ;=> false
+```
+
+### `valid-css-rgba?`
+```clojure
+(valid-css-rgba? css-str) => boolean
+```
+Check if string is a valid CSS rgba() color.
+
+**Parameters:**
+- `css-str` - CSS color string to validate
+
+**Returns:** `true` if valid CSS RGBA format, `false` otherwise
+
+**Examples:**
+```clojure
+(valid-css-rgba? "rgba(255, 0, 0, 1)")   ;=> true
+(valid-css-rgba? "rgba(255, 0, 0, 0.5)") ;=> true
+(valid-css-rgba? "rgba(255 0 0 0.8)")    ;=> true
+(valid-css-rgba? "rgb(255, 0, 0)")       ;=> false
 ```
 Check if vector is a valid HSL color.
 
@@ -186,6 +243,83 @@ Convert RGB to HSV color space.
 (hsv->rgb hsv) => [r g b]
 ```
 Convert HSV to RGB color space.
+
+### `parse-css-rgb`
+```clojure
+(parse-css-rgb css-str) => [r g b]
+```
+Parse CSS rgb() string to RGB vector.
+
+**Parameters:**
+- `css-str` - Valid CSS RGB string (e.g., "rgb(255, 0, 0)")
+
+**Returns:** Vector of [red green blue] values (0-255)
+
+**Examples:**
+```clojure
+(parse-css-rgb "rgb(255, 0, 0)")     ;=> [255 0 0]
+(parse-css-rgb "rgb(255,87,51)")     ;=> [255 87 51]
+(parse-css-rgb "RGB( 255 , 0 , 0 )") ;=> [255 0 0]
+(parse-css-rgb "rgb(255 0 0)")       ;=> [255 0 0]
+```
+
+### `parse-css-rgba`
+```clojure
+(parse-css-rgba css-str) => [r g b a]
+```
+Parse CSS rgba() string to RGBA vector.
+
+**Parameters:**
+- `css-str` - Valid CSS RGBA string (e.g., "rgba(255, 0, 0, 0.5)")
+
+**Returns:** Vector of [red green blue alpha] values
+
+**Examples:**
+```clojure
+(parse-css-rgba "rgba(255, 0, 0, 1)")   ;=> [255 0 0 1.0]
+(parse-css-rgba "rgba(255, 0, 0, 0.5)") ;=> [255 0 0 0.5]
+(parse-css-rgba "rgba(255 0 0 0.8)")    ;=> [255 0 0 0.8]
+(parse-css-rgba "RGBA( 255 , 0 , 0 , .7 )") ;=> [255 0 0 0.7]
+```
+
+### `parse-css-color-components`
+```clojure
+(parse-css-color-components css-str) => [r g b] or [r g b a] or nil
+```
+Parse CSS rgb() or rgba() string into color component vector with validation.
+
+**Parameters:**
+- `css-str` - CSS color string in rgb() or rgba() format
+
+**Returns:** 
+- For rgb(): `[r g b]` where r, g, b are integers 0-255
+- For rgba(): `[r g b a]` where r, g, b are integers 0-255 and a is float 0.0-1.0  
+- `nil` if the string doesn't match expected format or values are out of range
+
+**Examples:**
+```clojure
+(parse-css-color-components "rgb(255,0,0)")     ;=> [255 0 0]
+(parse-css-color-components "RGB( 255 , 0 , 0 )") ;=> [255 0 0]
+(parse-css-color-components "rgba(255,0,0,0.5)") ;=> [255 0 0 0.5]
+(parse-css-color-components "rgb(256,0,0)")     ;=> nil (out of range)
+```
+
+### `normalize-css-color-string`
+```clojure
+(normalize-css-color-string css-str) => string
+```
+Normalize CSS color string by removing extra spaces and standardizing separators.
+
+**Parameters:**
+- `css-str` - CSS color string to normalize
+
+**Returns:** Normalized CSS color string
+
+**Examples:**
+```clojure
+(normalize-css-color-string " RGB( 255 , 0 , 0 ) ") ;=> "rgb(255,0,0)"
+(normalize-css-color-string "rgba( 255  0  0  0.5 )") ;=> "rgba(255 0 0 0.5)"
+```
 
 ## Color Manipulation Functions
 

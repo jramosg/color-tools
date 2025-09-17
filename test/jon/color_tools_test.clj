@@ -55,7 +55,78 @@
     (is (sut/valid-hsl? [180 50 75]))
     (is (not (sut/valid-hsl? [361 100 50])))
     (is (not (sut/valid-hsl? [0 101 50])))
-    (is (not (sut/valid-hsl? [0 100 101])))))
+    (is (not (sut/valid-hsl? [0 100 101]))))
+
+  (testing "CSS RGB color validation"
+    ;; Valid CSS RGB formats
+    (is (sut/valid-css-rgb? "rgb(255, 0, 0)"))
+    (is (sut/valid-css-rgb? "rgb(255,0,0)"))
+    (is (sut/valid-css-rgb? "rgb( 255 , 0 , 0 )"))
+    (is (sut/valid-css-rgb? "RGB(255, 0, 0)"))
+    (is (sut/valid-css-rgb? "  rgb(255, 0, 0)  "))
+    (is (sut/valid-css-rgb? "rgb(255 0 0)"))  ; space-separated
+    (is (sut/valid-css-rgb? "rgb( 255  0  0 )"))
+
+    (testing "Valid format but out of range and invalidad formats"
+      ;; Out of range RGB values
+      (is (sut/valid-css-rgb? "rgb(256, 0, 0)"))  ; valid format, out of range value
+      (is (nil? (sut/parse-css-color-components "rgb(256, 0, 0)")))
+      (is (not (sut/valid-css-rgb? "rgb(0, -1, 0)")))   ; invalid format, negative value
+      (is (nil? (sut/parse-css-color-components "rgb(0, -1, 0)")))
+      (is (sut/valid-css-rgb? "rgb(0, 0, 300)"))  ; valid format, value > 255
+      (is (nil? (sut/parse-css-color-components "rgb(0, 0, 300)")))
+      ;; Out of range RGBA values (should not match valid-css-rgb?)
+      (is (not (sut/valid-css-rgb? "rgb(255, 0, 0, 0)")))
+      ;; Out of range RGBA alpha
+      (is (not (sut/valid-css-rgba? "rgba(255, 0, 0, 1.5)"))) ; invalid format, alpha > 1
+      (is (nil? (sut/parse-css-color-components "rgba(255, 0, 0, 1.5)")))
+      (is (not (sut/valid-css-rgba? "rgba(255, 0, 0, -0.1)"))) ; invalid format, negative alpha
+      (is (nil? (sut/parse-css-color-components "rgba(255, 0, 0, -0.1)")))
+      (is (sut/valid-css-rgba? "rgba(300, 0, 0, 0.5)")) ; valid format, r > 255
+      (is (nil? (sut/parse-css-color-components "rgba(300, 0, 0, 0.5)")))
+      (is (not (sut/valid-css-rgba? "rgba(0, 0, 0, 2)"))) ; invalid format, alpha > 1
+      (is (nil? (sut/parse-css-color-components "rgba(0, 0, 0, 2)")))
+      (is (not (sut/valid-css-rgba? "rgba(-1, 0, 0, 0.5)"))) ; invalid format, negative r
+      (is (nil? (sut/parse-css-color-components "rgba(-1, 0, 0, 0.5)")))
+      ;; Decimal and boundary values
+      (is (sut/valid-css-rgba? "rgba(255, 0, 0, 1.0)"))
+      (is (= [255 0 0 1.0] (sut/parse-css-color-components "rgba(255, 0, 0, 1.0)")))
+      (is (sut/valid-css-rgba? "rgba(255, 0, 0, 0.0)"))
+      (is (= [255 0 0 0.0] (sut/parse-css-color-components "rgba(255, 0, 0, 0.0)")))
+      (is (sut/valid-css-rgba? "rgba(255, 0, 0, .5)"))
+      (is (= [255 0 0 0.5] (sut/parse-css-color-components "rgba(255, 0, 0, .5)")))))
+
+    ;; Invalid CSS RGB formats
+
+  (is (not (sut/valid-css-rgb? "rgb(255, 0)")))      ; missing component
+  (is (not (sut/valid-css-rgb? "rgb(255, 0, 0, 0)"))) ; extra component
+  (is (not (sut/valid-css-rgb? "rgba(255, 0, 0, 1)"))) ; rgba format
+  (is (not (sut/valid-css-rgb? "rgb(255.5, 0, 0)")))   ; decimal numbers
+  (is (not (sut/valid-css-rgb? "rgb(-1, 0, 0)")))      ; negative numbers
+  (is (not (sut/valid-css-rgb? "#ff0000")))            ; hex format
+  (is (not (sut/valid-css-rgb? "red"))))                ; color name
+
+(testing "CSS RGBA color validation"
+    ;; Valid CSS RGBA formats
+  (is (sut/valid-css-rgba? "rgba(255, 0, 0, 1)"))
+  (is (sut/valid-css-rgba? "rgba(255, 0, 0, 0.5)"))
+  (is (sut/valid-css-rgba? "rgba(255, 0, 0, 0)"))
+  (is (sut/valid-css-rgba? "rgba(255, 0, 0, 1.0)"))
+  (is (sut/valid-css-rgba? "rgba(255, 0, 0, .5)"))
+  (is (sut/valid-css-rgba? "rgba(255,0,0,1)"))
+  (is (sut/valid-css-rgba? "RGBA(255, 0, 0, 0.8)"))
+  (is (sut/valid-css-rgba? "  rgba(255, 0, 0, 0.3)  "))
+  (is (sut/valid-css-rgba? "rgba(255 0 0 0.5)"))    ; space-separated
+  (is (sut/valid-css-rgba? "rgba( 255  0  0  0.7 )"))
+
+    ;; Invalid CSS RGBA formats
+  (is (not (sut/valid-css-rgba? "rgba(255, 0, 0)")))    ; missing alpha
+  (is (not (sut/valid-css-rgba? "rgba(255, 0, 0, 2)"))) ; alpha > 1
+  (is (not (sut/valid-css-rgba? "rgba(255, 0, 0, -0.5)"))) ; negative alpha
+  (is (not (sut/valid-css-rgba? "rgb(255, 0, 0)")))     ; rgb format
+  (is (not (sut/valid-css-rgba? "rgba(255.5, 0, 0, 1)"))) ; decimal RGB values
+  (is (not (sut/valid-css-rgba? "#ff0000")))             ; hex format
+  (is (not (sut/valid-css-rgba? "red"))))                ; color name
 
 (deftest test-color-conversion
   (testing "Hex normalization"
@@ -97,7 +168,50 @@
   (testing "Hex HSL round-trip conversion"
     (is (= "#ff0000" (-> "#ff0000" sut/hex->hsl sut/hsl->hex)))
     (is (= "#00ff00" (-> "#00ff00" sut/hex->hsl sut/hsl->hex)))
-    (is (= "#0000ff" (-> "#0000ff" sut/hex->hsl sut/hsl->hex)))))
+    (is (= "#0000ff" (-> "#0000ff" sut/hex->hsl sut/hsl->hex))))
+
+  (testing "CSS RGB string parsing"
+    ;; Standard comma-separated format
+    (is (= [255 0 0] (sut/parse-css-rgb "rgb(255, 0, 0)")))
+    (is (= [0 255 0] (sut/parse-css-rgb "rgb(0, 255, 0)")))
+    (is (= [0 0 255] (sut/parse-css-rgb "rgb(0, 0, 255)")))
+    (is (thrown? Exception (sut/parse-css-rgb "rgb(0, 0, 256)")))
+
+    ;; Space-separated format
+    (is (= [255 128 64] (sut/parse-css-rgb "rgb(255 128 64)")))
+
+    ;; Various whitespace handling
+    (is (= [255 87 51] (sut/parse-css-rgb "rgb(255,87,51)")))
+    (is (= [255 87 51] (sut/parse-css-rgb " rgb( 255 , 87 , 51 ) ")))
+    (is (= [255 87 51] (sut/parse-css-rgb "RGB(255, 87, 51)")))
+    (is (= [255 87 51] (sut/parse-css-rgb "rgb( 255  87  51 )")))
+
+    ;; Edge cases
+    (is (= [0 0 0] (sut/parse-css-rgb "rgb(0, 0, 0)")))
+    (is (= [255 255 255] (sut/parse-css-rgb "rgb(255, 255, 255)"))))
+
+  (testing "CSS RGBA string parsing"
+    ;; Standard comma-separated format
+    (is (= [255 0 0 1.0] (sut/parse-css-rgba "rgba(255, 0, 0, 1)")))
+    (is (= [255 0 0 0.5] (sut/parse-css-rgba "rgba(255, 0, 0, 0.5)")))
+    (is (= [255 0 0 0.0] (sut/parse-css-rgba "rgba(255, 0, 0, 0)")))
+    (is (= [255 0 0 1.0] (sut/parse-css-rgba "rgba(255, 0, 0, 1.0)")))
+
+    ;; Space-separated format
+    (is (= [255 128 64 0.8] (sut/parse-css-rgba "rgba(255 128 64 0.8)")))
+
+    ;; Various whitespace handling
+    (is (= [255 87 51 0.7] (sut/parse-css-rgba "rgba(255,87,51,0.7)")))
+    (is (= [255 87 51 0.3] (sut/parse-css-rgba " rgba( 255 , 87 , 51 , 0.3 ) ")))
+    (is (= [255 87 51 0.9] (sut/parse-css-rgba "RGBA(255, 87, 51, 0.9)")))
+    (is (= [255 87 51 0.2] (sut/parse-css-rgba "rgba( 255  87  51  0.2 )")))
+
+    ;; Decimal alpha formats
+    (is (= [255 0 0 0.5] (sut/parse-css-rgba "rgba(255, 0, 0, .5)")))
+
+    ;; Edge cases
+    (is (= [0 0 0 0.0] (sut/parse-css-rgba "rgba(0, 0, 0, 0)")))
+    (is (= [255 255 255 1.0] (sut/parse-css-rgba "rgba(255, 255, 255, 1)")))))
 
 (deftest test-color-manipulation
   (testing "Lighten color"
@@ -340,6 +454,47 @@
       (is (string? red-name))
       (is (= "red" red-name)))))
 
+(deftest test-color-to-name
+  (testing "->name function with Color records"
+    (is (= "red" (sut/->name (sut/color 255 0 0))))
+    (is (= "green" (sut/->name (sut/color 0 128 0))))
+    (is (= "blue" (sut/->name (sut/color 0 0 255))))
+    (is (= "white" (sut/->name (sut/color 255 255 255))))
+    (is (= "black" (sut/->name (sut/color 0 0 0)))))
+
+  (testing "->name function with hex strings"
+    (is (= "red" (sut/->name "#ff0000")))
+    (is (= "green" (sut/->name "#008000")))
+    (is (= "blue" (sut/->name "#0000ff")))
+    (is (= "white" (sut/->name "#ffffff")))
+    (is (= "black" (sut/->name "#000000")))
+    (is (= "red" (sut/->name "#f00"))))  ; Short hex format
+
+  (testing "->name function with RGB vectors"
+    (is (= "red" (sut/->name [255 0 0])))
+    (is (= "green" (sut/->name [0 128 0])))
+    (is (= "blue" (sut/->name [0 0 255])))
+    (is (= "white" (sut/->name [255 255 255])))
+    (is (= "black" (sut/->name [0 0 0]))))
+
+  (testing "->name function with RGBA vectors"
+    (is (= "red" (sut/->name [255 0 0 1.0])))
+    (is (= "green" (sut/->name [0 128 0 0.5])))
+    (is (= "blue" (sut/->name [0 0 255 0.8]))))
+
+  (testing "->name function with approximate colors"
+    ;; Test that close colors return the expected name
+    (is (= "red" (sut/->name "#ff1100")))     ; Very close to red
+    (is (= "red" (sut/->name [250 5 5])))     ; Very close to red RGB
+    (is (= "blue" (sut/->name "#0011ff")))    ; Very close to blue
+    (is (= "white" (sut/->name [250 250 250]))) ; Very close to white
+    (is (= "black" (sut/->name [10 10 10]))))   ; Very close to black
+
+  (testing "->name function returns strings"
+    (is (string? (sut/->name "#ff0000")))
+    (is (string? (sut/->name [255 0 0])))
+    (is (string? (sut/->name (sut/color 255 0 0))))))
+
 (deftest test-random-color
   (testing "Random color generation"
     (let [random1 (sut/random-color)
@@ -502,6 +657,7 @@
     (is (sut/color? (sut/color "#00ff00")))
     (is (sut/color? (sut/color [0 0 255])))
     (is (sut/color? (sut/color [255 255 0 0.5])))
+    (is (sut/color? (sut/color (sut/color 128 128 128)))) ; passing Color record
 
     ; Test that they create the right colors
     (is (= [255 0 0] (sut/->rgb (sut/color 255 0 0))))
@@ -527,23 +683,117 @@
               hsv-from-rgb (sut/rgb->hsv rgb)]
           (is (= hsv-from-rgb hsv-from-color)))))))
 
+(deftest test-css-color-strings-integration
+  (testing "CSS color strings work with color factory function"
+    (is (sut/color? (sut/color "rgb(255, 0, 0)")))
+    (is (sut/color? (sut/color "rgba(255, 0, 0, 0.5)")))
+    (is (= [255 0 0] (sut/->rgb (sut/color "rgb(255, 0, 0)"))))
+    (is (= [255 0 0] (sut/->rgb (sut/color "rgba(255, 0, 0, 0.8)"))))
+    (is (= 0.8 (:a (sut/color "rgba(255, 0, 0, 0.8)")))))
+
+  (testing "CSS color strings work with conversion functions"
+    (is (= [255 87 51] (sut/->rgb "rgb(255, 87, 51)")))
+    (is (= "#ff5733" (sut/->hex "rgb(255, 87, 51)")))
+    (is (= [11 100 60] (sut/->hsl "rgb(255, 87, 51)")))
+    (is (= [255 87 51 0.5] (sut/->rgba "rgba(255, 87, 51, 0.5)"))))
+
+  (testing "CSS color strings work with color manipulation"
+    (let [css-red "rgb(255, 0, 0)"
+          lighter (sut/lighten css-red 0.2)
+          darker (sut/darken css-red 0.2)
+          inverted (sut/invert css-red)]
+      (is (string? lighter))
+      (is (string? darker))
+      (is (string? inverted))
+      (is (not= css-red lighter))
+      (is (not= css-red darker))
+      (is (= "#00ffff" inverted))))
+
+  (testing "CSS color strings work with accessibility functions"
+    (let [white-css "rgb(255, 255, 255)"
+          black-css "rgb(0, 0, 0)"
+          ratio (sut/contrast-ratio white-css black-css)]
+      (is (= 21.0 ratio))
+      (is (sut/accessible? white-css black-css))
+      (is (= "#000000" (sut/get-contrast-text white-css)))
+      (is (= "#ffffff" (sut/get-contrast-text black-css)))))
+
+  (testing "CSS color strings work with color analysis"
+    (is (= 255 (sut/brightness "rgb(255, 255, 255)")))
+    (is (= 0 (sut/brightness "rgb(0, 0, 0)")))
+    (is (sut/light? "rgb(255, 255, 255)"))
+    (is (sut/dark? "rgb(0, 0, 0)"))
+    (is (sut/warm? "rgb(255, 0, 0)"))
+    (is (sut/cool? "rgb(0, 0, 255)"))
+    (is (sut/vibrant? "rgb(255, 0, 0)"))
+    (is (sut/muted? "rgb(128, 128, 128)")))
+
+  (testing "CSS color strings work with color harmony"
+    (let [css-red "rgb(255, 0, 0)"
+          comp (sut/complementary css-red)
+          triadic (sut/triadic css-red)
+          analogous (sut/analogous css-red)]
+      (is (string? comp))
+      (is (= 2 (count triadic)))
+      (is (every? string? triadic))
+      (is (= 3 (count analogous)))
+      (is (every? string? analogous))))
+
+  (testing "CSS color strings work with color mixing"
+    (let [red-css "rgb(255, 0, 0)"
+          blue-css "rgb(0, 0, 255)"
+          mixed (sut/mix red-css blue-css)]
+      (is (string? mixed))
+      (is (not= red-css mixed))
+      (is (not= blue-css mixed))))
+
+  (testing "CSS color strings work with color names"
+    (is (= "red" (sut/->name "rgb(255, 0, 0)")))
+    (is (= "green" (sut/->name "rgb(0, 128, 0)")))
+    (is (= "blue" (sut/->name "rgb(0, 0, 255)")))
+    (is (= "white" (sut/->name "rgb(255, 255, 255)")))
+    (is (= "black" (sut/->name "rgb(0, 0, 0)")))))
+
 (deftest test-normalize-color-input
   (testing "normalize-color-input with Color record returns a Color"
     (let [c (sut/->color 10 20 30)
-          out (sut/normalize-color-input c)]
+          out (#'sut/normalize-color-input c)]
       (is (sut/color? out))
       (is (= (sut/->rgb c) (sut/->rgb out)))))
 
   (testing "normalize-color-input with hex string returns a Color"
-    (let [out (sut/normalize-color-input "#0a141e")]
+    (let [out (#'sut/normalize-color-input "#0a141e")]
       (is (sut/color? out))
       (is (= [10 20 30] (sut/->rgb out)))))
 
   (testing "normalize-color-input with RGB vector returns a Color"
-    (let [out (sut/normalize-color-input [10 20 30])]
+    (let [out (#'sut/normalize-color-input [10 20 30])]
       (is (sut/color? out))
       (is (= [10 20 30] (sut/->rgb out)))))
 
-  (testing "normalize-color-input throws on invalid input"
-    (is (thrown? clojure.lang.ExceptionInfo
-                 (sut/normalize-color-input :invalid-input)))))
+  (testing "normalize-color-input with CSS RGB string returns a Color"
+    (let [out (#'sut/normalize-color-input "rgb(10, 20, 30)")]
+      (is (sut/color? out))
+      (is (= [10 20 30] (sut/->rgb out)))))
+
+  (testing "normalize-color-input with CSS RGBA string returns a Color"
+    (let [out (#'sut/normalize-color-input "rgba(10, 20, 30, 0.5)")]
+      (is (sut/color? out))
+      (is (= [10 20 30] (sut/->rgb out)))
+      (is (= 0.5 (:a out)))))
+
+  (testing "normalize-color-input with various CSS string formats"
+    ;; Different whitespace and separator styles
+    (let [formats ["rgb(255, 0, 0)"
+                   "rgb(255,0,0)"
+                   "rgb( 255 , 0 , 0 )"
+                   "RGB(255, 0, 0)"
+                   "rgb(255 0 0)"
+                   "rgba(255, 0, 0, 1)"
+                   "rgba(255,0,0,1)"
+                   "RGBA(255, 0, 0, 1.0)"
+                   "rgba(255 0 0 1)"]]
+      (doseq [fmt formats]
+        (let [out (#'sut/normalize-color-input fmt)]
+          (is (sut/color? out))
+          (is (= [255 0 0] (sut/->rgb out))))))))

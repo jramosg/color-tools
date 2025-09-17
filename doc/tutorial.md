@@ -27,6 +27,16 @@ Colors can be represented in many ways. This library supports the most common fo
 ;; RGBA - RGB with Alpha channel 0-1
 [255 87 51 0.8]
 
+;; CSS RGB - CSS color strings with flexible formatting
+"rgb(255, 87, 51)"     ; Comma-separated (standard)
+"rgb(255 87 51)"       ; Space-separated (modern CSS)
+"RGB( 255 , 87 , 51 )" ; Case-insensitive, extra spaces
+
+;; CSS RGBA - CSS color strings with alpha channel
+"rgba(255, 87, 51, 1)"    ; Comma-separated with alpha
+"rgba(255 87 51 0.8)"     ; Space-separated with alpha
+"rgba(255, 87, 51, .5)"   ; Decimal alpha values
+
 ;; HSL - Hue (0-360), Saturation (0-100), Lightness (0-100)
 [9 100 60]
 
@@ -36,7 +46,47 @@ Colors can be represented in many ways. This library supports the most common fo
 
 ### Basic Conversions
 
-Converting between formats is straightforward:
+The library provides two approaches for conversions: format-specific functions and universal conversion functions.
+
+#### Universal Conversion Functions (Recommended)
+
+These functions work with any color input type:
+
+```clojure
+;; Convert any color type to RGB
+(color/->rgb "#ff5733")                ; hex to RGB
+;=> [255 87 51]
+
+(color/->rgb "rgb(255, 87, 51)")       ; CSS RGB to RGB
+;=> [255 87 51]
+
+(color/->rgb "rgba(255, 87, 51, 0.8)") ; CSS RGBA to RGB (ignores alpha)
+;=> [255 87 51]
+
+(color/->rgb [255 87 51])              ; RGB passthrough
+;=> [255 87 51]
+
+;; Convert any color type to HEX
+(color/->hex [255 87 51])              ; RGB to hex
+;=> "#ff5733"
+
+(color/->hex "rgb(255, 87, 51)")       ; CSS RGB to hex
+;=> "#ff5733"
+
+(color/->hex "#ff5733")                ; hex passthrough
+;=> "#ff5733"
+
+;; Convert any color type to HSL
+(color/->hsl "#ff5733")                ; hex to HSL
+;=> [9 100 60]
+
+(color/->hsl "rgb(255, 87, 51)")       ; CSS RGB to HSL
+;=> [9 100 60]
+```
+
+#### Format-Specific Functions (Legacy)
+
+Traditional format-specific conversions are still available:
 
 ```clojure
 ;; HEX to RGB
@@ -46,6 +96,13 @@ Converting between formats is straightforward:
 ;; RGB to HEX
 (color/rgb->hex [255 87 51])
 ;=> "#ff5733"
+
+;; Parse CSS color strings
+(color/parse-css-rgb "rgb(255, 87, 51)")
+;=> [255 87 51]
+
+(color/parse-css-rgba "rgba(255, 87, 51, 0.8)")
+;=> [255 87 51 0.8]
 
 ;; RGB to HSL for color manipulation
 (color/rgb->hsl [255 87 51])
@@ -76,20 +133,30 @@ Always validate colors when accepting user input:
 
 ### Lightness and Darkness
 
-Adjust the lightness of colors:
+Adjust the lightness of colors. The functions work with any input format and preserve the input type:
 
 ```clojure
 (def blue "#3498db")
+(def blue-css "rgb(52, 152, 219)")
 
-;; Make it 20% lighter
-(color/lighten blue 0.2)
+;; Make it 20% lighter - works with any format
+(color/lighten blue 0.2)         ; hex input -> hex output
 ;=> "#5dade2"
+
+(color/lighten blue-css 0.2)     ; CSS RGB input -> hex output  
+;=> "#5dade2"
+
+(color/lighten [52 152 219] 0.2) ; RGB vector input -> RGB vector output
+;=> [93 173 226]
 
 ;; Make it 30% darker  
 (color/darken blue 0.3)
 ;=> "#2471a3"
 
-;; Chain operations
+(color/darken blue-css 0.3)      ; CSS input also works
+;=> "#2471a3"
+
+;; Chain operations - seamless format handling
 (-> blue
     (color/lighten 0.1)
     (color/darken 0.05))
@@ -98,17 +165,24 @@ Adjust the lightness of colors:
 
 ### Saturation
 
-Control the intensity of colors:
+Control the intensity of colors. These functions also work with CSS color strings:
 
 ```clojure
 (def orange "#ff8c00")
+(def orange-css "rgb(255, 140, 0)")
 
-;; More vivid
-(color/saturate orange 0.2)
+;; More vivid - works with any input format
+(color/saturate orange 0.2)      ; hex input
+;=> "#ff7700"
+
+(color/saturate orange-css 0.2)  ; CSS RGB input
 ;=> "#ff7700"
 
 ;; More muted
 (color/desaturate orange 0.4)
+;=> "#cc9633"
+
+(color/desaturate "rgba(255, 140, 0, 0.8)" 0.4) ; CSS RGBA input
 ;=> "#cc9633"
 
 ;; Complete desaturation = grayscale

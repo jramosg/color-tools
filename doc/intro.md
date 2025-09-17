@@ -31,6 +31,8 @@ The library supports several color formats:
 - **HEX**: Strings like `"#ff5733"` or `"#f53"`
 - **RGB**: Vectors like `[255, 87, 51]` with values 0-255
 - **RGBA**: Vectors like `[255, 87, 51, 0.8]` with alpha 0-1
+- **CSS RGB**: CSS color strings like `"rgb(255, 87, 51)"` or `"rgb(255 87 51)"`
+- **CSS RGBA**: CSS color strings like `"rgba(255, 87, 51, 0.8)"` or `"rgba(255 87 51 0.8)"`
 - **HSL**: Vectors like `[9, 100, 60]` (Hue 0-360, Saturation/Lightness 0-100)
 - **HSV**: Vectors like `[9, 80, 100]` (Hue 0-360, Saturation/Value 0-100)
 
@@ -92,12 +94,21 @@ The quickest way to get started is to require the namespace and try some basic o
 ```clojure
 (require '[jon.color-tools :as color])
 
-;; Convert formats
-(color/hex->rgb "#3498db")
+;; Convert formats - universal conversion functions work with any input
+(color/->rgb "#3498db")          ; hex to RGB
 ;=> [52 152 219]
 
-;; Manipulate colors
-(color/lighten "#3498db" 0.2)
+(color/->rgb "rgb(52, 152, 219)") ; CSS string to RGB
+;=> [52 152 219]
+
+(color/->hex [52 152 219])       ; RGB to hex
+;=> "#3498db"
+
+;; Manipulate colors - works with any format
+(color/lighten "#3498db" 0.2)           ; hex input
+;=> "#5dade2"
+
+(color/lighten "rgb(52, 152, 219)" 0.2) ; CSS string input
 ;=> "#5dade2"
 
 ;; Generate palettes

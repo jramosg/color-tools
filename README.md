@@ -23,13 +23,13 @@ A comprehensive color manipulation library for Clojure and ClojureScript. Provid
 Add the following dependency to your `deps.edn`:
 
 ```clojure
-{:deps com.github.jramosg/color-tools {:mvn/version "1.0.3"}}
+{:deps com.github.jramosg/color-tools {:mvn/version "1.0.4"}}
 ```
 
 Or for Leiningen, add to your `project.clj`:
 
 ```clojure
-[com.github.jramosg/color-tools "1.0.3"]
+[com.github.jramosg/color-tools "1.0.4"]
 ```
 
 ## Quick Start
@@ -37,11 +37,23 @@ Or for Leiningen, add to your `project.clj`:
 ```clojure
 (require '[jon.color-tools :as color])
 
-;; Convert between formats
-(color/hex->rgb "#ff5733")
+;; Convert between formats - universal conversion functions
+(color/->rgb "#ff5733")        ; hex to RGB
 ;=> [255 87 51]
 
-(color/rgb->hex [255 87 51])
+(color/->rgb [255 87 51])      ; RGB vector (passthrough)
+;=> [255 87 51]
+
+(color/->rgb "rgb(255, 87, 51)") ; CSS RGB string to RGB
+;=> [255 87 51]
+
+(color/->hex [255 87 51])      ; RGB to hex
+;=> "#ff5733"
+
+(color/->hex "#ff5733")        ; hex (passthrough)
+;=> "#ff5733"
+
+(color/->hex "rgba(255, 87, 51, 0.8)") ; CSS RGBA string to hex
 ;=> "#ff5733"
 
 ;; Manipulate colors
@@ -75,13 +87,30 @@ The library includes a proper `Color` datatype that provides type safety and cle
 (color/color "#ff0000")         ; Hex string -> Color record  
 (color/color [255 0 0])         ; RGB vector -> Color record
 (color/color [255 0 0 0.8])     ; RGBA vector -> Color record
+(color/color "rgb(255, 0, 0)")  ; CSS RGB string -> Color record
+(color/color "rgba(255, 0, 0, 0.8)") ; CSS RGBA string -> Color record
+(color/color (color/color 255 0 0)) ; From existing Color record -> Color record
 
-;; Convert Color records to different formats
+;; Convert any color type to different formats
 (def red-color (color/color 255 0 0))
 (color/->hex red-color)         ;=> "#ff0000"
+(color/->hex "#ff0000")         ;=> "#ff0000" (passthrough)
+(color/->hex [255 0 0])         ;=> "#ff0000"
+(color/->hex "rgb(255, 0, 0)")  ;=> "#ff0000"
+
 (color/->rgb red-color)         ;=> [255 0 0]
+(color/->rgb "#ff0000")         ;=> [255 0 0]
+(color/->rgb [255 0 0])         ;=> [255 0 0] (passthrough)
+(color/->rgb "rgb(255, 0, 0)")  ;=> [255 0 0]
+
 (color/->hsl red-color)         ;=> [0 100 50]
+(color/->hsl "#ff0000")         ;=> [0 100 50]
+(color/->hsl [255 0 0])         ;=> [0 100 50]
+(color/->hsl "rgb(255, 0, 0)")  ;=> [0 100 50]
+
 (color/->rgba red-color)        ;=> [255 0 0 1.0]
+(color/->rgba [255 0 0 128])    ;=> [255 0 0 128] (RGBA passthrough)
+(color/->rgba "rgba(255, 0, 0, 0.5)") ;=> [255 0 0 0.5]
 
 ;; Colors work seamlessly with all library functions
 (color/lighten red-color 0.2)   ;=> Color record (lighter red)
@@ -92,24 +121,82 @@ The library includes a proper `Color` datatype that provides type safety and cle
 (str (color/color 255 0 0 0.5)) ;=> "rgba(255,0,0,0.5)"
 ```
 
-### Traditional Format Conversions
+### CSS Color String Support
+
+The library fully supports CSS color strings with flexible formatting:
 
 ```clojure
-;; HEX to RGB
-(color/hex->rgb "#ff5733")
+;; CSS RGB strings - various formats supported
+(color/->rgb "rgb(255, 87, 51)")     ; comma-separated
 ;=> [255 87 51]
 
-;; RGB to HEX
-(color/rgb->hex [255 87 51])
+(color/->rgb "rgb(255 87 51)")       ; space-separated  
+;=> [255 87 51]
+
+(color/->rgb "RGB( 255 , 87 , 51 )") ; case-insensitive, extra spaces
+;=> [255 87 51]
+
+;; CSS RGBA strings - with alpha channel
+(color/->rgba "rgba(255, 87, 51, 0.8)")  ; with alpha
+;=> [255 87 51 0.8]
+
+(color/->rgba "rgba(255 87 51 0.5)")     ; space-separated with alpha
+;=> [255 87 51 0.5]
+
+(color/->rgba "RGBA( 255 , 87 , 51 , .7 )") ; decimal alpha, extra spaces
+;=> [255 87 51 0.7]
+
+;; CSS strings work with all functions
+(color/lighten "rgb(255, 0, 0)" 0.2)     ; manipulation
+;=> "#ff6666"
+
+(color/accessible? "rgb(255, 255, 255)" "rgb(0, 0, 0)") ; accessibility  
+;=> true
+
+(color/complementary "rgba(255, 0, 0, 0.5)") ; harmony
+;=> "#00ffff"
+```
+
+### Universal Format Conversions
+
+```clojure
+;; Universal conversion functions work with any color input type
+(color/->rgb "#ff5733")        ; hex to RGB
+;=> [255 87 51]
+
+(color/->rgb [255 87 51])      ; RGB vector (passthrough)
+;=> [255 87 51]
+
+(color/->rgb "rgb(255, 87, 51)") ; CSS RGB string to RGB
+;=> [255 87 51]
+
+(color/->rgb (color/color 255 87 51))  ; Color record to RGB
+;=> [255 87 51]
+
+(color/->hex [255 87 51])      ; RGB to hex
 ;=> "#ff5733"
 
-;; RGB to HSL
-(color/rgb->hsl [255 87 51])
+(color/->hex "#ff5733")        ; hex (passthrough)
+;=> "#ff5733"
+
+(color/->hex "rgb(255, 87, 51)") ; CSS RGB string to hex
+;=> "#ff5733"
+
+(color/->hsl [255 87 51])      ; RGB to HSL
 ;=> [9 100 60]
 
-;; HSL to RGB
-(color/hsl->rgb [9 100 60])
+(color/->hsl "#ff5733")        ; hex to HSL
+;=> [9 100 60]
+
+(color/->hsl "rgba(255, 87, 51, 0.8)") ; CSS RGBA string to HSL
+;=> [9 100 60]
+
+;; Traditional format-specific functions still available
+(color/hex->rgb "#ff5733")     ; specific hex to RGB
 ;=> [255 87 51]
+
+(color/rgb->hex [255 87 51])   ; specific RGB to hex
+;=> "#ff5733"
 
 ;; Normalize short hex codes
 (color/normalize-hex "#f53")
@@ -231,7 +318,17 @@ The library includes a proper `Color` datatype that provides type safety and cle
 (color/name->hex "navy")
 ;=> "#000080"
 
-;; Find closest color name
+;; Find closest color name from any color input type
+(color/->name "#ff1100")              ; hex string
+;=> "red"
+
+(color/->name [255 17 0])             ; RGB vector
+;=> "red"
+
+(color/->name (color/color 255 17 0)) ; Color record
+;=> "red"
+
+;; Legacy function still available
 (color/hex->name "#ff1100")
 ;=> "red"
 ```
