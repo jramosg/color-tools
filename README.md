@@ -261,6 +261,20 @@ Key namespaces:
 clojure -T:build test
 ```
 
+### Code Quality
+
+#### Formatting
+Format all Clojure files using cljfmt:
+```bash
+clojure -Tcljfmt fix
+```
+
+#### Linting
+Lint the codebase using clj-kondo:
+```bash
+clojure -Sdeps '{:deps {clj-kondo/clj-kondo {:mvn/version "RELEASE"}}}' -M -m clj-kondo.main --lint src test
+```
+
 ### Building
 
 ```bash
