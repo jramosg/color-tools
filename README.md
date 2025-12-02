@@ -8,11 +8,48 @@ A comprehensive color manipulation library for Clojure and ClojureScript. Provid
 
 `jon/color-tools` is designed to be a complete toolkit for working with colors in Clojure applications. Whether you're building web applications, data visualizations, or design tools, this library provides the essential color utilities you need.
 
-### Key Features
+### Demo (local)
 
-- **Type Safety**: Proper `Color` record type for better APIs and type safety
-- **Format Conversions**: Convert between HEX, RGB, RGBA, HSL, and HSV color formats
-- **Color Manipulation**: Lighten, darken, saturate, desaturate, invert, and adjust hue
+An interactive demo application is available in the `demo` directory. The pre-built demo files (generated at `demo/public`) are not checked in to this repository, so to view the demo locally you must build and serve the demo.
+
+Options:
+
+Prerequisites
+- Node.js + npm
+- Java (for the ClojureScript build tool)
+
+Quick local options
+
+- Development (recommended for live-reload during editing):
+
+```bash
+# from the repository root
+cd demo
+npm install
+npx shadow-cljs watch app
+# open http://localhost:8080
+```
+
+- Production build (generates `demo/public`):
+
+```bash
+# from the repository root
+cd demo
+npm install
+npx shadow-cljs release app
+# then serve the generated files:
+python3 -m http.server --directory demo/public 8000
+# or
+npx http-server demo/public -p 8000
+# open http://localhost:8000
+```
+
+- **Blending Modes**: Multiply, screen, overlay (Photoshop-style blending) ✨ NEW
+- **Tints/Shades/Tones**: Design system color scale generation ✨ NEW
+- **Alpha Blending**: Porter-Duff compositing for transparent colors ✨ NEW
+- **Color Interpolation**: Smooth gradients in RGB, HSL, or HSV ✨ NEW
+- **Perceptual Difference**: Delta E calculations in CIE LAB color space ✨ NEW
+- **Color Temperature**: Kelvin to RGB conversions for realistic lighting ✨ NEW
 - **Palette Generation**: Create harmonious color palettes using various color theory principles
 - **Accessibility**: WCAG-compliant contrast checking and accessible color finding
 - **Color Analysis**: Determine color properties like brightness, warmth, and vibrancy

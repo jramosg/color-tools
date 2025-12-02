@@ -1,0 +1,16 @@
+{
+  "name": "color-tools-demo",
+  "version": "1.1.0",
+  "private": true,
+  "devDependencies": {
+    "shadow-cljs": "2.26.2"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "scripts": {
+    "start": "shadow-cljs watch app",
+    "build": "shadow-cljs release app"
+  }
+}

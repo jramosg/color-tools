@@ -28,3 +28,8 @@
 /classes
 /target
 .env
+
+demo/public/js/
+demo/node_modules/
+demo/.cpcache/
+demo/.shadow-cljs/
