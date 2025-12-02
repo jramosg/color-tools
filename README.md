@@ -4,13 +4,19 @@ A comprehensive color manipulation library for Clojure and ClojureScript. Provid
 
 [![Clojars Project](https://img.shields.io/clojars/v/com.github.jramosg/color-tools.svg)](https://clojars.org/com.github.jramosg/color-tools)
 
+## 🎨 [**Try the Live Demo →**](https://jramosg.github.io/color-tools/)
+
+Explore all the features interactively: color picker, format converter, gradient generator, WCAG contrast checker, color harmonies, and more!
+
 ## Overview
 
 `jon/color-tools` is designed to be a complete toolkit for working with colors in Clojure applications. Whether you're building web applications, data visualizations, or design tools, this library provides the essential color utilities you need.
 
-### Demo (local)
+### Demo
 
-An interactive demo application is available in the `demo` directory. The pre-built demo files (generated at `demo/public`) are not checked in to this repository, so to view the demo locally you must build and serve the demo.
+🌐 **[Live Demo](https://jramosg.github.io/color-tools/)** - Try it online now!
+
+You can also run the demo locally from the `demo` directory:
 
 Options:
 
