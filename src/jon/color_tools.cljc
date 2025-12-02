@@ -806,3 +806,323 @@
   "Check if a color is muted (low saturation)"
   [color & [threshold]]
   (not (vibrant? color threshold)))
+
+;; =============================================================================
+;; Color Blending Modes
+;; =============================================================================
+
+(defn- blend-channel
+  "Apply a blend function to a single color channel"
+  [base overlay blend-fn]
+  (-> (blend-fn (/ base 255.0) (/ overlay 255.0))
+      (* 255)
+      (clamp 0 255)
+      round-int))
+
+(defn blend-multiply
+  "Blend two colors using multiply mode (darkens)"
+  [base-color overlay-color]
+  (let [[r1 g1 b1] (->rgb base-color)
+        [r2 g2 b2] (->rgb overlay-color)
+        blend-fn (fn [a b] (* a b))
+        result [(blend-channel r1 r2 blend-fn)
+                (blend-channel g1 g2 blend-fn)
+                (blend-channel b1 b2 blend-fn)]]
+    (cond
+      (color? base-color) (color-from-rgb result)
+      (string? base-color) (rgb->hex result)
+      (vector? base-color) result)))
+
+(defn blend-screen
+  "Blend two colors using screen mode (lightens)"
+  [base-color overlay-color]
+  (let [[r1 g1 b1] (->rgb base-color)
+        [r2 g2 b2] (->rgb overlay-color)
+        blend-fn (fn [a b] (- 1 (* (- 1 a) (- 1 b))))
+        result [(blend-channel r1 r2 blend-fn)
+                (blend-channel g1 g2 blend-fn)
+                (blend-channel b1 b2 blend-fn)]]
+    (cond
+      (color? base-color) (color-from-rgb result)
+      (string? base-color) (rgb->hex result)
+      (vector? base-color) result)))
+
+(defn blend-overlay
+  "Blend two colors using overlay mode (combines multiply and screen)"
+  [base-color overlay-color]
+  (let [[r1 g1 b1] (->rgb base-color)
+        [r2 g2 b2] (->rgb overlay-color)
+        blend-fn (fn [a b]
+                   (if (< a 0.5)
+                     (* 2 a b)
+                     (- 1 (* 2 (- 1 a) (- 1 b)))))
+        result [(blend-channel r1 r2 blend-fn)
+                (blend-channel g1 g2 blend-fn)
+                (blend-channel b1 b2 blend-fn)]]
+    (cond
+      (color? base-color) (color-from-rgb result)
+      (string? base-color) (rgb->hex result)
+      (vector? base-color) result)))
+
+;; =============================================================================
+;; Color Shades and Tints
+;; =============================================================================
+
+(defn tint
+  "Create a tint by mixing color with white (lightens while preserving hue)"
+  [color amount]
+  (mix color "#ffffff" amount))
+
+(defn shade
+  "Create a shade by mixing color with black (darkens while preserving hue)"
+  [color amount]
+  (mix color "#000000" amount))
+
+(defn tone
+  "Create a tone by mixing color with gray (reduces saturation)"
+  [color amount]
+  (mix color "#808080" amount))
+
+(defn tints
+  "Generate a series of tints (color mixed with white)"
+  [color & [count]]
+  (let [count (or count 5)]
+    (for [i (range 1 (inc count))]
+      (tint color (/ i count)))))
+
+(defn shades
+  "Generate a series of shades (color mixed with black)"
+  [color & [count]]
+  (let [count (or count 5)]
+    (for [i (range 1 (inc count))]
+      (shade color (/ i count)))))
+
+(defn tones
+  "Generate a series of tones (color mixed with gray)"
+  [color & [count]]
+  (let [count (or count 5)]
+    (for [i (range 1 (inc count))]
+      (tone color (/ i count)))))
+
+;; =============================================================================
+;; Alpha Blending and Compositing
+;; =============================================================================
+
+(defn alpha-blend
+  "Blend two colors with alpha compositing (overlay on top of base)"
+  [base-color overlay-color]
+  (let [base-rgba (->rgba base-color)
+        overlay-rgba (->rgba overlay-color)
+        [r1 g1 b1 a1] base-rgba
+        [r2 g2 b2 a2] overlay-rgba
+        ;; Alpha compositing formula
+        a-out (+ a2 (* a1 (- 1 a2)))
+        blend-channel (fn [c1 c2]
+                        (if (zero? a-out)
+                          0
+                          (round-int (/ (+ (* c2 a2) (* c1 a1 (- 1 a2))) a-out))))
+        result [(blend-channel r1 r2)
+                (blend-channel g1 g2)
+                (blend-channel b1 b2)]]
+    (cond
+      (or (color? base-color) (color? overlay-color))
+      (->color (nth result 0) (nth result 1) (nth result 2) a-out)
+      ;;
+      (string? base-color)
+      (if (= a-out 1.0)
+        (rgb->hex result)
+        (str "rgba(" (result 0) "," (result 1) "," (result 2) "," a-out ")"))
+      ;;
+      (vector? base-color)
+      (if (= 4 (count base-rgba))
+        (conj result a-out)
+        result))))
+
+(defn with-alpha
+  "Set alpha channel of a color"
+  [color alpha]
+  {:pre [(and (>= alpha 0) (<= alpha 1))]}
+  (let [[r g b] (->rgb color)]
+    (cond
+      (color? color) (->color r g b alpha)
+      (string? color) (if (= alpha 1.0)
+                        (rgb->hex [r g b])
+                        (str "rgba(" r "," g "," b "," alpha ")"))
+      (vector? color) [r g b alpha])))
+
+;; =============================================================================
+;; Color Interpolation
+;; =============================================================================
+
+(defn interpolate
+  "Interpolate between multiple colors at given position (0-1).
+   Can use different color spaces: :rgb (default), :hsl, or :hsv"
+  [colors position & [color-space]]
+  (let [color-space (or color-space :rgb)
+        n (count colors)
+        _ (when (< n 2)
+            (throw (ex-info "Need at least 2 colors to interpolate"
+                            {:colors colors})))
+        ;; Calculate which segment and position within segment
+        segment-size (/ 1.0 (dec n))
+        segment-idx (min (dec n) (int (/ position segment-size)))
+        segment-pos (/ (- position (* segment-idx segment-size)) segment-size)
+        color1 (nth colors segment-idx)
+        color2 (nth colors (min (inc segment-idx) (dec n)))
+
+        ;; Convert to working color space
+        [c1 c2] (case color-space
+                  :hsl [(->hsl color1) (->hsl color2)]
+                  :hsv [(->hsv color1) (->hsv color2)]
+                  :rgb [(->rgb color1) (->rgb color2)])
+
+        ;; Interpolate each component
+        interpolated (map (fn [v1 v2]
+                            (+ v1 (* (- v2 v1) segment-pos)))
+                          c1 c2)
+
+        ;; Handle hue interpolation specially (shortest path around circle)
+        interpolated (if (#{:hsl :hsv} color-space)
+                       (let [[h1] c1
+                             [h2] c2
+                             ;; Find shortest hue path
+                             diff (- h2 h1)
+                             diff (cond
+                                    (> diff 180) (- diff 360)
+                                    (< diff -180) (+ diff 360)
+                                    :else diff)
+                             h-interp (mod (+ h1 (* diff segment-pos)) 360)]
+                         [(round h-interp)
+                          (round (nth interpolated 1))
+                          (round (nth interpolated 2))])
+                       (mapv round-int interpolated))
+
+        ;; Convert back to original format
+        result (case color-space
+                 :hsl (hsl->rgb interpolated)
+                 :hsv (hsv->rgb interpolated)
+                 :rgb interpolated)]
+
+    (cond
+      (every? color? colors) (color-from-rgb result)
+      (every? string? colors) (rgb->hex result)
+      :else result)))
+
+(defn gradient
+  "Generate a gradient with n steps between colors"
+  [colors steps & [color-space]]
+  (let [color-space (or color-space :rgb)]
+    (for [i (range steps)]
+      (interpolate colors (/ i (dec steps)) color-space))))
+
+;; =============================================================================
+;; Perceptual Color Difference (Delta E)
+;; =============================================================================
+
+(defn rgb->lab
+  "Convert RGB to LAB color space (CIE L*a*b*)"
+  [rgb]
+  (let [[r g b] (map #(/ % 255.0) rgb)
+        ;; Convert to linear RGB
+        to-linear (fn [c]
+                    (if (<= c 0.04045)
+                      (/ c 12.92)
+                      (Math/pow (/ (+ c 0.055) 1.055) 2.4)))
+        [r-lin g-lin b-lin] (map to-linear [r g b])
+        ;; Convert to XYZ
+        x (* 100 (+ (* r-lin 0.4124) (* g-lin 0.3576) (* b-lin 0.1805)))
+        y (* 100 (+ (* r-lin 0.2126) (* g-lin 0.7152) (* b-lin 0.0722)))
+        z (* 100 (+ (* r-lin 0.0193) (* g-lin 0.1192) (* b-lin 0.9505)))
+        ;; Normalize for D65 illuminant
+        x (/ x 95.047)
+        y (/ y 100.000)
+        z (/ z 108.883)
+        ;; Convert to LAB
+        f (fn [t]
+            (if (> t 0.008856)
+              (Math/pow t (/ 1.0 3.0))
+              (+ (* 7.787 t) (/ 16.0 116.0))))
+        [fx fy fz] (map f [x y z])
+        l (- (* 116 fy) 16)
+        a (* 500 (- fx fy))
+        b (* 200 (- fy fz))]
+    [l a b]))
+
+(defn delta-e
+  "Calculate perceptual color difference using CIE76 Delta E formula.
+   Returns a value where < 1.0 is imperceptible, 1-2 is barely perceptible,
+   2-10 is noticeable, > 10 is very different"
+  [color1 color2]
+  (let [[l1 a1 b1] (rgb->lab (->rgb color1))
+        [l2 a2 b2] (rgb->lab (->rgb color2))]
+    (Math/sqrt (+ (Math/pow (- l2 l1) 2)
+                  (Math/pow (- a2 a1) 2)
+                  (Math/pow (- b2 b1) 2)))))
+
+(defn perceptually-similar?
+  "Check if two colors are perceptually similar using Delta E.
+   Default threshold of 2.3 is the JND (Just Noticeable Difference)"
+  [color1 color2 & [threshold]]
+  (let [threshold (or threshold 2.3)]
+    (<= (delta-e color1 color2) threshold)))
+
+;; =============================================================================
+;; Color Temperature (Kelvin)
+;; =============================================================================
+
+(defn kelvin->rgb
+  "Convert color temperature in Kelvin to RGB.
+   Valid range: 1000K - 40000K. Based on Tanner Helland's algorithm."
+  [kelvin]
+  (if (<= 1000 kelvin 40000)
+    (let [temp (/ kelvin 100.0)
+          ;; Calculate red
+          r (if (<= temp 66)
+              255
+              (let [r-calc (- temp 60)]
+                (* 255 (clamp (Math/pow r-calc -0.1332047592) 0 1))))
+          ;; Calculate green
+          g (if (<= temp 66)
+              (let [g-calc (* 99.4708025861 (Math/log temp))]
+                (* 255 (clamp (/ (- g-calc 161.1195681661) 255) 0 1)))
+              (let [g-calc (- temp 60)]
+                (* 255 (clamp (Math/pow g-calc -0.0755148492) 0 1))))
+          ;; Calculate blue
+          b (cond
+              (>= temp 66) 255
+              (<= temp 19) 0
+              :else (let [b-calc (- temp 10)]
+                      (* 255 (clamp (/ (- (* 138.5177312231 (Math/log b-calc))
+                                          305.0447927307)
+                                       255) 0 1))))]
+      [(round-int r) (round-int g) (round-int b)])
+    (throw (ex-info "Kelvin value out of range (1000K - 40000K)" {:kelvin kelvin}))))
+
+(defn kelvin->hex
+  "Convert color temperature in Kelvin to hex color"
+  [kelvin]
+  (rgb->hex (kelvin->rgb kelvin)))
+
+(defn kelvin->color
+  "Convert color temperature in Kelvin to Color record"
+  [kelvin]
+  (color-from-rgb (kelvin->rgb kelvin)))
+
+(defn rgb->kelvin
+  "Approximate the color temperature in Kelvin from RGB.
+   This is an approximation and works best for colors close to the Planckian locus.
+   Returns nil if the color is too far from the black body curve."
+  [rgb]
+  (let [[r g b] (map #(/ % 255.0) rgb)
+        ;; Use McCamy's formula for CCT approximation
+        x (/ (+ (* -0.14282 r) (* 1.54924 g) (* -0.95641 b))
+             (+ (* -0.32466 r) (* 1.57837 g) (* -0.73191 b)))
+        y (/ (+ (* -1.1063 r) (* 2.3622 g) (* -0.2559 b))
+             (+ (* -0.32466 r) (* 1.57837 g) (* -0.73191 b)))
+        n (/ (- x 0.3320) (- 0.1858 y))
+        cct (+ (* -449 (Math/pow n 3))
+               (* 3525 (Math/pow n 2))
+               (* -6823.3 n)
+               5520.33)]
+    (when (and (>= cct 1000) (<= cct 40000))
+      (round cct 0))))

@@ -1,6 +1,38 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## [1.1.0] - 2025-12-02
+### Added
+- **Color Blending Modes**: Professional blending operations for design workflows
+  - `blend-multiply` - Multiply blend mode (darkens)
+  - `blend-screen` - Screen blend mode (lightens)
+  - `blend-overlay` - Overlay blend mode (combines multiply and screen)
+- **Tints, Shades, and Tones**: Essential design system utilities
+  - `tint` - Mix color with white (lightens while preserving hue)
+  - `shade` - Mix color with black (darkens while preserving hue)
+  - `tone` - Mix color with gray (reduces saturation)
+  - `tints`, `shades`, `tones` - Generate series of variations
+- **Alpha Blending and Compositing**: Proper transparency support
+  - `alpha-blend` - Porter-Duff alpha compositing
+  - `with-alpha` - Set alpha channel of any color
+- **Color Interpolation**: Smooth color transitions
+  - `interpolate` - Interpolate between multiple colors in RGB, HSL, or HSV space
+  - `gradient` - Generate gradients with n steps between colors
+  - Supports hue wrapping for natural color transitions
+- **Perceptual Color Difference**: More accurate color comparison
+  - `rgb->lab` - Convert to CIE L\*A\*B\* color space
+  - `delta-e` - Calculate perceptual difference using CIE76 Delta E formula
+  - `perceptually-similar?` - Check similarity using JND (Just Noticeable Difference)
+- **Color Temperature (Kelvin)**: Physical light color representation
+  - `kelvin->rgb`, `kelvin->hex`, `kelvin->color` - Convert temperature to color
+  - `rgb->kelvin` - Approximate color temperature from RGB
+  - Supports 1000K-40000K range using Tanner Helland's algorithm
+
+### Improved
+- **Better Color Science**: Added LAB color space for perceptually uniform calculations
+- **Enhanced Documentation**: Comprehensive examples and usage patterns for new features
+- **Test Coverage**: Extensive tests for all new blending, interpolation, and temperature functions
+
 ## [1.0.4] - 2025-09-17
 ### Added
 - **CSS Color String Support**: Full support for CSS `rgb()` and `rgba()` color strings

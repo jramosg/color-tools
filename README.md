@@ -402,11 +402,112 @@ This library draws inspiration from various color manipulation libraries across 
 - [Chroma.js](https://gka.github.io/chroma.js/) for JavaScript - Color scales, interpolation, and Delta E calculations
 - [colorsys](https://github.com/vaab/colour) for Python - Color space conversions and color picking algorithms
 
+### Color Blending and Transparency
+
+```clojure
+;; Blending modes for design work
+(color/blend-multiply "#ff0000" "#0000ff")    ; Darkens
+;=> "#000000"
+
+(color/blend-screen "#800000" "#000080")      ; Lightens
+;=> "#800080"
+
+(color/blend-overlay "#ff0000" "#808080")     ; Combines multiply/screen
+;=> "#ff0000"
+
+;; Tints, shades, and tones for design systems
+(color/tint "#3498db" 0.3)                    ; Mix with white
+;=> "#6fb3e5"
+
+(color/shade "#3498db" 0.3)                   ; Mix with black
+;=> "#236a91"
+
+(color/tone "#3498db" 0.3)                    ; Mix with gray
+;=> "#4d98c3"
+
+;; Generate series of variations
+(color/tints "#e74c3c" 5)
+;=> ["#eb6757" "#ef8272" "#f39c8d" "#f7b7a8" "#fbd2c3"]
+
+(color/shades "#e74c3c" 3)
+;=> ["#b83d30" "#892d24" "#5a1e18"]
+
+;; Alpha blending with proper compositing
+(color/alpha-blend [255 0 0 0.8] [0 0 255 0.6])
+;=> [102 0 153 0.92]
+
+(color/with-alpha "#ff0000" 0.5)
+;=> "rgba(255,0,0,0.5)"
+```
+
+### Color Interpolation and Gradients
+
+```clojure
+;; Interpolate between colors
+(color/interpolate ["#ff0000" "#0000ff"] 0.5 :rgb)
+;=> "#800080"  ; Middle point
+
+;; Multi-color interpolation
+(color/interpolate ["#ff0000" "#00ff00" "#0000ff"] 0.5 :hsl)
+;=> "#00ff00"  ; At the green midpoint
+
+;; Generate smooth gradients
+(color/gradient ["#ff0000" "#0000ff"] 5 :rgb)
+;=> ["#ff0000" "#bf003f" "#80007f" "#4000bf" "#0000ff"]
+
+;; Use HSL for more natural color transitions
+(color/gradient ["#ff0000" "#ffff00"] 3 :hsl)
+;=> ["#ff0000" "#ff8000" "#ffff00"]
+```
+
+### Perceptual Color Difference
+
+```clojure
+;; More accurate than RGB distance
+(color/delta-e "#ff0000" "#fe0000")
+;=> 1.2  ; Small difference (barely perceptible)
+
+(color/delta-e "#ff0000" "#0000ff")
+;=> 176.5  ; Large difference
+
+;; Check perceptual similarity
+(color/perceptually-similar? "#ff0000" "#fe0101")
+;=> true  ; Within JND threshold
+
+(color/perceptually-similar? "#ff0000" "#0000ff")
+;=> false
+
+;; Convert to LAB color space
+(color/rgb->lab [255 0 0])
+;=> [53.24 80.09 67.20]
+```
+
+### Color Temperature (Kelvin)
+
+```clojure
+;; Convert temperature to color (1000K - 40000K)
+(color/kelvin->rgb 1800)      ; Candlelight
+;=> [255 147 41]
+
+(color/kelvin->hex 3000)      ; Warm white
+;=> "#ffd6aa"
+
+(color/kelvin->rgb 6500)      ; Daylight
+;=> [255 249 253]
+
+(color/kelvin->color 10000)   ; Cool/blue
+;=> Color record
+
+;; Approximate temperature from color
+(color/rgb->kelvin [255 147 41])
+;=> 1856  ; Close to original 1800K
+```
+
 ### Planned Features (Inspired by these libraries)
 
 **Advanced Color Spaces:**
 
-- Lab/CIE Lab color space for perceptually uniform calculations
+- ✅ Lab/CIE Lab color space for perceptually uniform calculations (ADDED in v1.1.0)
 - LCH (Lightness, Chroma, Hue) cylindrical color space
 - OKLab/OKLCh modern perceptually uniform color spaces
 - CMYK for print applications

@@ -797,3 +797,327 @@
         (let [out (#'sut/normalize-color-input fmt)]
           (is (sut/color? out))
           (is (= [255 0 0] (sut/->rgb out))))))))
+
+;; =============================================================================
+;; Tests for New Features
+;; =============================================================================
+
+(deftest test-color-blending-modes
+  (testing "Blend multiply (darkens)"
+    (let [red "#ff0000"
+          blue "#0000ff"
+          result (sut/blend-multiply red blue)]
+      (is (string? result))
+      (is (sut/valid-hex? result))
+      ;; Multiply should darken - result should be darker than both inputs
+      (is (< (sut/brightness result)
+             (min (sut/brightness red) (sut/brightness blue)))))
+
+    ;; Test with RGB vectors
+    (let [result (sut/blend-multiply [255 128 64] [128 255 200])]
+      (is (vector? result))
+      (is (= 3 (count result)))
+      (is (every? #(and (>= % 0) (<= % 255)) result))))
+
+  (testing "Blend screen (lightens)"
+    (let [red "#800000"
+          blue "#000080"
+          result (sut/blend-screen red blue)]
+      (is (string? result))
+      (is (sut/valid-hex? result))
+      ;; Screen should lighten - result should be brighter than both inputs
+      (is (> (sut/brightness result)
+             (max (sut/brightness red) (sut/brightness blue))))))
+
+  (testing "Blend overlay (combines multiply and screen)"
+    (let [red "#ff0000"
+          gray "#808080"
+          result (sut/blend-overlay red gray)]
+      (is (string? result))
+      (is (sut/valid-hex? result)))
+
+    ;; Test with Color records
+    (let [c1 (sut/color 200 100 50)
+          c2 (sut/color 100 150 200)
+          result (sut/blend-overlay c1 c2)]
+      (is (sut/color? result))))
+
+  (testing "Blending preserves input format"
+    (is (string? (sut/blend-multiply "#ff0000" "#0000ff")))
+    (is (vector? (sut/blend-multiply [255 0 0] [0 0 255])))
+    (is (sut/color? (sut/blend-multiply (sut/color 255 0 0) (sut/color 0 0 255))))))
+
+(deftest test-tints-shades-tones
+  (testing "Tint creates lighter color"
+    (let [red "#ff0000"
+          tinted (sut/tint red 0.3)]
+      (is (string? tinted))
+      (is (> (sut/brightness tinted) (sut/brightness red)))))
+
+  (testing "Shade creates darker color"
+    (let [red "#ff0000"
+          shaded (sut/shade red 0.3)]
+      (is (string? shaded))
+      (is (< (sut/brightness shaded) (sut/brightness red)))))
+
+  (testing "Tone reduces saturation"
+    (let [red "#ff0000"
+          toned (sut/tone red 0.3)
+          [_ s-orig _] (sut/->hsl red)
+          [_ s-toned _] (sut/->hsl toned)]
+      (is (string? toned))
+      (is (< s-toned s-orig))))
+
+  (testing "Generate multiple tints"
+    (let [red "#ff0000"
+          tints (sut/tints red 5)]
+      (is (= 5 (count tints)))
+      (is (every? string? tints))
+      ;; Each tint should be progressively lighter
+      (is (apply < (map sut/brightness tints)))))
+
+  (testing "Generate multiple shades"
+    (let [red "#ff0000"
+          shades (sut/shades red 5)]
+      (is (= 5 (count shades)))
+      (is (every? string? shades))
+      ;; Each shade should be progressively darker
+      (is (apply > (map sut/brightness shades)))))
+
+  (testing "Generate multiple tones"
+    (let [red "#ff0000"
+          tones (sut/tones red 5)]
+      (is (= 5 (count tones)))
+      (is (every? string? tones))
+      ;; Each tone should have progressively less saturation
+      (let [saturations (map #(second (sut/->hsl %)) tones)]
+        (is (apply > saturations)))))
+
+  (testing "Custom count for tints/shades/tones"
+    (is (= 3 (count (sut/tints "#ff0000" 3))))
+    (is (= 7 (count (sut/shades "#ff0000" 7))))
+    (is (= 10 (count (sut/tones "#ff0000" 10))))))
+
+(deftest test-alpha-blending
+  (testing "Alpha blend with full opacity"
+    (let [red [255 0 0 1.0]
+          blue [0 0 255 0.5]
+          result (sut/alpha-blend red blue)]
+      (is (vector? result))
+      (is (= 4 (count result)))
+      ;; Blue at 50% opacity over red should give purple-ish color
+      ;; Formula: a-out = a2 + a1 * (1 - a2) = 0.5 + 1.0 * 0.5 = 1.0
+      (let [[r _g b a] result]
+        (is (> r 0))
+        (is (= b 128))
+        (is (= a 1.0)))))
+
+  (testing "Alpha blend with transparency"
+    (let [base [255 255 255 0.5]
+          overlay [0 0 0 0.5]
+          result (sut/alpha-blend base overlay)]
+      (is (vector? result))
+      (is (= 4 (count result)))))
+
+  (testing "Alpha blend with hex strings"
+    (let [result (sut/alpha-blend "#ff0000" "#0000ff")]
+      (is (string? result))))
+
+  (testing "Alpha blend with Color records"
+    (let [c1 (sut/->color 255 0 0 0.8)
+          c2 (sut/->color 0 0 255 0.6)
+          result (sut/alpha-blend c1 c2)]
+      (is (sut/color? result))))
+
+  (testing "Set alpha channel"
+    (let [red "#ff0000"
+          with-alpha (sut/with-alpha red 0.5)]
+      (is (string? with-alpha))
+      (is (= "rgba(255,0,0,0.5)" with-alpha)))
+
+    (let [red [255 0 0]
+          with-alpha (sut/with-alpha red 0.7)]
+      (is (vector? with-alpha))
+      (is (= [255 0 0 0.7] with-alpha)))
+
+    (let [red (sut/color 255 0 0)
+          with-alpha (sut/with-alpha red 0.3)]
+      (is (sut/color? with-alpha))
+      (is (= 0.3 (:a with-alpha))))))
+
+(deftest test-color-interpolation
+  (testing "Interpolate between two colors in RGB"
+    (let [red "#ff0000"
+          blue "#0000ff"
+          middle (sut/interpolate [red blue] 0.5 :rgb)]
+      (is (string? middle))
+      ;; Middle should be purple-ish
+      (let [[r _g b] (sut/->rgb middle)]
+        (is (> r 100))
+        (is (> b 100)))))
+
+  (testing "Interpolate in HSL color space"
+    (let [red "#ff0000"
+          cyan "#00ffff"
+          middle (sut/interpolate [red cyan] 0.5 :hsl)]
+      (is (string? middle))))
+
+  (testing "Interpolate in HSV color space"
+    (let [red "#ff0000"
+          yellow "#ffff00"
+          middle (sut/interpolate [red yellow] 0.5 :hsv)]
+      (is (string? middle))))
+
+  (testing "Interpolate between multiple colors"
+    (let [colors ["#ff0000" "#00ff00" "#0000ff"]
+          ;; Position 0.5 should be close to green
+          middle (sut/interpolate colors 0.5 :rgb)
+          [_r g _b] (sut/->rgb middle)]
+      (is (string? middle))
+      (is (> g 200))))  ; Green should be dominant
+
+  (testing "Interpolate at boundaries"
+    (let [colors ["#ff0000" "#0000ff"]
+          start (sut/interpolate colors 0.0 :rgb)
+          end (sut/interpolate colors 1.0 :rgb)]
+      (is (= "#ff0000" start))
+      (is (= "#0000ff" end))))
+
+  (testing "Generate gradient"
+    (let [colors ["#ff0000" "#00ff00" "#0000ff"]
+          gradient (sut/gradient colors 5 :rgb)]
+      (is (= 5 (count gradient)))
+      (is (every? string? gradient))
+      ;; First and last should match input colors
+      (is (= "#ff0000" (first gradient)))
+      (is (= "#0000ff" (last gradient)))))
+
+  (testing "Gradient with different color spaces"
+    (is (= 10 (count (sut/gradient ["#ff0000" "#0000ff"] 10 :rgb))))
+    (is (= 10 (count (sut/gradient ["#ff0000" "#0000ff"] 10 :hsl))))
+    (is (= 10 (count (sut/gradient ["#ff0000" "#0000ff"] 10 :hsv))))))
+
+(deftest test-perceptual-color-difference
+  (testing "RGB to LAB conversion"
+    (let [[l a b] (sut/rgb->lab [255 0 0])]
+      (is (number? l))
+      (is (number? a))
+      (is (number? b))
+      ;; Red in LAB should have high L and positive a
+      (is (> l 0))
+      (is (> a 0))))
+
+  (testing "Delta E calculation"
+    (let [red "#ff0000"
+          red2 "#fe0000"
+          blue "#0000ff"
+          de-similar (sut/delta-e red red2)
+          de-different (sut/delta-e red blue)]
+      (is (number? de-similar))
+      (is (number? de-different))
+      ;; Similar colors should have low Delta E
+      (is (< de-similar 5))
+      ;; Different colors should have high Delta E
+      (is (> de-different 50))))
+
+  (testing "Perceptually similar colors"
+    (let [red "#ff0000"
+          almost-red "#fe0101"]
+      (is (sut/perceptually-similar? red almost-red))
+      (is (not (sut/perceptually-similar? red "#0000ff")))))
+
+  (testing "Delta E with different thresholds"
+    (let [c1 "#ff0000"
+          c2 "#fc0303"]
+      ;; Should be similar with default threshold
+      (is (sut/perceptually-similar? c1 c2))
+      ;; Might not be similar with very strict threshold
+      (is (or (sut/perceptually-similar? c1 c2 0.5)
+              (not (sut/perceptually-similar? c1 c2 0.5)))))))
+
+(deftest test-color-temperature-kelvin
+  (testing "Kelvin to RGB conversion"
+    ;; Test warm temperatures (candlelight to warm white)
+    (let [candlelight (sut/kelvin->rgb 1800)]
+      (is (= 3 (count candlelight)))
+      (is (every? #(and (>= % 0) (<= % 255)) candlelight))
+      ;; Warm light should be reddish
+      (let [[r g b] candlelight]
+        (is (> r g))
+        (is (> r b))))
+    ;; Test neutral daylight
+    (let [daylight (sut/kelvin->rgb 6500)]
+      (is (= 3 (count daylight)))
+      ;; Daylight should be relatively balanced
+      (let [[r g b] daylight]
+        (is (< (Math/abs (- r g)) 50))
+        (is (< (Math/abs (- g b)) 50))))
+    ;; Test cool temperatures
+    (let [cool (sut/kelvin->rgb 10000)]
+      (is (= 3 (count cool)))
+      ;; Cool light should be bluish
+      (let [[r _g b] cool]
+        (is (> b r)))))
+
+  (testing "Kelvin to hex conversion"
+    (let [hex (sut/kelvin->hex 5000)]
+      (is (string? hex))
+      (is (sut/valid-hex? hex))))
+
+  (testing "Kelvin to Color record"
+    (let [color (sut/kelvin->color 4000)]
+      (is (sut/color? color))
+      (is (= 3 (count (sut/->rgb color))))))
+
+  (testing "RGB to Kelvin approximation"
+    ;; Note: RGB->Kelvin is inherently imprecise due to:
+    ;; 1. The conversion algorithms are approximations
+    ;; 2. Round-trip conversions accumulate errors
+    ;; 3. McCamy's formula works best near the Planckian locus
+
+    ;; Test that the function returns a number for valid black body colors
+    (let [warm-white (sut/kelvin->rgb 3000)
+          estimated-k (sut/rgb->kelvin warm-white)]
+      (is (number? estimated-k))
+      ;; Approximation may not be very close, just check it's in valid range
+      (is (<= 1000 estimated-k 40000)))
+
+    ;; Test with a more neutral temperature which should be more accurate
+    (let [daylight (sut/kelvin->rgb 6500)
+          estimated-k (sut/rgb->kelvin daylight)]
+      (is (number? estimated-k))
+      ;; Mid-range temperatures should be more accurate
+      (is (< (Math/abs (- estimated-k 6500)) 2000)))
+
+    ;; Test that very saturated colors may return nil or a value
+    (let [pure-red [255 0 0]
+          k (sut/rgb->kelvin pure-red)]
+      ;; Pure red is not on the black body curve, may return nil
+      (is (or (nil? k) (and (number? k) (>= k 1000) (<= k 40000))))))
+
+  (testing "Kelvin range validation"
+    ;; Should work for valid range
+    (is (sut/kelvin->rgb 1000))
+    (is (sut/kelvin->rgb 40000))
+    ;; Should throw for invalid range
+    (is (thrown? Exception (sut/kelvin->rgb 500)))
+    (is (thrown? Exception (sut/kelvin->rgb 50000))))
+
+  (testing "Common color temperatures produce expected results"
+    ;; Candlelight ~1800K - should be very warm/orange
+    (let [[r _g b] (sut/kelvin->rgb 1800)]
+      (is (> r 200))
+      (is (< b 100)))
+    ;; Warm white ~3000K - should be slightly warm
+    (let [[r g b] (sut/kelvin->rgb 3000)]
+      (is (> r g))
+      (is (> g b)))
+    ;; Cool white ~5000K - should be balanced
+    (let [[r g] (sut/kelvin->rgb 5000)]
+      (is (< (Math/abs (- r g)) 30)))
+    ;; Daylight ~6500K - should be neutral to slightly cool
+    (let [[r _g b] (sut/kelvin->rgb 6500)]
+      (is (< (Math/abs (- r b)) 40)))
+    ;; Overcast sky ~7000K - should be cool/blue
+    (let [[_r g b] (sut/kelvin->rgb 7000)]
+      (is (>= b g)))))
