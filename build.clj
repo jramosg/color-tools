@@ -4,7 +4,7 @@
             [deps-deploy.deps-deploy :as dd]))
 
 (def lib 'com.github.jramosg/color-tools)
-(def version "1.0.4")
+(def version "1.1.0")
 #_ ; alternatively, use MAJOR.MINOR.COMMITS:
 (def version (format "1.0.%s" (b/git-count-revs nil)))
 (def class-dir "target/classes")

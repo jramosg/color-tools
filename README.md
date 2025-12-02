@@ -23,13 +23,13 @@ A comprehensive color manipulation library for Clojure and ClojureScript. Provid
 Add the following dependency to your `deps.edn`:
 
 ```clojure
-{:deps com.github.jramosg/color-tools {:mvn/version "1.0.4"}}
+{:deps com.github.jramosg/color-tools {:mvn/version "1.1.0"}}
 ```
 
 Or for Leiningen, add to your `project.clj`:
 
 ```clojure
-[com.github.jramosg/color-tools "1.0.4"]
+[com.github.jramosg/color-tools "1.1.0"]
 ```
 
 ## Quick Start
@@ -536,7 +536,7 @@ Deployments only run from the `master` branch after the Checks workflow complete
 
 Example:
 ```bash
-git commit -m "Release version 1.0.4 [deploy]"
+git commit -m "Release version 1.1.0 [deploy]"
 git push origin master
 ```
 
