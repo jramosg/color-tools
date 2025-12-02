@@ -16,38 +16,62 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for demo changes
+        id: check_changes
+        run: |
+          if git diff --name-only HEAD^ HEAD | grep -q '^demo/'; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Skip if no demo changes
+        if: steps.check_changes.outputs.changes == 'false'
+        run: |
+          echo "No changes in demo directory, skipping deployment"
+          exit 0
 
       - name: Set up JDK
+        if: steps.check_changes.outputs.changes == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
 
       - name: Set up Node.js
+        if: steps.check_changes.outputs.changes == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '24'
 
       - name: Install Clojure
+        if: steps.check_changes.outputs.changes == 'true'
         uses: DeLaGuardo/setup-clojure@12.5
         with:
           cli: latest
 
       - name: Install npm dependencies
+        if: steps.check_changes.outputs.changes == 'true'
         working-directory: demo
         run: npm ci
 
       - name: Build demo
+        if: steps.check_changes.outputs.changes == 'true'
         working-directory: demo
         env:
           CI: true
         run: npm run build
 
       - name: Setup Pages
+        if: steps.check_changes.outputs.changes == 'true'
         id: pages
         uses: actions/configure-pages@v5
 
       - name: Upload GitHub Pages artifact
+        if: steps.check_changes.outputs.changes == 'true'
         uses: actions/upload-pages-artifact@v4
         with:
           path: demo/public
@@ -55,6 +79,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    if: needs.build.result == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
