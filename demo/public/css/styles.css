@@ -107,11 +107,10 @@ body {
     border-radius: var(--radius);
     padding: 2rem;
     box-shadow: 0 4px 6px var(--shadow), 0 1px 3px rgba(0, 0, 0, 0.06);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: box-shadow 0.2s;
 }
 
 .card:hover {
-    transform: translateY(-2px);
     box-shadow: 0 8px 12px var(--shadow), 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
