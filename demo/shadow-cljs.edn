@@ -4,6 +4,7 @@
   {:target :browser
    :output-dir "public/js"
    :asset-path "/js"
+   :module-hash-names true
    :modules {:main {:init-fn demo.core/init}}
    :devtools {:http-root "public"
               :http-port 8080}}}}
