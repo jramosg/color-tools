@@ -4,7 +4,7 @@ A comprehensive color manipulation library for Clojure and ClojureScript. Provid
 
 [![Clojars Project](https://img.shields.io/clojars/v/com.github.jramosg/color-tools.svg)](https://clojars.org/com.github.jramosg/color-tools)
 
-## 🎨 [**Try the Live Demo →**](https://jramosg.github.io/color-tools/)
+## 🎨 [**Try the Live Demo →**](https://color-tools.jonramos.dev/)
 
 Explore all the features interactively: color picker, format converter, gradient generator, WCAG contrast checker, color harmonies, and more!
 
@@ -14,13 +14,14 @@ Explore all the features interactively: color picker, format converter, gradient
 
 ### Demo
 
-🌐 **[Live Demo](https://jramosg.github.io/color-tools/)** - Try it online now!
+🌐 **[Live Demo](https://color-tools.jonramos.dev/)** - Try it online now!
 
 You can also run the demo locally from the `demo` directory:
 
 Options:
 
 Prerequisites
+
 - Node.js + npm
 - Java (for the ClojureScript build tool)
 
@@ -127,7 +128,7 @@ The library includes a proper `Color` datatype that provides type safety and cle
 ```clojure
 ;; Create Color records from various inputs
 (color/color 255 0 0)           ; RGB values -> Color record
-(color/color "#ff0000")         ; Hex string -> Color record  
+(color/color "#ff0000")         ; Hex string -> Color record
 (color/color [255 0 0])         ; RGB vector -> Color record
 (color/color [255 0 0 0.8])     ; RGBA vector -> Color record
 (color/color "rgb(255, 0, 0)")  ; CSS RGB string -> Color record
@@ -173,7 +174,7 @@ The library fully supports CSS color strings with flexible formatting:
 (color/->rgb "rgb(255, 87, 51)")     ; comma-separated
 ;=> [255 87 51]
 
-(color/->rgb "rgb(255 87 51)")       ; space-separated  
+(color/->rgb "rgb(255 87 51)")       ; space-separated
 ;=> [255 87 51]
 
 (color/->rgb "RGB( 255 , 87 , 51 )") ; case-insensitive, extra spaces
@@ -193,7 +194,7 @@ The library fully supports CSS color strings with flexible formatting:
 (color/lighten "rgb(255, 0, 0)" 0.2)     ; manipulation
 ;=> "#ff6666"
 
-(color/accessible? "rgb(255, 255, 255)" "rgb(0, 0, 0)") ; accessibility  
+(color/accessible? "rgb(255, 255, 255)" "rgb(0, 0, 0)") ; accessibility
 ;=> true
 
 (color/complementary "rgba(255, 0, 0, 0.5)") ; harmony
@@ -254,10 +255,10 @@ The library fully supports CSS color strings with flexible formatting:
 
 ;; Lighten and darken - returns same type as input
 (color/lighten blue 0.2)               ;=> Color record (lighter blue)
-(color/lighten "#3498db" 0.2)          ;=> "#5dade2" 
+(color/lighten "#3498db" 0.2)          ;=> "#5dade2"
 (color/darken [52 152 219] 0.3)        ;=> [36 106 153]
 
-;; Adjust saturation  
+;; Adjust saturation
 (color/saturate blue 0.4)              ;=> Color record (more saturated)
 (color/desaturate "#e74c3c" 0.3)       ;=> "#d66357"
 
@@ -404,13 +405,17 @@ clojure -T:build test
 ### Code Quality
 
 #### Formatting
+
 Format all Clojure files using cljfmt:
+
 ```bash
 clojure -Tcljfmt fix
 ```
 
 #### Linting
+
 Lint the codebase using clj-kondo:
+
 ```bash
 clojure -Sdeps '{:deps {clj-kondo/clj-kondo {:mvn/version "RELEASE"}}}' -M -m clj-kondo.main --lint src test
 ```
@@ -575,17 +580,21 @@ The Eclipse Public License is available at http://www.eclipse.org/legal/epl-v10.
 The repository runs GitHub Actions checks on every branch. Deployments to Clojars are triggered in two ways:
 
 ### Automatic Deployment
+
 Deployments only run from the `master` branch after the Checks workflow completes successfully **and** the commit message contains `[deploy]`.
 
 Example:
+
 ```bash
 git commit -m "Release version 1.1.0 [deploy]"
 git push origin master
 ```
 
 ### Manual Deployment
+
 You can manually trigger deployment from the GitHub Actions UI by going to the "Deploy to Clojars" workflow and clicking "Run workflow".
 
 **Requirements:**
+
 - Ensure `CLOJARS_USERNAME` and `CLOJARS_PASSWORD` are set in the repository secrets
 - For automatic deploys, include `[deploy]` in your commit message when pushing to `master`

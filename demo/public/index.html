@@ -1,75 +1,96 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- SEO Meta Tags -->
-    <title>Color Tools - Free Online Color Picker, Gradient Generator & WCAG Contrast Checker</title>
-    <meta name="description" content="Free interactive color tools for designers and developers. Convert HEX, RGB, HSL colors, generate gradients, check WCAG contrast accessibility, blend colors, create harmonies, and explore color temperature. Open-source Clojure library.">
-    <meta name="keywords" content="color picker, color converter, gradient generator, contrast checker, wcag, accessibility, color harmony, hex to rgb, hsl converter, color blending, tints shades tones, color palette generator, design tools, clojure, clojurescript, delta e, color temperature, kelvin to rgb">
-    <meta name="author" content="Jon Ramos">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://jramosg.github.io/color-tools/">
+    <title>
+      Color Tools - Free Online Color Picker, Gradient Generator & WCAG Contrast
+      Checker
+    </title>
+    <meta
+      name="description"
+      content="Free interactive color tools for designers and developers. Convert HEX, RGB, HSL colors, generate gradients, check WCAG contrast accessibility, blend colors, create harmonies, and explore color temperature. Open-source Clojure library."
+    />
+    <meta
+      name="keywords"
+      content="color picker, color converter, gradient generator, contrast checker, wcag, accessibility, color harmony, hex to rgb, hsl converter, color blending, tints shades tones, color palette generator, design tools, clojure, clojurescript, delta e, color temperature, kelvin to rgb"
+    />
+    <meta name="author" content="Jon Ramos" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://color-tools.jonramos.dev/" />
 
     <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://jramosg.github.io/color-tools/">
-    <meta property="og:title" content="Color Tools - Free Color Picker, Gradient Generator & Contrast Checker">
-    <meta property="og:description" content="Interactive color tools: picker, converter, gradient generator, WCAG contrast checker, and harmony creator. Free, open-source, and built with Clojure.">
-    <meta property="og:site_name" content="Color Tools">
-    <meta property="og:locale" content="en_US">
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://color-tools.jonramos.dev/" />
+    <meta
+      property="og:title"
+      content="Color Tools - Free Color Picker, Gradient Generator & Contrast Checker"
+    />
+    <meta
+      property="og:description"
+      content="Interactive color tools: picker, converter, gradient generator, WCAG contrast checker, and harmony creator. Free, open-source, and built with Clojure."
+    />
+    <meta property="og:site_name" content="Color Tools" />
+    <meta property="og:locale" content="en_US" />
 
     <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Color Tools - Free Color Picker, Gradient Generator & Contrast Checker">
-    <meta name="twitter:description" content="Interactive color tools: picker, converter, gradient generator, WCAG contrast checker, and harmony creator. Free, open-source, and built with Clojure.">
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Color Tools - Free Color Picker, Gradient Generator & Contrast Checker"
+    />
+    <meta
+      name="twitter:description"
+      content="Interactive color tools: picker, converter, gradient generator, WCAG contrast checker, and harmony creator. Free, open-source, and built with Clojure."
+    />
 
     <!-- Preconnect for fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
     <!-- Theme color -->
-    <meta name="theme-color" content="#0c0e14">
-    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#0c0e14" />
+    <meta name="color-scheme" content="dark" />
 
     <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
-    {
+      {
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "Color Tools",
-        "url": "https://jramosg.github.io/color-tools/",
+        "url": "https://color-tools.jonramos.dev/",
         "description": "Free interactive color manipulation tools for designers and developers. Convert colors, generate gradients, check WCAG contrast, blend colors, and create color harmonies.",
         "applicationCategory": "DesignApplication",
         "operatingSystem": "Any",
         "browserRequirements": "Requires JavaScript",
         "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
         },
         "author": {
-            "@type": "Person",
-            "name": "Jon Ramos",
-            "url": "https://github.com/jramosg"
+          "@type": "Person",
+          "name": "Jon Ramos",
+          "url": "https://github.com/jramosg"
         },
         "isAccessibleForFree": true,
         "featureList": [
-            "HEX, RGB, HSL, HSV color conversion",
-            "Color blending modes (Multiply, Screen, Overlay)",
-            "Tints, shades, and tones generation",
-            "Multi-step gradient generation in RGB, HSL, HSV",
-            "Alpha blending and compositing",
-            "Delta E perceptual color difference (CIE76)",
-            "Kelvin color temperature conversion",
-            "WCAG AA and AAA contrast ratio checking",
-            "Complementary, analogous, triadic, and tetradic color harmonies"
+          "HEX, RGB, HSL, HSV color conversion",
+          "Color blending modes (Multiply, Screen, Overlay)",
+          "Tints, shades, and tones generation",
+          "Multi-step gradient generation in RGB, HSL, HSV",
+          "Alpha blending and compositing",
+          "Delta E perceptual color difference (CIE76)",
+          "Kelvin color temperature conversion",
+          "WCAG AA and AAA contrast ratio checking",
+          "Complementary, analogous, triadic, and tetradic color harmonies"
         ]
-    }
+      }
     </script>
     <script type="application/ld+json">
-    {
+      {
         "@context": "https://schema.org",
         "@type": "SoftwareSourceCode",
         "name": "color-tools",
@@ -78,135 +99,261 @@
         "runtimePlatform": "JVM",
         "license": "https://opensource.org/licenses/MIT",
         "author": {
-            "@type": "Person",
-            "name": "Jon Ramos"
+          "@type": "Person",
+          "name": "Jon Ramos"
         }
-    }
+      }
     </script>
     <script type="application/ld+json">
-    {
+      {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
         "itemListElement": [
-            {
-                "@type": "ListItem",
-                "position": 1,
-                "name": "Color Tools Demo",
-                "item": "https://jramosg.github.io/color-tools/"
-            }
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Color Tools Demo",
+            "item": "https://color-tools.jonramos.dev/"
+          }
         ]
-    }
+      }
     </script>
 
-    <link rel="stylesheet" href="css/styles.css">
-</head>
-<body>
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
     <a class="skip-link" href="#app">Skip to main content</a>
 
     <header class="header" role="banner">
-        <div class="container">
-            <div class="header-content">
-                <h1>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
-                        <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
-                        <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
-                        <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
-                        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.55 0 1-.45 1-1 0-2 2-2 2-2v-2c0-1.1.9-2 2-2h1c2.21 0 4-1.79 4-4 0-4.42-3.58-8-8-8z"/>
-                    </svg>
-                    color-tools
-                </h1>
-                <p class="tagline">Interactive color manipulation tools for designers and developers. Powered by the open-source <strong>color-tools</strong> Clojure library.</p>
-                <div class="header-links">
-                    <a class="btn btn-primary" href="https://github.com/jramosg/color-tools" target="_blank" rel="noopener noreferrer">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.79-.26.79-.58v-2.23c-3.34.73-4.03-1.42-4.03-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.02 0c2.28-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.19.69.8.58A12.01 12.01 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-                        GitHub
-                    </a>
-                    <a class="btn btn-secondary" href="https://clojars.org/com.github.jramosg/color-tools" target="_blank" rel="noopener noreferrer">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                            <line x1="12" y1="22.08" x2="12" y2="12"/>
-                        </svg>
-                        Clojars
-                    </a>
-                    <div id="theme-toggle-mount"></div>
-                </div>
-            </div>
+      <div class="container">
+        <div class="header-content">
+          <h1>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="44"
+              height="44"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+              <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+              <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+              <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+              <path
+                d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.55 0 1-.45 1-1 0-2 2-2 2-2v-2c0-1.1.9-2 2-2h1c2.21 0 4-1.79 4-4 0-4.42-3.58-8-8-8z"
+              />
+            </svg>
+            color-tools
+          </h1>
+          <p class="tagline">
+            Interactive color manipulation tools for designers and developers.
+            Powered by the open-source <strong>color-tools</strong> Clojure
+            library.
+          </p>
+          <div class="header-links">
+            <a
+              class="btn btn-primary"
+              href="https://github.com/jramosg/color-tools"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.79-.26.79-.58v-2.23c-3.34.73-4.03-1.42-4.03-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.02 0c2.28-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.19.69.8.58A12.01 12.01 0 0 0 24 12c0-6.63-5.37-12-12-12z"
+                />
+              </svg>
+              GitHub
+            </a>
+            <a
+              class="btn btn-secondary"
+              href="https://clojars.org/com.github.jramosg/color-tools"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+              Clojars
+            </a>
+            <div id="theme-toggle-mount"></div>
+          </div>
         </div>
+      </div>
     </header>
 
     <main class="container" id="app">
-        <!-- Content for SEO crawlers and non-JS users -->
-        <noscript>
-            <article>
-                <section class="section">
-                    <h2>About Color Tools</h2>
-                    <div class="card">
-                        <p>Color Tools is a free, interactive color manipulation application for designers, developers, and anyone working with digital colors. Create design systems, verify accessibility compliance, and explore color theory - all in one place.</p>
-                        <p>Every feature is powered by <strong>color-tools</strong>, an open-source Clojure/ClojureScript library you can use in your own projects.</p>
-                    </div>
-                </section>
+      <!-- Content for SEO crawlers and non-JS users -->
+      <noscript>
+        <article>
+          <section class="section">
+            <h2>About Color Tools</h2>
+            <div class="card">
+              <p>
+                Color Tools is a free, interactive color manipulation
+                application for designers, developers, and anyone working with
+                digital colors. Create design systems, verify accessibility
+                compliance, and explore color theory - all in one place.
+              </p>
+              <p>
+                Every feature is powered by <strong>color-tools</strong>, an
+                open-source Clojure/ClojureScript library you can use in your
+                own projects.
+              </p>
+            </div>
+          </section>
 
-                <section class="section">
-                    <h2>Features</h2>
-                    <div class="card">
-                        <h3>Color Picker & Converter</h3>
-                        <p>Convert between HEX, RGB, HSL, and HSV color formats instantly. Copy values in your preferred format with one click.</p>
+          <section class="section">
+            <h2>Features</h2>
+            <div class="card">
+              <h3>Color Picker & Converter</h3>
+              <p>
+                Convert between HEX, RGB, HSL, and HSV color formats instantly.
+                Copy values in your preferred format with one click.
+              </p>
 
-                        <h3>Blending Modes</h3>
-                        <p>Preview Photoshop-style blending modes including Multiply, Screen, and Overlay. Composite transparent colors with alpha blending.</p>
+              <h3>Blending Modes</h3>
+              <p>
+                Preview Photoshop-style blending modes including Multiply,
+                Screen, and Overlay. Composite transparent colors with alpha
+                blending.
+              </p>
 
-                        <h3>Tints, Shades & Tones</h3>
-                        <p>Generate color scales by mixing with white (tints), black (shades), or gray (tones). Essential for building consistent design systems.</p>
+              <h3>Tints, Shades & Tones</h3>
+              <p>
+                Generate color scales by mixing with white (tints), black
+                (shades), or gray (tones). Essential for building consistent
+                design systems.
+              </p>
 
-                        <h3>Gradient Generator</h3>
-                        <p>Create smooth multi-step color gradients interpolated in RGB, HSL, or HSV color spaces. Control the number of steps for precise output.</p>
+              <h3>Gradient Generator</h3>
+              <p>
+                Create smooth multi-step color gradients interpolated in RGB,
+                HSL, or HSV color spaces. Control the number of steps for
+                precise output.
+              </p>
 
-                        <h3>WCAG Contrast Checker</h3>
-                        <p>Test foreground/background color pairs against WCAG 2.1 accessibility standards. Check compliance for AA and AAA levels, normal and large text.</p>
+              <h3>WCAG Contrast Checker</h3>
+              <p>
+                Test foreground/background color pairs against WCAG 2.1
+                accessibility standards. Check compliance for AA and AAA levels,
+                normal and large text.
+              </p>
 
-                        <h3>Color Harmonies</h3>
-                        <p>Generate complementary, analogous, triadic, and tetradic color schemes rooted in color theory.</p>
+              <h3>Color Harmonies</h3>
+              <p>
+                Generate complementary, analogous, triadic, and tetradic color
+                schemes rooted in color theory.
+              </p>
 
-                        <h3>Color Temperature (Kelvin)</h3>
-                        <p>Convert color temperatures from 1000K to 15000K into RGB values. Includes presets for candlelight, daylight, and overcast conditions.</p>
+              <h3>Color Temperature (Kelvin)</h3>
+              <p>
+                Convert color temperatures from 1000K to 15000K into RGB values.
+                Includes presets for candlelight, daylight, and overcast
+                conditions.
+              </p>
 
-                        <h3>Perceptual Color Difference (Delta E)</h3>
-                        <p>Measure how different two colors appear to the human eye using the CIE76 Delta E formula.</p>
-                    </div>
-                </section>
+              <h3>Perceptual Color Difference (Delta E)</h3>
+              <p>
+                Measure how different two colors appear to the human eye using
+                the CIE76 Delta E formula.
+              </p>
+            </div>
+          </section>
 
-                <section class="section">
-                    <h2>Enable JavaScript</h2>
-                    <div class="card">
-                        <p>This application requires JavaScript for interactive features. Please enable JavaScript to use all tools.</p>
-                        <p>Developers: visit the <a href="https://github.com/jramosg/color-tools">GitHub repository</a> to integrate the color-tools library into your Clojure/ClojureScript projects.</p>
-                    </div>
-                </section>
-            </article>
-        </noscript>
+          <section class="section">
+            <h2>Enable JavaScript</h2>
+            <div class="card">
+              <p>
+                This application requires JavaScript for interactive features.
+                Please enable JavaScript to use all tools.
+              </p>
+              <p>
+                Developers: visit the
+                <a href="https://github.com/jramosg/color-tools"
+                  >GitHub repository</a
+                >
+                to integrate the color-tools library into your
+                Clojure/ClojureScript projects.
+              </p>
+            </div>
+          </section>
+        </article>
+      </noscript>
     </main>
 
     <footer class="footer" role="contentinfo">
-        <div class="container">
-            <p>
-                color-tools by <strong>Jon Ramos</strong> -
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                </svg>
-                for designers, developers & the Clojure community
-            </p>
-            <nav aria-label="Footer navigation">
-                <p>
-                    <a href="https://github.com/jramosg/color-tools" rel="noopener noreferrer">GitHub</a> &middot;
-                    <a href="https://clojars.org/com.github.jramosg/color-tools" rel="noopener noreferrer">Clojars</a> &middot;
-                    <a href="https://github.com/jramosg/color-tools/blob/master/doc/api-reference.md" rel="noopener noreferrer">API Docs</a>
-                </p>
-            </nav>
-        </div>
+      <div class="container">
+        <p>
+          color-tools by <strong>Jon Ramos</strong> -
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+            />
+          </svg>
+          for designers, developers & the Clojure community
+        </p>
+        <nav aria-label="Footer navigation">
+          <p>
+            <a
+              href="https://github.com/jramosg/color-tools"
+              rel="noopener noreferrer"
+              >GitHub</a
+            >
+            &middot;
+            <a
+              href="https://clojars.org/com.github.jramosg/color-tools"
+              rel="noopener noreferrer"
+              >Clojars</a
+            >
+            &middot;
+            <a
+              href="https://github.com/jramosg/color-tools/blob/master/doc/api-reference.md"
+              rel="noopener noreferrer"
+              >API Docs</a
+            >
+          </p>
+        </nav>
+      </div>
     </footer>
 
     <script src="js/main.js"></script>
-</body>
+  </body>
 </html>
