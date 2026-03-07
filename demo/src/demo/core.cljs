@@ -539,15 +539,17 @@
          [:div.palette-display
           (doall (map-indexed
                   (fn [i hex]
-                    (let [text-color (color/get-contrast-text hex)
-                          name (color/->name hex)]
+                    (let [text-color (color/get-contrast-text hex)]
                       ^{:key i}
                       [:div.palette-swatch
                        {:style {:background hex :color text-color}
-                        :on-click #(copy-to-clipboard (.toUpperCase hex))}
-                       [:span.palette-swatch__hex (.toUpperCase hex)]
-                       (when name
-                         [:span.palette-swatch__name name])]))
+                        :on-click #(copy-to-clipboard (.toUpperCase hex))
+                        :title "Click to copy"}
+                       [:div.palette-swatch__copy (:clipboard icons)]
+                       [:div.palette-swatch__label
+                        [:span.palette-swatch__hex (.toUpperCase hex)]
+                        (when-let [n (color/->name hex)]
+                          [:span.palette-swatch__name n])]]))
                   colors))]
          [:div.palette-export
           [:button.btn.btn-secondary
