@@ -1,5 +1,6 @@
 (ns demo.core
   (:require
+   [clojure.string :as str]
    [jon.color-tools :as color]
    [reagent.core :as r]
    [reagent.dom.client :as rdomc]
@@ -13,9 +14,9 @@
 (defn init-theme! []
   (let [stored (js/localStorage.getItem "color-tools-theme")
         preferred (if (and (nil? stored)
-                          (.-matches (js/matchMedia "(prefers-color-scheme: light)")))
-                   "light"
-                   (or stored "dark"))]
+                           (.-matches (js/matchMedia "(prefers-color-scheme: light)")))
+                    "light"
+                    (or stored "dark"))]
     (reset! theme preferred)
     (.setAttribute js/document.documentElement "data-theme" preferred)))
 
@@ -66,7 +67,9 @@
     :delta {:color1 "#ff0000" :color2 "#fe0101"}
     :kelvin {:temp 6500}
     :contrast {:bg default-color :fg "#ffffff"}
-    :harmony {:base default-color}}))
+    :harmony {:base default-color}
+    :palette {:base default-color :strategy "analogous" :count 6
+              :colors nil}}))
 
 ;; Components
 
@@ -115,7 +118,13 @@
    :check [icon [:polyline {:points "20 6 9 17 4 12"}]]
    :x [icon [:g [:line {:x1 "18" :y1 "6" :x2 "6" :y2 "18"}]
              [:line {:x1 "6" :y1 "6" :x2 "18" :y2 "18"}]]]
-   :heart [icon [:path {:d "M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"}]]})
+   :heart [icon [:path {:d "M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"}]]
+   :shuffle [icon [:g [:polyline {:points "16 3 21 3 21 8"}]
+                   [:line {:x1 "4" :y1 "20" :x2 "21" :y2 "3"}]
+                   [:polyline {:points "21 16 21 21 16 21"}]
+                   [:line {:x1 "15" :y1 "15" :x2 "21" :y2 "21"}]
+                   [:line {:x1 "4" :y1 "4" :x2 "9" :y2 "9"}]]]
+   :zap [icon [:g [:polygon {:points "13 2 3 14 12 14 11 22 21 10 12 10 13 2"}]]]})
 
 (defn copy-to-clipboard [text]
   (js/navigator.clipboard.writeText text))
@@ -232,30 +241,22 @@
        [:input {:type "color" :value base
                 :on-change #(swap! state assoc-in [:tst :base] (-> % .-target .-value))}]]
       [:div.tst-grid
-       [:div.tst-section
-        [:h4 "Tints (Lighter)"]
-        [:div.tst-swatches
-         (doall (map-indexed (fn [i c]
-                               ^{:key i}
-                               [:div.tst-swatch {:style {:background c :color (color/get-contrast-text c)}}
-                                (str (* (inc i) 10) "%")])
-                             tints))]]
-       [:div.tst-section
-        [:h4 "Shades (Darker)"]
-        [:div.tst-swatches
-         (doall (map-indexed (fn [i c]
-                               ^{:key i}
-                               [:div.tst-swatch {:style {:background c :color (color/get-contrast-text c)}}
-                                (str (* (inc i) 10) "%")])
-                             shades))]]
-       [:div.tst-section
-        [:h4 "Tones (Less Saturated)"]
-        [:div.tst-swatches
-         (doall (map-indexed (fn [i c]
-                               ^{:key i}
-                               [:div.tst-swatch {:style {:background c :color (color/get-contrast-text c)}}
-                                (str (* (inc i) 10) "%")])
-                             tones))]]]]]))
+       (doall
+        (for [[title colors] [["Tints (Lighter)" tints]
+                              ["Shades (Darker)" shades]
+                              ["Tones (Less Saturated)" tones]]]
+          ^{:key title}
+          [:div.tst-section
+           [:h4 title]
+           [:div.tst-swatches
+            (doall (map-indexed (fn [i c]
+                                  ^{:key i}
+                                  [:div.tst-swatch
+                                   {:style {:background c :color (color/get-contrast-text c)}
+                                    :on-click #(copy-to-clipboard (.toUpperCase c))
+                                    :title (str "Click to copy " (.toUpperCase c))}
+                                   (str (* (inc i) 10) "%")])
+                                colors))]]))]]]))
 
 (defn gradient-section []
   (let [{:keys [start end steps space]} (:gradient @state)
@@ -474,6 +475,114 @@
         [:div.harmony-swatches
          (doall (map-indexed (fn [i c] ^{:key i} [copyable-color c]) tetrad))]]]]]))
 
+(def palette-strategies
+  [["analogous" "Analogous"]
+   ["monochromatic" "Monochromatic"]
+   ["triadic" "Triadic"]
+   ["tetradic" "Tetradic"]
+   ["split-complementary" "Split Complementary"]
+   ["random" "Random"]])
+
+(defn generate-palette! []
+  (let [{:keys [base strategy count]} (:palette @state)
+        kw (keyword strategy)
+        colors (color/generate-palette kw base {:count count :angle 30})]
+    (swap! state assoc-in [:palette :colors] (vec colors))))
+
+(defn randomize-palette! []
+  (let [new-base (color/random-color)]
+    (swap! state (fn [s]
+                   (-> s
+                       (assoc-in [:palette :base] new-base)
+                       (assoc-in [:palette :colors] nil))))
+    (js/setTimeout generate-palette! 0)))
+
+(defn color-tag [hex label]
+  (let [text-color (color/get-contrast-text hex)]
+    [:span.palette-tag
+     {:style {:background-color hex :color text-color}}
+     label]))
+
+(defn palette-color-card [hex]
+  (let [hsl (color/->hsl hex)
+        name (color/->name hex)
+        text-color (color/get-contrast-text hex)]
+    [:div.palette-card
+     [:div.palette-card__swatch {:style {:background hex :color text-color}}
+      [:span.palette-card__hex (.toUpperCase hex)]]
+     [:div.palette-card__info
+      (when name [:div.palette-card__name name])
+      [:div.palette-card__hsl
+       (str "H:" (Math/round (:h hsl)) " S:" (Math/round (:s hsl)) " L:" (Math/round (:l hsl)))]
+      [:div.palette-card__tags
+       (when (color/warm? hex) [color-tag hex "warm"])
+       (when (color/cool? hex) [color-tag hex "cool"])
+       (when (color/vibrant? hex) [color-tag hex "vibrant"])
+       (when (color/muted? hex) [color-tag hex "muted"])
+       (when (color/light? hex) [color-tag hex "light"])
+       (when (color/dark? hex) [color-tag hex "dark"])]]
+     [copyable-color hex]]))
+
+(defn palette-section []
+  (let [{:keys [base strategy count colors]} (:palette @state)]
+    (when (nil? colors)
+      (js/setTimeout generate-palette! 0))
+    [:section.section
+     [:h2 (:palette icons) "Palette Generator"]
+     [:div.card
+      [:div.palette-controls
+       [:div.input-group
+        [:label "Base Color:"]
+        [:input {:type "color" :value base
+                 :on-change (fn [e]
+                              (swap! state assoc-in [:palette :base] (-> e .-target .-value))
+                              (js/setTimeout generate-palette! 0))}]]
+       [:div.input-group
+        [:label "Strategy:"]
+        [:select {:value strategy
+                  :on-change (fn [e]
+                               (swap! state assoc-in [:palette :strategy] (-> e .-target .-value))
+                               (js/setTimeout generate-palette! 0))}
+         (doall (for [[v label] palette-strategies]
+                  ^{:key v}
+                  [:option {:value v} label]))]]
+       [:div.input-group
+        [:label "Count:"]
+        [:input {:type "range" :min 3 :max 12 :value count
+                 :on-change (fn [e]
+                              (swap! state assoc-in [:palette :count] (js/parseInt (-> e .-target .-value)))
+                              (js/setTimeout generate-palette! 0))}]
+        [:span count]]
+       [:div.palette-actions
+        [:button.btn.btn-primary {:on-click generate-palette!}
+         (:zap icons) "Generate"]
+        [:button.btn.btn-secondary {:on-click randomize-palette!}
+         (:shuffle icons) "Randomize"]]]
+      (when (seq colors)
+        [:<>
+         [:div.palette-strip
+          (doall (map-indexed (fn [i c]
+                                (let [hex (if (string? c) c (color/->hex c))]
+                                  ^{:key i}
+                                  [:div.palette-strip__color {:style {:background hex}}]))
+                              colors))]
+         [:div.palette-grid
+          (doall (map-indexed (fn [i c]
+                                (let [hex (if (string? c) c (color/->hex c))]
+                                  ^{:key i}
+                                  [palette-color-card hex]))
+                              colors))]])
+      (when (seq colors)
+        [:div.palette-export
+         [:button.btn.btn-secondary
+          {:on-click #(copy-to-clipboard
+                       (str/join ", "
+                                 (map (fn [c] (.toUpperCase (if (string? c)
+                                                              c
+                                                              (color/->hex c))))
+                                      colors)))}
+          (:clipboard icons) "Copy All"]])]]))
+
 (def nav-items
   [{:id "picker"    :icon :target      :label "Picker"}
    {:id "blending"  :icon :layers      :label "Blending"}
@@ -483,7 +592,8 @@
    {:id "delta"     :icon :eye         :label "Delta E"}
    {:id "kelvin"    :icon :thermometer :label "Kelvin"}
    {:id "contrast"  :icon :contrast    :label "Contrast"}
-   {:id "harmony"   :icon :aperture    :label "Harmony"}])
+   {:id "harmony"   :icon :aperture    :label "Harmony"}
+   {:id "palette"   :icon :palette     :label "Palette"}])
 
 (defn section-nav []
   [:nav.section-nav {:aria-label "Tool sections"}
@@ -505,7 +615,8 @@
    [:div {:id "delta"}     [delta-section]]
    [:div {:id "kelvin"}    [kelvin-section]]
    [:div {:id "contrast"}  [contrast-section]]
-   [:div {:id "harmony"}   [harmony-section]]])
+   [:div {:id "harmony"}   [harmony-section]]
+   [:div {:id "palette"}   [palette-section]]])
 
 (defonce toggle-root
   (when-let [el (js/document.getElementById "theme-toggle-mount")]
