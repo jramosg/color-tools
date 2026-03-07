@@ -483,11 +483,13 @@
    ["split-complementary" "Split Complementary"]
    ["random" "Random"]])
 
+(defn- palette-hex [c]
+  (if (string? c) c (color/->hex c)))
+
 (defn generate-palette! []
   (let [{:keys [base strategy count]} (:palette @state)
-        kw (keyword strategy)
-        colors (color/generate-palette kw base {:count count :angle 30})]
-    (swap! state assoc-in [:palette :colors] (vec colors))))
+        colors (color/generate-palette (keyword strategy) base {:count count :angle 30})]
+    (swap! state assoc-in [:palette :colors] (mapv palette-hex colors))))
 
 (defn randomize-palette! []
   (let [new-base (color/random-color)]
@@ -496,32 +498,6 @@
                        (assoc-in [:palette :base] new-base)
                        (assoc-in [:palette :colors] nil))))
     (js/setTimeout generate-palette! 0)))
-
-(defn color-tag [hex label]
-  (let [text-color (color/get-contrast-text hex)]
-    [:span.palette-tag
-     {:style {:background-color hex :color text-color}}
-     label]))
-
-(defn palette-color-card [hex]
-  (let [hsl (color/->hsl hex)
-        name (color/->name hex)
-        text-color (color/get-contrast-text hex)]
-    [:div.palette-card
-     [:div.palette-card__swatch {:style {:background hex :color text-color}}
-      [:span.palette-card__hex (.toUpperCase hex)]]
-     [:div.palette-card__info
-      (when name [:div.palette-card__name name])
-      [:div.palette-card__hsl
-       (str "H:" (Math/round (:h hsl)) " S:" (Math/round (:s hsl)) " L:" (Math/round (:l hsl)))]
-      [:div.palette-card__tags
-       (when (color/warm? hex) [color-tag hex "warm"])
-       (when (color/cool? hex) [color-tag hex "cool"])
-       (when (color/vibrant? hex) [color-tag hex "vibrant"])
-       (when (color/muted? hex) [color-tag hex "muted"])
-       (when (color/light? hex) [color-tag hex "light"])
-       (when (color/dark? hex) [color-tag hex "dark"])]]
-     [copyable-color hex]]))
 
 (defn palette-section []
   (let [{:keys [base strategy count colors]} (:palette @state)]
@@ -561,27 +537,23 @@
       (when (seq colors)
         [:<>
          [:div.palette-strip
-          (doall (map-indexed (fn [i c]
-                                (let [hex (if (string? c) c (color/->hex c))]
-                                  ^{:key i}
-                                  [:div.palette-strip__color {:style {:background hex}}]))
+          (doall (map-indexed (fn [i hex]
+                                ^{:key i}
+                                [:div.palette-strip__color
+                                 {:style {:background hex}
+                                  :on-click #(copy-to-clipboard (.toUpperCase hex))
+                                  :title (.toUpperCase hex)}])
                               colors))]
-         [:div.palette-grid
-          (doall (map-indexed (fn [i c]
-                                (let [hex (if (string? c) c (color/->hex c))]
-                                  ^{:key i}
-                                  [palette-color-card hex]))
-                              colors))]])
-      (when (seq colors)
-        [:div.palette-export
-         [:button.btn.btn-secondary
-          {:on-click #(copy-to-clipboard
-                       (str/join ", "
-                                 (map (fn [c] (.toUpperCase (if (string? c)
-                                                              c
-                                                              (color/->hex c))))
-                                      colors)))}
-          (:clipboard icons) "Copy All"]])]]))
+         [:div.palette-swatches
+          (doall (map-indexed (fn [i hex]
+                                ^{:key i}
+                                [copyable-color hex])
+                              colors))]
+         [:div.palette-export
+          [:button.btn.btn-secondary
+           {:on-click #(copy-to-clipboard
+                        (str/join ", " (map (fn [c] (.toUpperCase c)) colors)))}
+           (:clipboard icons) "Copy All"]]])]]))
 
 (def nav-items
   [{:id "picker"    :icon :target      :label "Picker"}
