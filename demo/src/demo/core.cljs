@@ -536,23 +536,23 @@
          (:shuffle icons) "Randomize"]]]
       (when (seq colors)
         [:<>
-         [:div.palette-strip
-          (doall (map-indexed (fn [i hex]
-                                ^{:key i}
-                                [:div.palette-strip__color
-                                 {:style {:background hex}
-                                  :on-click #(copy-to-clipboard (.toUpperCase hex))
-                                  :title (.toUpperCase hex)}])
-                              colors))]
-         [:div.palette-swatches
-          (doall (map-indexed (fn [i hex]
-                                ^{:key i}
-                                [copyable-color hex])
-                              colors))]
+         [:div.palette-display
+          (doall (map-indexed
+                  (fn [i hex]
+                    (let [text-color (color/get-contrast-text hex)
+                          name (color/->name hex)]
+                      ^{:key i}
+                      [:div.palette-swatch
+                       {:style {:background hex :color text-color}
+                        :on-click #(copy-to-clipboard (.toUpperCase hex))}
+                       [:span.palette-swatch__hex (.toUpperCase hex)]
+                       (when name
+                         [:span.palette-swatch__name name])]))
+                  colors))]
          [:div.palette-export
           [:button.btn.btn-secondary
            {:on-click #(copy-to-clipboard
-                        (str/join ", " (map (fn [c] (.toUpperCase c)) colors)))}
+                        (str/join "\n" (map (fn [c] (.toUpperCase c)) colors)))}
            (:clipboard icons) "Copy All"]]])]]))
 
 (def nav-items

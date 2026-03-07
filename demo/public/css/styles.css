@@ -1062,60 +1062,86 @@ body::before {
     height: 16px;
 }
 
-.palette-strip {
+.palette-display {
     display: flex;
-    height: 80px;
+    min-height: 220px;
     border-radius: var(--radius);
     overflow: hidden;
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
     margin-bottom: 1.25rem;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.palette-strip__color {
+.palette-swatch {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
     cursor: pointer;
-    transition: flex 0.35s var(--ease-out);
+    transition: flex 0.35s var(--ease-out), filter 0.2s;
     position: relative;
+    user-select: none;
 }
 
-.palette-strip__color:hover {
-    flex: 2.5;
+.palette-swatch:hover {
+    flex: 1.6;
 }
 
-.palette-strip__color:hover::after {
-    content: attr(title);
-    position: absolute;
-    bottom: 0.5rem;
-    left: 50%;
-    transform: translateX(-50%);
+.palette-swatch:active {
+    filter: brightness(0.9);
+}
+
+.palette-swatch__hex {
     font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    opacity: 0;
+    transition: opacity 0.2s;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.palette-swatch:hover .palette-swatch__hex {
+    opacity: 1;
+}
+
+.palette-swatch__name {
     font-size: 0.7rem;
     font-weight: 500;
-    color: inherit;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
-    white-space: nowrap;
-    opacity: 0.9;
+    opacity: 0;
+    transition: opacity 0.2s;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    text-transform: capitalize;
 }
 
-.palette-strip__color:first-child {
-    border-radius: var(--radius) 0 0 var(--radius);
-}
-
-.palette-strip__color:last-child {
-    border-radius: 0 var(--radius) var(--radius) 0;
-}
-
-.palette-swatches {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 0.6rem;
-    margin-bottom: 1.25rem;
+.palette-swatch:hover .palette-swatch__name {
+    opacity: 0.7;
 }
 
 .palette-export {
     display: flex;
     justify-content: flex-end;
+}
+
+/* Stack on narrow screens */
+@media (max-width: 540px) {
+    .palette-display {
+        flex-direction: column;
+        min-height: auto;
+    }
+
+    .palette-swatch {
+        min-height: 56px;
+        flex-direction: row;
+        gap: 0.6rem;
+    }
+
+    .palette-swatch__hex,
+    .palette-swatch__name {
+        opacity: 1;
+    }
 }
 
 /* ---- Footer ---- */
