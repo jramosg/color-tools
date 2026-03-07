@@ -35,8 +35,8 @@
                        title (if title
                                (str (:title-prefix state) title)
                                (str (:default-title state)))]
-                   (when r/is-client
-                     (set! js/document.title title))
+                   #_(when r/is-client
+                       (set! js/document.title title))
                    (assoc state :current-page page :title title))
     :set-page (let [path x
                     _ (assert (string? path))

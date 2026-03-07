@@ -2,9 +2,58 @@
   (:require
    [jon.color-tools :as color]
    [reagent.core :as r]
+   [reagent.dom.client :as rdomc]
    [demo.sitetools :refer [start!]]))
 
 (def default-color "#3498db")
+
+;; Theme
+(defonce theme (r/atom "dark"))
+
+(defn init-theme! []
+  (let [stored (js/localStorage.getItem "color-tools-theme")
+        preferred (if (and (nil? stored)
+                          (.-matches (js/matchMedia "(prefers-color-scheme: light)")))
+                   "light"
+                   (or stored "dark"))]
+    (reset! theme preferred)
+    (.setAttribute js/document.documentElement "data-theme" preferred)))
+
+(defn toggle-theme! []
+  (let [next-theme (if (= @theme "dark") "light" "dark")]
+    (reset! theme next-theme)
+    (js/localStorage.setItem "color-tools-theme" next-theme)
+    (.setAttribute js/document.documentElement "data-theme" next-theme)))
+
+(defn theme-toggle []
+  (let [dark? (= @theme "dark")]
+    [:button.theme-toggle
+     {:type "button"
+      :class (when-not dark? "theme-toggle--toggled")
+      :title "Toggle theme"
+      :aria-label "Toggle theme"
+      :on-click toggle-theme!}
+     [:svg {:xmlns "http://www.w3.org/2000/svg"
+            :aria-hidden "true"
+            :width "1em" :height "1em"
+            :fill "currentColor"
+            :stroke-linecap "round"
+            :class "theme-toggle__classic"
+            :viewBox "0 0 32 32"}
+      [:clipPath {:id "theme-toggle__classic__cutout"}
+       [:path {:d "M0-5h30a1 1 0 0 0 9 13v24H0Z"}]]
+      [:g {:clip-path "url(#theme-toggle__classic__cutout)"}
+       [:circle {:cx "16" :cy "16" :r "9.34"}]
+       [:g {:stroke "currentColor" :stroke-width "1.5"}
+        [:path {:d "M16 5.5v-4"}]
+        [:path {:d "M16 30.5v-4"}]
+        [:path {:d "M1.5 16h4"}]
+        [:path {:d "M26.5 16h4"}]
+        [:path {:d "m23.4 8.6 2.8-2.8"}]
+        [:path {:d "m5.7 26.3 2.9-2.9"}]
+        [:path {:d "m5.8 5.8 2.8 2.8"}]
+        [:path {:d "m23.4 23.4 2.9 2.9"}]]]]]))
+
 ;; State
 (def state
   (r/atom
@@ -23,9 +72,10 @@
 
 (defn icon [paths]
   [:svg {:xmlns "http://www.w3.org/2000/svg"
-         :width "28" :height "28" :viewBox "0 0 24 24"
+         :width "24" :height "24" :viewBox "0 0 24 24"
          :fill "none" :stroke "currentColor" :stroke-width "2"
-         :stroke-linecap "round" :stroke-linejoin "round"}
+         :stroke-linecap "round" :stroke-linejoin "round"
+         :aria-hidden "true"}
    paths])
 
 (def icons
@@ -209,7 +259,6 @@
 
 (defn gradient-section []
   (let [{:keys [start end steps space]} (:gradient @state)
-        _ (prn "space " (:gradient @state))
         gradient (color/gradient [start end] steps (keyword space))]
     [:section.section
      [:h2 (:activity icons) "Interpolation & Gradients"]
@@ -425,19 +474,47 @@
         [:div.harmony-swatches
          (doall (map-indexed (fn [i c] ^{:key i} [copyable-color c]) tetrad))]]]]]))
 
+(def nav-items
+  [{:id "picker"    :icon :target      :label "Picker"}
+   {:id "blending"  :icon :layers      :label "Blending"}
+   {:id "tst"       :icon :grid        :label "Tints/Shades"}
+   {:id "gradient"  :icon :activity    :label "Gradients"}
+   {:id "alpha"     :icon :droplet     :label "Alpha"}
+   {:id "delta"     :icon :eye         :label "Delta E"}
+   {:id "kelvin"    :icon :thermometer :label "Kelvin"}
+   {:id "contrast"  :icon :contrast    :label "Contrast"}
+   {:id "harmony"   :icon :aperture    :label "Harmony"}])
+
+(defn section-nav []
+  [:nav.section-nav {:aria-label "Tool sections"}
+   (doall
+    (for [{:keys [id icon label]} nav-items]
+      ^{:key id}
+      [:a {:href (str "#" id)}
+       (get icons icon)
+       label]))])
+
 (defn app []
   [:<>
-   [color-picker-section]
-   [blending-section]
-   [tst-section]
-   [gradient-section]
-   [alpha-section]
-   [delta-section]
-   [kelvin-section]
-   [contrast-section]
-   [harmony-section]])
+   [section-nav]
+   [:div {:id "picker"}    [color-picker-section]]
+   [:div {:id "blending"}  [blending-section]]
+   [:div {:id "tst"}       [tst-section]]
+   [:div {:id "gradient"}  [gradient-section]]
+   [:div {:id "alpha"}     [alpha-section]]
+   [:div {:id "delta"}     [delta-section]]
+   [:div {:id "kelvin"}    [kelvin-section]]
+   [:div {:id "contrast"}  [contrast-section]]
+   [:div {:id "harmony"}   [harmony-section]]])
+
+(defonce toggle-root
+  (when-let [el (js/document.getElementById "theme-toggle-mount")]
+    (rdomc/create-root el)))
 
 (defn init []
+  (init-theme!)
+  (when toggle-root
+    (rdomc/render toggle-root [theme-toggle]))
   (start! {:body [#'app]
            :title-prefix "Reagent: "
            :css-infiles ["site/public/css/examples.css"
