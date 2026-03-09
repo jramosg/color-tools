@@ -126,8 +126,26 @@
                    [:line {:x1 "4" :y1 "4" :x2 "9" :y2 "9"}]]]
    :zap [icon [:g [:polygon {:points "13 2 3 14 12 14 11 22 21 10 12 10 13 2"}]]]})
 
+(defonce toast-timeout (atom nil))
+(defonce toast (r/atom nil))
+
+(defn show-toast! [msg]
+  (when @toast-timeout (js/clearTimeout @toast-timeout))
+  (reset! toast msg)
+  (reset! toast-timeout (js/setTimeout #(reset! toast nil) 1800)))
+
 (defn copy-to-clipboard [text]
-  (js/navigator.clipboard.writeText text))
+  (-> (js/navigator.clipboard.writeText text)
+      (.then #(show-toast! (str "Copied " text)))
+      (.catch (fn [_]
+                ;; fallback for non-HTTPS
+                (let [el (js/document.createElement "textarea")]
+                  (set! (.-value el) text)
+                  (.appendChild js/document.body el)
+                  (.select el)
+                  (js/document.execCommand "copy")
+                  (.removeChild js/document.body el)
+                  (show-toast! (str "Copied " text)))))))
 
 (defn copyable-color [color-val]
   (let [format (:format @state)
@@ -142,7 +160,7 @@
               :color text-color}
       :on-click #(copy-to-clipboard display-text)
       :title "Click to copy"}
-     [:span display-text]
+     display-text
      [:div.copyable-color__icon (:clipboard icons)]]))
 
 (defn color-picker-section []
@@ -547,9 +565,7 @@
                         :title "Click to copy"}
                        [:div.palette-swatch__copy (:clipboard icons)]
                        [:div.palette-swatch__label
-                        [:span.palette-swatch__hex (.toUpperCase hex)]
-                        (when-let [n (color/->name hex)]
-                          [:span.palette-swatch__name n])]]))
+                        [:span.palette-swatch__hex (.toUpperCase hex)]]]))
                   colors))]
          [:div.palette-export
           [:button.btn.btn-secondary
@@ -578,8 +594,13 @@
        (get icons icon)
        label]))])
 
+(defn toast-component []
+  (when-let [msg @toast]
+    [:div.toast msg]))
+
 (defn app []
   [:<>
+   [toast-component]
    [section-nav]
    [:div {:id "picker"}    [color-picker-section]]
    [:div {:id "blending"}  [blending-section]]
