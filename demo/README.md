@@ -36,7 +36,7 @@ npx shadow-cljs release app
 
 - `src/demo/core.cljs`: Main application logic using Reagent and `jon.color-tools`
 - `public/index.html`: Entry point HTML
-- `public/css/styles.css`: Application styles
+- `public/css/styles_hash.css`: Application styles
 - `deps.edn`: Clojure dependencies (includes local `color-tools` reference)
 - `shadow-cljs.edn`: Build configuration
 
