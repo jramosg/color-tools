@@ -267,6 +267,10 @@ body::before {
   z-index: 1;
 }
 
+main.container {
+  z-index: 2;
+}
+
 /* ---- Header ---- */
 
 .header {
