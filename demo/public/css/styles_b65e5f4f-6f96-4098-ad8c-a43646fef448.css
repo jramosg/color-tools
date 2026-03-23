@@ -1332,9 +1332,60 @@ main.container {
   color: var(--accent-text);
 }
 
+/* ---- Floating Support Button ---- */
+
+.bmc-float {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  background: var(--accent);
+  color: var(--bg-base);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 50px;
+  box-shadow: var(--shadow-md), 0 0 24px rgba(232, 166, 52, 0.2);
+  transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+  overflow: hidden;
+}
+
+.bmc-float:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), 0 0 36px rgba(232, 166, 52, 0.35);
+}
+
+.bmc-float__icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.bmc-float__label {
+  max-width: 5rem;
+  white-space: nowrap;
+  transition: max-width 0.3s var(--ease-out), opacity 0.2s;
+}
+
 /* ---- Responsive ---- */
 
 @media (max-width: 768px) {
+  .bmc-float {
+    bottom: 1rem;
+    right: 1rem;
+    padding: 0.6rem;
+  }
+
+  .bmc-float__label {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+
   .header {
     padding: 2rem 0 1.5rem;
   }
