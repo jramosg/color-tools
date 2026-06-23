@@ -14,6 +14,10 @@ All notable changes to this project will be documented in this file. This change
 - **cljdoc support**: Added explicit cljdoc article ordering, Clojure and
   ClojureScript language metadata, and a README badge
 
+### Changed
+- Replaced optional destructuring arities with explicit multi-arity
+  definitions while preserving existing call behavior
+
 ## [1.1.0] - 2025-12-02
 ### Added
 - **Color Blending Modes**: Professional blending operations for design workflows

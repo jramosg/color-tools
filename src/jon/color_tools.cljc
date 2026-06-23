@@ -36,20 +36,23 @@
 
 (defn round
   "Round a number to specified decimal places"
-  [n & [decimals]]
-  (let [decimals (or decimals 0)
-        factor (Math/pow 10 decimals)]
-    (cond-> (/ (Math/round #?(:clj (double (* n factor))
-                              :cljs (* n factor)))
-               factor)
-      (= decimals 0) int)))
+  ([n] (round n 0))
+  ([n decimals]
+   (let [decimals (or decimals 0)
+         factor (Math/pow 10 decimals)]
+     (cond-> (/ (Math/round #?(:clj (double (* n factor))
+                               :cljs (* n factor)))
+                factor)
+       (= decimals 0) int))))
 
 (defn round-int [n]
   (round n 0))
 
-(defn parse-int [s & [radix]]
-  #?(:clj (Integer/parseInt s (or radix 10))
-     :cljs (js/parseInt s (or radix 10))))
+(defn parse-int
+  ([s] (parse-int s 10))
+  ([s radix]
+   #?(:clj (Integer/parseInt s (or radix 10))
+      :cljs (js/parseInt s (or radix 10)))))
 
 ;; =============================================================================
 ;; Color Format Validation
@@ -148,11 +151,10 @@
 
 (defn hex->rgba
   "Convert hex color to RGBA vector with optional alpha"
-  [hex & [alpha]]
-  {:pre [(valid-hex? hex)]}
-  (let [rgb (hex->rgb hex)
-        a (or alpha 1)]
-    (conj rgb a)))
+  ([hex] (hex->rgba hex 1))
+  ([hex alpha]
+   {:pre [(valid-hex? hex)]}
+   (conj (hex->rgb hex) (or alpha 1))))
 
 (defn rgba->hex
   "Convert RGBA vector to hex string (ignoring alpha)"
@@ -534,17 +536,18 @@
 
 (defn mix
   "Mix two colors with optional ratio (0-1, default 0.5)"
-  [color1 color2 & [ratio]]
-  (let [ratio (or ratio 0.5)
-        [r1 g1 b1] (->rgb (normalize-color-input color1))
+  ([color1 color2] (mix color1 color2 0.5))
+  ([color1 color2 ratio]
+   (let [ratio (or ratio 0.5)
+         [r1 g1 b1] (->rgb (normalize-color-input color1))
         [r2 g2 b2] (->rgb (normalize-color-input color2))
         mixed [(round-int (+ r1 (* (- r2 r1) ratio)))
                (round-int (+ g1 (* (- g2 g1) ratio)))
                (round-int (+ b1 (* (- b2 b1) ratio)))]]
-    (cond
-      (color? color1) (color-from-rgb mixed)
-      (string? color1) (rgb->hex mixed)
-      (vector? color1) mixed)))
+     (cond
+       (color? color1) (color-from-rgb mixed)
+       (string? color1) (rgb->hex mixed)
+       (vector? color1) mixed))))
 
 ;; =============================================================================
 ;; Contrast and Accessibility
@@ -572,33 +575,38 @@
 
 (defn accessible?
   "Check if two colors meet WCAG AA accessibility standards"
-  [color1 color2 & [level]]
-  (let [ratio (contrast-ratio color1 color2)
-        threshold (case level
-                    :aaa 7
-                    :aa-large 3
-                    4.5)]  ; AA normal
-    (>= ratio threshold)))
+  ([color1 color2] (accessible? color1 color2 :aa))
+  ([color1 color2 level]
+   (let [level (or level :aa)
+         ratio (contrast-ratio color1 color2)
+         threshold (case level
+                     :aaa 7
+                     :aa-large 3
+                     4.5)]  ; AA normal
+     (>= ratio threshold))))
 
 (defn find-accessible-color
   "Find an accessible color by adjusting lightness"
-  [background target-color & [level]]
-  (let [level (or level :aa)
-        threshold (case level
-                    :aaa 7
-                    :aa-large 3
-                    4.5)  ; AA normal
-        target-color-hsl (->hsl target-color)
-        try-color (fn [lightness]
-                    (let [[h s _] target-color-hsl
-                          new-color (if (string? target-color)
-                                      (hsl->hex [h s lightness])
-                                      (hsl->rgb [h s lightness]))]
-                      (when (>= (contrast-ratio background new-color) threshold)
-                        new-color)))]
-    (or (try-color 0)    ; Try black first
-        (try-color 100)  ; Then white
-        (some try-color (range 0 101 5))))) ; Then try other lightness values
+  ([background target-color]
+   (find-accessible-color background target-color :aa))
+  ([background target-color level]
+   (let [level (or level :aa)
+         threshold (case level
+                     :aaa 7
+                     :aa-large 3
+                     4.5)  ; AA normal
+         target-color-hsl (->hsl target-color)
+         try-color (fn [lightness]
+                     (let [[h s _] target-color-hsl
+                           new-color (if (string? target-color)
+                                       (hsl->hex [h s lightness])
+                                       (hsl->rgb [h s lightness]))]
+                       (when (>= (contrast-ratio background new-color)
+                                 threshold)
+                         new-color)))]
+     (or (try-color 0)    ; Try black first
+         (try-color 100)  ; Then white
+         (some try-color (range 0 101 5)))))) ; Then try other lightness values
 
 (defn get-contrast-text
   "Get the best contrast text color (black or white) for a given background color.
@@ -662,33 +670,37 @@
 
 (defn analogous
   "Generate analogous colors"
-  [color & [count angle]]
-  (let [count (or count 3)
-        angle (or angle 30)]
-    (map #(adjust-hue color (* % angle)) (range 1 (inc count)))))
+  ([color] (analogous color 3 30))
+  ([color count] (analogous color count 30))
+  ([color count angle]
+   (let [count (or count 3)
+         angle (or angle 30)]
+     (map #(adjust-hue color (* % angle)) (range 1 (inc count))))))
 
 (defn monochromatic
   "Generate monochromatic palette by varying lightness and saturation"
-  [color & [count]]
-  (let [count (or count 5)
-        [h] (->hsl color)
-        variations (for [i (range count)
-                         :let [factor (/ i (dec count))
-                               new-l (+ 20 (* 60 factor))
-                               new-s (+ 50 (* 50 (- 1 (* 0.5 factor))))]]
-                     (if (string? color)
-                       (hsl->hex [h new-s new-l])
-                       (hsl->rgb [h new-s new-l])))]
-    variations))
+  ([color] (monochromatic color 5))
+  ([color count]
+   (let [count (or count 5)
+         [h] (->hsl color)
+         variations (for [i (range count)
+                          :let [factor (/ i (dec count))
+                                new-l (+ 20 (* 60 factor))
+                                new-s (+ 50 (* 50 (- 1 (* 0.5 factor))))]]
+                      (if (string? color)
+                        (hsl->hex [h new-s new-l])
+                        (hsl->rgb [h new-s new-l])))]
+     variations)))
 
 (defn split-complementary
   "Get split-complementary colors"
-  [color & [angle]]
-  (let [angle (or angle 30)
-        [h] (->hsl color)
-        comp-hue (+ h 180)]
-    [(adjust-hue color (- comp-hue angle))
-     (adjust-hue color (+ comp-hue angle))]))
+  ([color] (split-complementary color 30))
+  ([color angle]
+   (let [angle (or angle 30)
+         [h] (->hsl color)
+         comp-hue (+ h 180)]
+     [(adjust-hue color (- comp-hue angle))
+      (adjust-hue color (+ comp-hue angle))])))
 
 ;; =============================================================================
 ;; Advanced Palette Generation
@@ -701,16 +713,18 @@
 
 (defn generate-palette
   "Generate a color palette using various strategies"
-  [strategy base-color & [options]]
-  (case strategy
-    :monochromatic (monochromatic base-color (:count options 5))
-    :analogous (analogous base-color (:count options 3) (:angle options 30))
-    :triadic (triadic base-color)
-    :tetradic (tetradic base-color)
-    :complementary [(complementary base-color)]
-    :split-complementary (split-complementary base-color (:angle options 30))
-    :random (repeatedly (:count options 5) random-color)
-    [base-color]))
+  ([strategy base-color] (generate-palette strategy base-color {}))
+  ([strategy base-color options]
+   (case strategy
+     :monochromatic (monochromatic base-color (:count options 5))
+     :analogous (analogous base-color (:count options 3) (:angle options 30))
+     :triadic (triadic base-color)
+     :tetradic (tetradic base-color)
+     :complementary [(complementary base-color)]
+     :split-complementary (split-complementary base-color
+                                                (:angle options 30))
+     :random (repeatedly (:count options 5) random-color)
+     [base-color])))
 
 ;; =============================================================================
 ;; Accessible Design Tokens
@@ -754,61 +768,65 @@
 
   Returns a map of hex color tokens for app UIs, including foreground tokens
   that meet the requested contrast level against their paired backgrounds."
-  [base-color & [options]]
-  (let [{:keys [mode level]
-         :or {mode :light level :aa}} options
-        light? (= mode :light)
-        base (->hex base-color)
-        background (if light? (tint base 0.96) (shade base 0.88))
-        surface (if light? (tint base 0.9) (shade base 0.78))
-        muted (if light? (tone (tint base 0.82) 0.45)
-                  (tone (shade base 0.65) 0.35))
-        primary base
-        secondary (->hex (adjust-hue base 35))
-        accent (->hex (complementary base))
-        ring (accessible-color background (adjust-hue base 65) :aa-large)]
-    {:mode mode
-     :level level
-     :scale (theme-scale base)
-     :background (->hex background)
-     :on-background (accessible-color background
-                                      (if light? "#111827" "#f9fafb")
-                                      level)
-     :surface (->hex surface)
-     :on-surface (accessible-color surface
-                                   (if light? "#111827" "#f9fafb")
-                                   level)
-     :muted (->hex muted)
-     :on-muted (accessible-color muted
-                                 (if light? "#374151" "#e5e7eb")
-                                 level)
-     :primary primary
-     :on-primary (accessible-color primary
-                                   (if (dark? primary) "#ffffff" "#000000")
-                                   level)
-     :secondary secondary
-     :on-secondary (accessible-color secondary
-                                     (if (dark? secondary) "#ffffff" "#000000")
-                                     level)
-     :accent accent
-     :on-accent (accessible-color accent
-                                  (if (dark? accent) "#ffffff" "#000000")
+  ([base-color] (accessible-theme base-color {}))
+  ([base-color options]
+   (let [{:keys [mode level]
+          :or {mode :light level :aa}} options
+         light? (= mode :light)
+         base (->hex base-color)
+         background (if light? (tint base 0.96) (shade base 0.88))
+         surface (if light? (tint base 0.9) (shade base 0.78))
+         muted (if light? (tone (tint base 0.82) 0.45)
+                   (tone (shade base 0.65) 0.35))
+         primary base
+         secondary (->hex (adjust-hue base 35))
+         accent (->hex (complementary base))
+         ring (accessible-color background (adjust-hue base 65) :aa-large)]
+     {:mode mode
+      :level level
+      :scale (theme-scale base)
+      :background (->hex background)
+      :on-background (accessible-color background
+                                       (if light? "#111827" "#f9fafb")
+                                       level)
+      :surface (->hex surface)
+      :on-surface (accessible-color surface
+                                    (if light? "#111827" "#f9fafb")
+                                    level)
+      :muted (->hex muted)
+      :on-muted (accessible-color muted
+                                  (if light? "#374151" "#e5e7eb")
                                   level)
-     :border (if light? (shade background 0.12) (tint background 0.16))
-     :focus-ring ring}))
+      :primary primary
+      :on-primary (accessible-color primary
+                                    (if (dark? primary) "#ffffff" "#000000")
+                                    level)
+      :secondary secondary
+      :on-secondary (accessible-color secondary
+                                      (if (dark? secondary)
+                                        "#ffffff"
+                                        "#000000")
+                                      level)
+      :accent accent
+      :on-accent (accessible-color accent
+                                   (if (dark? accent) "#ffffff" "#000000")
+                                   level)
+      :border (if light? (shade background 0.12) (tint background 0.16))
+      :focus-ring ring})))
 
 (defn theme->css-vars
   "Convert an `accessible-theme` map to CSS custom properties.
 
   By default variables use the `--ct-` prefix. Pass `:prefix` to override it."
-  [theme & [options]]
-  (let [prefix (:prefix options "--ct-")
-        scale (:scale theme)
-        top-level (dissoc theme :scale :mode :level)]
-    (into {}
-          (concat
-           (map (fn [[k v]] [(str prefix (name k)) v]) top-level)
-           (map (fn [[k v]] [(str prefix "scale-" (name k)) v]) scale)))))
+  ([theme] (theme->css-vars theme {}))
+  ([theme options]
+   (let [prefix (:prefix options "--ct-")
+         scale (:scale theme)
+         top-level (dissoc theme :scale :mode :level)]
+     (into {}
+           (concat
+            (map (fn [[k v]] [(str prefix (name k)) v]) top-level)
+            (map (fn [[k v]] [(str prefix "scale-" (name k)) v]) scale))))))
 
 ;; =============================================================================
 ;; Color Distance and Similarity
@@ -825,9 +843,9 @@
 
 (defn similar?
   "Check if two colors are similar within a threshold"
-  [color1 color2 & [threshold]]
-  (let [threshold (or threshold 50)]
-    (<= (color-distance color1 color2) threshold)))
+  ([color1 color2] (similar? color1 color2 50))
+  ([color1 color2 threshold]
+   (<= (color-distance color1 color2) (or threshold 50))))
 
 ;; =============================================================================
 ;; Utility Functions for Color Names
@@ -895,15 +913,16 @@
 
 (defn vibrant?
   "Check if a color is vibrant (high saturation)"
-  [color & [threshold]]
-  (let [threshold (or threshold 60)
-        [_ s] (->hsl color)]
-    (> s threshold)))
+  ([color] (vibrant? color 60))
+  ([color threshold]
+   (let [threshold (or threshold 60)
+         [_ s] (->hsl color)]
+     (> s threshold))))
 
 (defn muted?
   "Check if a color is muted (low saturation)"
-  [color & [threshold]]
-  (not (vibrant? color threshold)))
+  ([color] (muted? color 60))
+  ([color threshold] (not (vibrant? color (or threshold 60)))))
 
 ;; =============================================================================
 ;; Color Blending Modes
@@ -983,24 +1002,27 @@
 
 (defn tints
   "Generate a series of tints (color mixed with white)"
-  [color & [count]]
-  (let [count (or count 5)]
-    (for [i (range 1 (inc count))]
-      (tint color (/ i count)))))
+  ([color] (tints color 5))
+  ([color count]
+   (let [count (or count 5)]
+     (for [i (range 1 (inc count))]
+       (tint color (/ i count))))))
 
 (defn shades
   "Generate a series of shades (color mixed with black)"
-  [color & [count]]
-  (let [count (or count 5)]
-    (for [i (range 1 (inc count))]
-      (shade color (/ i count)))))
+  ([color] (shades color 5))
+  ([color count]
+   (let [count (or count 5)]
+     (for [i (range 1 (inc count))]
+       (shade color (/ i count))))))
 
 (defn tones
   "Generate a series of tones (color mixed with gray)"
-  [color & [count]]
-  (let [count (or count 5)]
-    (for [i (range 1 (inc count))]
-      (tone color (/ i count)))))
+  ([color] (tones color 5))
+  ([color count]
+   (let [count (or count 5)]
+     (for [i (range 1 (inc count))]
+       (tone color (/ i count))))))
 
 ;; =============================================================================
 ;; Alpha Blending and Compositing
@@ -1055,63 +1077,65 @@
 (defn interpolate
   "Interpolate between multiple colors at given position (0-1).
    Can use different color spaces: :rgb (default), :hsl, or :hsv"
-  [colors position & [color-space]]
-  (let [color-space (or color-space :rgb)
-        n (count colors)
-        _ (when (< n 2)
-            (throw (ex-info "Need at least 2 colors to interpolate"
-                            {:colors colors})))
-        ;; Calculate which segment and position within segment
-        segment-size (/ 1.0 (dec n))
-        segment-idx (min (dec n) (int (/ position segment-size)))
-        segment-pos (/ (- position (* segment-idx segment-size)) segment-size)
-        color1 (nth colors segment-idx)
-        color2 (nth colors (min (inc segment-idx) (dec n)))
+  ([colors position] (interpolate colors position :rgb))
+  ([colors position color-space]
+   (let [color-space (or color-space :rgb)
+         n (count colors)
+         _ (when (< n 2)
+             (throw (ex-info "Need at least 2 colors to interpolate"
+                             {:colors colors})))
+         ;; Calculate which segment and position within segment
+         segment-size (/ 1.0 (dec n))
+         segment-idx (min (dec n) (int (/ position segment-size)))
+         segment-pos (/ (- position (* segment-idx segment-size)) segment-size)
+         color1 (nth colors segment-idx)
+         color2 (nth colors (min (inc segment-idx) (dec n)))
 
-        ;; Convert to working color space
-        [c1 c2] (case color-space
-                  :hsl [(->hsl color1) (->hsl color2)]
-                  :hsv [(->hsv color1) (->hsv color2)]
-                  :rgb [(->rgb color1) (->rgb color2)])
+         ;; Convert to working color space
+         [c1 c2] (case color-space
+                   :hsl [(->hsl color1) (->hsl color2)]
+                   :hsv [(->hsv color1) (->hsv color2)]
+                   :rgb [(->rgb color1) (->rgb color2)])
 
-        ;; Interpolate each component
-        interpolated (map (fn [v1 v2]
-                            (+ v1 (* (- v2 v1) segment-pos)))
-                          c1 c2)
+         ;; Interpolate each component
+         interpolated (map (fn [v1 v2]
+                             (+ v1 (* (- v2 v1) segment-pos)))
+                           c1 c2)
 
-        ;; Handle hue interpolation specially (shortest path around circle)
-        interpolated (if (#{:hsl :hsv} color-space)
-                       (let [[h1] c1
-                             [h2] c2
-                             ;; Find shortest hue path
-                             diff (- h2 h1)
-                             diff (cond
-                                    (> diff 180) (- diff 360)
-                                    (< diff -180) (+ diff 360)
-                                    :else diff)
-                             h-interp (mod (+ h1 (* diff segment-pos)) 360)]
-                         [(round h-interp)
-                          (round (nth interpolated 1))
-                          (round (nth interpolated 2))])
-                       (mapv round-int interpolated))
+         ;; Handle hue interpolation specially (shortest path around circle)
+         interpolated (if (#{:hsl :hsv} color-space)
+                        (let [[h1] c1
+                              [h2] c2
+                              ;; Find shortest hue path
+                              diff (- h2 h1)
+                              diff (cond
+                                     (> diff 180) (- diff 360)
+                                     (< diff -180) (+ diff 360)
+                                     :else diff)
+                              h-interp (mod (+ h1 (* diff segment-pos)) 360)]
+                          [(round h-interp)
+                           (round (nth interpolated 1))
+                           (round (nth interpolated 2))])
+                        (mapv round-int interpolated))
 
-        ;; Convert back to original format
-        result (case color-space
-                 :hsl (hsl->rgb interpolated)
-                 :hsv (hsv->rgb interpolated)
-                 :rgb interpolated)]
+         ;; Convert back to original format
+         result (case color-space
+                  :hsl (hsl->rgb interpolated)
+                  :hsv (hsv->rgb interpolated)
+                  :rgb interpolated)]
 
-    (cond
-      (every? color? colors) (color-from-rgb result)
-      (every? string? colors) (rgb->hex result)
-      :else result)))
+     (cond
+       (every? color? colors) (color-from-rgb result)
+       (every? string? colors) (rgb->hex result)
+       :else result))))
 
 (defn gradient
   "Generate a gradient with n steps between colors"
-  [colors steps & [color-space]]
-  (let [color-space (or color-space :rgb)]
-    (for [i (range steps)]
-      (interpolate colors (/ i (dec steps)) color-space))))
+  ([colors steps] (gradient colors steps :rgb))
+  ([colors steps color-space]
+   (let [color-space (or color-space :rgb)]
+     (for [i (range steps)]
+       (interpolate colors (/ i (dec steps)) color-space)))))
 
 ;; =============================================================================
 ;; Perceptual Color Difference (Delta E)
@@ -1160,9 +1184,9 @@
 (defn perceptually-similar?
   "Check if two colors are perceptually similar using Delta E.
    Default threshold of 2.3 is the JND (Just Noticeable Difference)"
-  [color1 color2 & [threshold]]
-  (let [threshold (or threshold 2.3)]
-    (<= (delta-e color1 color2) threshold)))
+  ([color1 color2] (perceptually-similar? color1 color2 2.3))
+  ([color1 color2 threshold]
+   (<= (delta-e color1 color2) (or threshold 2.3))))
 
 ;; =============================================================================
 ;; Color Temperature (Kelvin)

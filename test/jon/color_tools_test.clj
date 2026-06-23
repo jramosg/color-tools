@@ -384,6 +384,42 @@
       (is (seq (sut/generate-palette :split-complementary base)))
       (is (seq (sut/generate-palette :random base))))))
 
+(deftest test-optional-arity-defaults
+  (testing "Explicit nil optional arguments keep legacy defaults"
+    (is (= (sut/round 1.4) (sut/round 1.4 nil)))
+    (is (= (sut/parse-int "10") (sut/parse-int "10" nil)))
+    (is (= (sut/hex->rgba "#ff0000") (sut/hex->rgba "#ff0000" nil)))
+    (is (= (sut/mix "#ff0000" "#0000ff")
+           (sut/mix "#ff0000" "#0000ff" nil)))
+    (is (= (sut/accessible? "#000000" "#ffffff")
+           (sut/accessible? "#000000" "#ffffff" nil)))
+    (is (= (sut/find-accessible-color "#ffffff" "#777777")
+           (sut/find-accessible-color "#ffffff" "#777777" nil)))
+    (is (= (sut/analogous "#ff0000") (sut/analogous "#ff0000" nil nil)))
+    (is (= (sut/monochromatic "#ff0000")
+           (sut/monochromatic "#ff0000" nil)))
+    (is (= (sut/split-complementary "#ff0000")
+           (sut/split-complementary "#ff0000" nil)))
+    (is (= (sut/generate-palette :analogous "#ff0000")
+           (sut/generate-palette :analogous "#ff0000" nil)))
+    (is (= (sut/accessible-theme "#3498db")
+           (sut/accessible-theme "#3498db" nil)))
+    (is (= (sut/theme->css-vars (sut/accessible-theme "#3498db"))
+           (sut/theme->css-vars (sut/accessible-theme "#3498db") nil)))
+    (is (= (sut/similar? "#ff0000" "#fe0000")
+           (sut/similar? "#ff0000" "#fe0000" nil)))
+    (is (= (sut/vibrant? "#ff0000") (sut/vibrant? "#ff0000" nil)))
+    (is (= (sut/muted? "#808080") (sut/muted? "#808080" nil)))
+    (is (= (sut/tints "#ff0000") (sut/tints "#ff0000" nil)))
+    (is (= (sut/shades "#ff0000") (sut/shades "#ff0000" nil)))
+    (is (= (sut/tones "#ff0000") (sut/tones "#ff0000" nil)))
+    (is (= (sut/interpolate ["#ff0000" "#0000ff"] 0.5)
+           (sut/interpolate ["#ff0000" "#0000ff"] 0.5 nil)))
+    (is (= (sut/gradient ["#ff0000" "#0000ff"] 3)
+           (sut/gradient ["#ff0000" "#0000ff"] 3 nil)))
+    (is (= (sut/perceptually-similar? "#ff0000" "#fe0101")
+           (sut/perceptually-similar? "#ff0000" "#fe0101" nil)))))
+
 (deftest test-accessible-theme
   (testing "Generates a complete light theme from a brand color"
     (let [theme (sut/accessible-theme "#3498db")]
