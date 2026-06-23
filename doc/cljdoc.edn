@@ -1,0 +1,9 @@
+{:cljdoc/languages ["clj" "cljs"]
+ :cljdoc/docstring-format :markdown
+ :cljdoc.doc/tree
+ [["Readme" {:file "README.md"}]
+  ["Changelog" {:file "CHANGELOG.md"}]
+  ["Introduction" {:file "doc/intro.md"}]
+  ["Tutorial" {:file "doc/tutorial.md"}]
+  ["API Reference" {:file "doc/api-reference.md"}]
+  ["Advanced Features" {:file "doc/advanced-features.md"}]]}

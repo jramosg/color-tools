@@ -21,7 +21,7 @@
 
 (defn- pom-template [version]
   [[:description "A comprehensive color manipulation library for Clojure and ClojureScript. Provides utilities for color format conversions, color manipulation, palette generation, accessibility checking, and color analysis."]
-   [:url "https://github.com/jon/color-tools"]
+   [:url "https://github.com/jramosg/color-tools"]
    [:licenses
     [:license
      [:name "Eclipse Public License"]
@@ -30,9 +30,9 @@
     [:developer
      [:name "Jon"]]]
    [:scm
-    [:url "https://github.com/jon/color-tools"]
-    [:connection "scm:git:https://github.com/jon/color-tools.git"]
-    [:developerConnection "scm:git:ssh:git@github.com:jon/color-tools.git"]
+    [:url "https://github.com/jramosg/color-tools"]
+    [:connection "scm:git:https://github.com/jramosg/color-tools.git"]
+    [:developerConnection "scm:git:ssh://git@github.com/jramosg/color-tools.git"]
     [:tag (str "v" version)]]])
 
 (defn- jar-opts [opts]

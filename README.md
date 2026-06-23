@@ -3,6 +3,7 @@
 A comprehensive color manipulation library for Clojure and ClojureScript. Provides utilities for color format conversions, color manipulation, palette generation, accessibility checking, and color analysis.
 
 [![Clojars Project](https://img.shields.io/clojars/v/com.github.jramosg/color-tools.svg)](https://clojars.org/com.github.jramosg/color-tools)
+[![cljdoc badge](https://cljdoc.org/badge/com.github.jramosg/color-tools)](https://cljdoc.org/d/com.github.jramosg/color-tools)
 
 ## 🎨 [**Try the Live Demo →**](https://color-tools.jonramos.dev/)
 

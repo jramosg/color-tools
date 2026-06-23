@@ -2,13 +2,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   
-  <groupId>com.github.jramosgramos</groupId>
+  <groupId>com.github.jramosg</groupId>
   <artifactId>color-tools</artifactId>
   <version>1.0.0</version>
   <name>jonramos/color-tools</name>
   
   <description>A comprehensive color manipulation library for Clojure and ClojureScript. Provides utilities for color format conversions, color manipulation, palette generation, accessibility checking, and color analysis.</description>
-  <url>https://github.com/jon/color-tools</url>
+  <url>https://github.com/jramosg/color-tools</url>
   
   <licenses>
     <license>
