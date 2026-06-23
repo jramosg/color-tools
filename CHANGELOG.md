@@ -1,6 +1,19 @@
 # Change Log
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
+## Unreleased
+### Added
+- **Accessible Theme Generator**: Generate production-ready UI color tokens
+  from a single brand color
+  - `accessible-theme` - Builds light or dark theme tokens with WCAG-aware
+    foreground colors, semantic roles, focus ring, border, and color scale
+  - `theme->css-vars` - Exports generated theme tokens as CSS custom
+    properties for direct frontend use
+- **Demo Theme Generator**: Interactive demo panel for previewing generated
+  accessible themes, contrast pairs, color scales, and CSS variable export
+- **cljdoc support**: Added explicit cljdoc article ordering, Clojure and
+  ClojureScript language metadata, and a README badge
+
 ## [1.1.0] - 2025-12-02
 ### Added
 - **Color Blending Modes**: Professional blending operations for design workflows

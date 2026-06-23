@@ -52,7 +52,9 @@ npx http-server demo/public -p 8000
 # open http://localhost:8000
 ```
 
-- **Blending Modes**: Multiply, screen, overlay (Photoshop-style blending) ✨ NEW
+- **Accessible Theme Generator**: WCAG-aware UI tokens from one brand color ✨ NEW
+- **CSS Variable Export**: Turn generated tokens into frontend-ready custom properties ✨ NEW
+- **Blending Modes**: Multiply, screen, overlay (Photoshop-style blending)
 - **Tints/Shades/Tones**: Design system color scale generation ✨ NEW
 - **Alpha Blending**: Porter-Duff compositing for transparent colors ✨ NEW
 - **Color Interpolation**: Smooth gradients in RGB, HSL, or HSV ✨ NEW
@@ -68,13 +70,13 @@ npx http-server demo/public -p 8000
 Add the following dependency to your `deps.edn`:
 
 ```clojure
-{:deps com.github.jramosg/color-tools {:mvn/version "1.1.0"}}
+{:deps com.github.jramosg/color-tools {:mvn/version "1.2.0"}}
 ```
 
 Or for Leiningen, add to your `project.clj`:
 
 ```clojure
-[com.github.jramosg/color-tools "1.1.0"]
+[com.github.jramosg/color-tools "1.2.0"]
 ```
 
 ## Quick Start
@@ -118,6 +120,18 @@ Or for Leiningen, add to your `project.clj`:
 
 (color/contrast-ratio "#ff5733" "#ffffff")
 ;=> 3.07
+
+;; Generate a complete accessible UI theme from a brand color
+(def theme (color/accessible-theme "#3498db" {:mode :light :level :aa}))
+
+(:primary theme)
+;=> "#3498db"
+
+(:on-primary theme)
+;=> "#000000"
+
+(color/theme->css-vars theme)
+;=> {"--ct-primary" "#3498db", "--ct-on-primary" "#000000", ...}
 ```
 
 ## Usage Examples
@@ -318,6 +332,28 @@ The library fully supports CSS color strings with flexible formatting:
 ;; Find accessible colors automatically
 (color/find-accessible-color "#3498db" "#e74c3c" :aa)
 ;=> "#b71c1c"  ; Darkened version that meets AA standards
+```
+
+### Accessible Theme Generation
+
+```clojure
+;; Create WCAG-aware UI tokens from one brand color
+(def theme (color/accessible-theme "#3498db" {:mode :light :level :aa}))
+
+(:background theme)    ;=> "#f7fbfe"
+(:primary theme)       ;=> "#3498db"
+(:on-primary theme)    ;=> "#000000"
+(:focus-ring theme)    ;=> "#8433db"
+
+;; Dark mode and stricter contrast are supported too
+(color/accessible-theme "#ff7a59" {:mode :dark :level :aaa})
+
+;; Export tokens as CSS custom properties
+(color/theme->css-vars theme {:prefix "--brand-"})
+;=> {"--brand-primary" "#3498db"
+;    "--brand-on-primary" "#000000"
+;    "--brand-scale-500" "#3498db"
+;    ...}
 ```
 
 ### Color Analysis
