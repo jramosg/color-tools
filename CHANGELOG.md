@@ -2,6 +2,9 @@
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## Unreleased
+### Changed
+- Improved the Accessible Theme Generator demo layout for clearer token,
+  contrast, and color scale previews
 
 ## [1.2.0] - 2026-06-23
 ### Added

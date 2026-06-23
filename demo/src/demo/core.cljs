@@ -429,11 +429,23 @@
         fg (get tokens fg-key)
         ratio (color/contrast-ratio bg fg)]
     [:div.token-contrast-row
-     [:span label]
-     [:span.token-contrast-pair
-      [:span.token-dot {:style {:background bg}}]
-      [:span.token-dot {:style {:background fg}}]]
-     [:strong (str ratio ":1")]]))
+     [:div.token-contrast-row__meta
+      [:span.token-contrast-row__label label]
+      [:span.token-contrast-row__pair
+       [:span.token-dot {:style {:background bg}}]
+       [:span.token-dot {:style {:background fg}}]]]
+     [:strong.token-contrast-row__ratio (str ratio ":1")]]))
+
+(defn- token-chip [tokens label k]
+  (let [hex (get tokens k)]
+    [:button.token-chip
+     {:type "button"
+      :on-click #(copy-to-clipboard (.toUpperCase hex))
+      :title (str "Copy " label " token")
+      :aria-label (str "Copy " label " token " hex)}
+     [:span.token-chip__swatch {:style {:background hex}}]
+     [:span.token-chip__label label]
+     [:code.token-chip__hex (.toUpperCase hex)]]))
 
 (defn- css-vars-text [tokens]
   (let [css-vars (color/theme->css-vars tokens)]
@@ -442,6 +454,8 @@
                    (map (fn [[k v]] (str "  " k ": " v ";"))
                         (sort-by key css-vars)))
          "\n}")))
+
+(def theme-scale-steps [:50 :100 :200 :300 :400 :500 :600 :700 :800 :900])
 
 (defn theme-generator-section []
   (let [{:keys [base mode level]} (:theme-generator @state)
@@ -497,7 +511,9 @@
          [:button.theme-preview__button {:style accent-style} "Accent"]]]]
       [:div.token-grid
        [:div.token-card
-        [:h4 "Role Tokens"]
+        [:div.token-card__header
+         [:h4 "Role Tokens"]
+         [:span "Click to copy"]]
         [:div.token-list
          (doall
           (for [[label k] [["Background" :background]
@@ -506,29 +522,33 @@
                            ["Secondary" :secondary]
                            ["Accent" :accent]
                            ["Focus" :focus-ring]]]
-            (let [hex (get tokens k)]
-              ^{:key label}
-              [:button.token-chip
-               {:on-click #(copy-to-clipboard (.toUpperCase hex))}
-               [:span.token-dot {:style {:background hex}}]
-               [:span label]
-               [:code (.toUpperCase hex)]])))]]
+            ^{:key label}
+            [token-chip tokens label k]))]]
        [:div.token-card
-        [:h4 "Contrast Pairs"]
+        [:div.token-card__header
+         [:h4 "Contrast Pairs"]
+         [:span (str/upper-case level)]]
         [contrast-row tokens :background :on-background "Background"]
         [contrast-row tokens :surface :on-surface "Surface"]
         [contrast-row tokens :primary :on-primary "Primary"]
         [contrast-row tokens :secondary :on-secondary "Secondary"]
         [contrast-row tokens :accent :on-accent "Accent"]]]
+      [:div.token-card.token-card--scale
+       [:div.token-card__header
+        [:h4 "Color Scale"]
+       [:span "50-900"]]
       [:div.theme-scale
        (doall
-        (for [[k hex] scale]
-          ^{:key k}
-          [:button.theme-scale__swatch
-           {:style {:background hex :color (color/get-contrast-text hex)}
-            :on-click #(copy-to-clipboard (.toUpperCase hex))}
-           [:span (name k)]
-           [:code (.toUpperCase hex)]]))]
+        (for [k theme-scale-steps
+              :let [hex (get scale k)]]
+          (when hex
+            ^{:key k}
+            [:button.theme-scale__swatch
+             {:type "button"
+              :style {:background hex :color (color/get-contrast-text hex)}
+              :on-click #(copy-to-clipboard (.toUpperCase hex))}
+             [:span.theme-scale__step (name k)]
+             [:code.theme-scale__hex (.toUpperCase hex)]])))]]
       [:div.palette-export
        [:button.btn.btn-primary
         {:on-click #(copy-to-clipboard (css-vars-text tokens))}
