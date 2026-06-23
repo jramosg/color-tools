@@ -540,10 +540,10 @@
   ([color1 color2 ratio]
    (let [ratio (or ratio 0.5)
          [r1 g1 b1] (->rgb (normalize-color-input color1))
-        [r2 g2 b2] (->rgb (normalize-color-input color2))
-        mixed [(round-int (+ r1 (* (- r2 r1) ratio)))
-               (round-int (+ g1 (* (- g2 g1) ratio)))
-               (round-int (+ b1 (* (- b2 b1) ratio)))]]
+         [r2 g2 b2] (->rgb (normalize-color-input color2))
+         mixed [(round-int (+ r1 (* (- r2 r1) ratio)))
+                (round-int (+ g1 (* (- g2 g1) ratio)))
+                (round-int (+ b1 (* (- b2 b1) ratio)))]]
      (cond
        (color? color1) (color-from-rgb mixed)
        (string? color1) (rgb->hex mixed)
@@ -722,7 +722,7 @@
      :tetradic (tetradic base-color)
      :complementary [(complementary base-color)]
      :split-complementary (split-complementary base-color
-                                                (:angle options 30))
+                                               (:angle options 30))
      :random (repeatedly (:count options 5) random-color)
      [base-color])))
 
