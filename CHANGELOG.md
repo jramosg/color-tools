@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file. This change
 ### Changed
 - Improved the Accessible Theme Generator demo layout for clearer token,
   contrast, and color scale previews
+- Expanded cljdoc documentation for accessible theme generation, CSS variable
+  export, public API coverage, and workflow examples
 
 ## [1.2.0] - 2026-06-23
 ### Added

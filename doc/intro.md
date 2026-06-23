@@ -56,6 +56,7 @@ The library implements color theory concepts like:
 - **Triadic harmonies**: Three colors equally spaced on the color wheel
 - **Analogous colors**: Colors adjacent on the color wheel
 - **Monochromatic palettes**: Variations of a single hue
+- **Accessible theme tokens**: UI roles generated from one brand color
 
 ### Accessibility Focus
 
@@ -64,6 +65,8 @@ Built-in support for WCAG (Web Content Accessibility Guidelines) compliance:
 - Contrast ratio calculations
 - Accessibility checking for AA and AAA standards
 - Automatic accessible color finding
+- Accessible light and dark theme generation
+- CSS custom property export for frontend apps
 
 ## Common Use Cases
 
@@ -71,6 +74,7 @@ Built-in support for WCAG (Web Content Accessibility Guidelines) compliance:
 - Theme generation and color scheme management
 - Accessibility compliance checking
 - Dynamic color manipulation based on user preferences
+- CSS variable generation for app-wide design tokens
 
 ### Data Visualization
 - Generating color scales and palettes
@@ -121,6 +125,15 @@ The quickest way to get started is to require the namespace and try some basic o
 
 (color/contrast-ratio "#3498db" "#ffffff")  
 ;=> 3.14 ; Needs 4.5 for AA
+
+;; Generate app-ready accessible theme tokens
+(def theme (color/accessible-theme "#3498db" {:mode :light :level :aa}))
+
+(:on-primary theme)
+;=> "#000000"
+
+(color/theme->css-vars theme)
+;=> {"--ct-primary" "#3498db", "--ct-on-primary" "#000000", ...}
 ```
 
 ## Architecture
@@ -145,6 +158,10 @@ Functions implementing color theory for generating harmonious color combinations
 ### Accessibility
 Functions for WCAG compliance checking and accessible color generation.
 
+### Design Tokens
+Functions for generating accessible UI theme tokens and exporting them as CSS
+custom properties.
+
 ### Color Mixing and Blending
 Functions for combining colors mathematically.
 
@@ -161,4 +178,5 @@ The library is designed for performance:
 
 For comprehensive examples and tutorials, see the main [README.md](../README.md) file.
 
-For advanced usage patterns and best practices, explore the examples in the test suite.
+For workflow examples and best practices, see the workflow guide and the
+examples in the test suite.

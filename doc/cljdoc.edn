@@ -6,4 +6,4 @@
   ["Introduction" {:file "doc/intro.md"}]
   ["Tutorial" {:file "doc/tutorial.md"}]
   ["API Reference" {:file "doc/api-reference.md"}]
-  ["Advanced Features" {:file "doc/advanced-features.md"}]]}
+  ["Workflow Guide" {:file "doc/workflow-guide.md"}]]}

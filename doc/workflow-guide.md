@@ -1,6 +1,7 @@
-# Advanced Features Guide
+# Workflow Guide
 
-This guide covers the advanced color manipulation features added in version 1.1.0.
+This guide covers practical workflows for design systems, data visualization,
+accessibility, and lighting interfaces.
 
 ## Table of Contents
 
@@ -10,6 +11,7 @@ This guide covers the advanced color manipulation features added in version 1.1.
 - [Color Interpolation and Gradients](#color-interpolation-and-gradients)
 - [Perceptual Color Difference](#perceptual-color-difference)
 - [Color Temperature (Kelvin)](#color-temperature-kelvin)
+- [Accessible Theme Generation](#accessible-theme-generation)
 
 ## Color Blending Modes
 
@@ -546,8 +548,94 @@ mood-presets
 ;    :energizing "#fff9fd"}
 ```
 
+## Accessible Theme Generation
+
+`accessible-theme` turns one brand color into production UI tokens. It is
+designed for app themes where color roles need to work together: surfaces,
+text, primary actions, secondary actions, accents, borders, focus rings, and a
+numeric scale.
+
+### Creating a Light Theme
+
+```clojure
+(def theme
+  (color/accessible-theme "#1f86c7" {:mode :light :level :aa}))
+
+(select-keys theme [:background :surface :primary :on-primary :focus-ring])
+;=> {:background "#f6fafd"
+;    :surface "#e9f3f9"
+;    :primary "#1f86c7"
+;    :on-primary "#000000"
+;    :focus-ring "#6d1fc7"}
+```
+
+The `:on-*` tokens are foreground colors selected to meet the requested WCAG
+level against their matching background token.
+
+```clojure
+(color/accessible? (:primary theme) (:on-primary theme) (:level theme))
+;=> true
+
+(color/accessible? (:surface theme) (:on-surface theme) (:level theme))
+;=> true
+```
+
+### Dark Mode and Stricter Contrast
+
+Use `:mode :dark` to derive dark surfaces from the same brand color. Use
+`:level :aaa` when normal body text needs the stricter AAA threshold.
+
+```clojure
+(def dark-theme
+  (color/accessible-theme "#ff7a59" {:mode :dark :level :aaa}))
+
+(select-keys dark-theme [:background :surface :primary :on-primary])
+;=> {:background "#1f0f0b"
+;    :surface "#381b14"
+;    :primary "#ff7a59"
+;    :on-primary "#000000"}
+```
+
+### Exporting CSS Variables
+
+`theme->css-vars` converts theme maps into CSS custom properties. This is the
+fastest path from Clojure/ClojureScript token generation to browser styling.
+
+```clojure
+(color/theme->css-vars theme {:prefix "--brand-"})
+;=> {"--brand-background" "#f6fafd"
+;    "--brand-on-background" "#111827"
+;    "--brand-primary" "#1f86c7"
+;    "--brand-on-primary" "#000000"
+;    "--brand-scale-50" "#f4f9fc"
+;    "--brand-scale-500" "#1f86c7"
+;    ...}
+```
+
+### Applying Tokens in ClojureScript
+
+```clojure
+(defn theme-style [brand mode]
+  (color/theme->css-vars
+   (color/accessible-theme brand {:mode mode :level :aa})))
+
+(defn app-shell []
+  [:main {:style (theme-style "#1f86c7" :light)}
+   [:button {:style {:background "var(--ct-primary)"
+                     :color "var(--ct-on-primary)"
+                     :outline-color "var(--ct-focus-ring)"}}
+    "Save"]])
+```
+
+### When to Use Palettes vs Themes
+
+Use palette functions such as `analogous`, `triadic`, and `monochromatic` when
+you need color ideas or data visualization ranges. Use `accessible-theme` when
+you need app-ready roles with contrast-aware foreground colors and CSS export.
+
 ## Conclusion
 
-These advanced features provide professional-grade color manipulation capabilities for design systems, data visualization, lighting applications, and more. They build on the solid foundation of the color-tools library while adding sophisticated operations that match industry-standard tools.
+These workflows show how the color-tools API fits into design systems, data
+visualization, lighting applications, and frontend UI work.
 
 For complete API documentation, see [api-reference.md](api-reference.md).

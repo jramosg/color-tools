@@ -265,6 +265,53 @@ Automatically find accessible alternatives:
 ;=> "#c62828"  ; Slightly lighter option
 ```
 
+### Generating Accessible Theme Tokens
+
+When you need a real UI theme, start with `accessible-theme` instead of
+manually picking every foreground color. It generates semantic tokens,
+foreground pairs, a focus ring, borders, and a 50-900 scale from one brand
+color.
+
+```clojure
+(def theme
+  (color/accessible-theme "#3498db" {:mode :light :level :aa}))
+
+(:background theme)
+;=> "#f7fbfe"
+
+(:primary theme)
+;=> "#3498db"
+
+(:on-primary theme)
+;=> "#000000"
+
+(color/accessible? (:primary theme) (:on-primary theme) :aa)
+;=> true
+```
+
+Use `:mode :dark` for dark interfaces and `:level :aaa` when you want stricter
+normal text contrast.
+
+```clojure
+(color/accessible-theme "#ff7a59" {:mode :dark :level :aaa})
+;=> {:mode :dark
+;    :level :aaa
+;    :background "#1f0f0b"
+;    :primary "#ff7a59"
+;    ...}
+```
+
+For frontend apps, export the generated tokens as CSS custom properties:
+
+```clojure
+(color/theme->css-vars theme {:prefix "--brand-"})
+;=> {"--brand-background" "#f7fbfe"
+;    "--brand-primary" "#3498db"
+;    "--brand-on-primary" "#000000"
+;    "--brand-scale-500" "#3498db"
+;    ...}
+```
+
 ## Chapter 4: Palette Generation
 
 ### Color Harmony
@@ -372,27 +419,20 @@ Compare colors mathematically:
 
 ## Chapter 6: Real-World Examples
 
-### Example 1: Theme Generator
+### Example 1: Accessible App Theme
 
 ```clojure
-(defn generate-app-theme [primary-color]
-  (let [complementary (color/complementary primary-color)
-        analogous (color/analogous primary-color 2 30)]
-    {:primary primary-color
-     :secondary (first analogous)
-     :accent (second analogous)
-     :danger "#e74c3c"
-     :success "#27ae60"
-     :warning "#f39c12"
-     :info "#3498db"
-     :light (color/lighten primary-color 0.4)
-     :dark (color/darken primary-color 0.3)}))
+(defn build-theme-css [brand-color mode]
+  (-> (color/accessible-theme brand-color {:mode mode :level :aa})
+      (color/theme->css-vars {:prefix "--app-"})))
 
-(generate-app-theme "#9b59b6")
-;=> {:primary "#9b59b6"
-;    :secondary "#59b69b" 
-;    :accent "#5959b6"
-;    :danger "#e74c3c"
+(build-theme-css "#9b59b6" :light)
+;=> {"--app-background" "#fbf8fc"
+;    "--app-on-background" "#111827"
+;    "--app-primary" "#9b59b6"
+;    "--app-on-primary" "#ffffff"
+;    "--app-focus-ring" "#b6586b"
+;    "--app-scale-500" "#9b59b6"
 ;    ...}
 ```
 
@@ -440,7 +480,7 @@ Compare colors mathematically:
 
 1. **Always validate user input** when accepting colors from external sources
 2. **Consider accessibility** from the start of your design process
-3. **Use semantic color names** in your application (primary, secondary, etc.)
+3. **Use generated theme tokens** for app surfaces, text, focus, and borders
 4. **Test color combinations** across different devices and lighting conditions
 5. **Provide fallbacks** for color-blind users
 6. **Cache expensive operations** like palette generation when possible
