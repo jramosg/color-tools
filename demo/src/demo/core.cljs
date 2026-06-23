@@ -66,6 +66,7 @@
     :alpha {:base "#ffffff" :overlay default-color :alpha-base 100 :alpha-overlay 50}
     :delta {:color1 "#ff0000" :color2 "#fe0101"}
     :kelvin {:temp 6500}
+    :theme-generator {:base default-color :mode "light" :level "aa"}
     :contrast {:bg default-color :fg "#ffffff"}
     :harmony {:base default-color}
     :palette {:base default-color :strategy "analogous" :count 6
@@ -189,6 +190,7 @@
                                                     (assoc-in [:gradient :start] v)
                                                     (assoc-in [:alpha :base] v)
                                                     (assoc-in [:harmony :base] v)
+                                                    (assoc-in [:theme-generator :base] v)
                                                     (assoc-in [:contrast :bg] v))))))}]]
         [:div.input-group
          [:label "Display Format:"]
@@ -422,6 +424,116 @@
                         [:div (str kelvin "K")]]))
                    presets))]]]))
 
+(defn- contrast-row [tokens bg-key fg-key label]
+  (let [bg (get tokens bg-key)
+        fg (get tokens fg-key)
+        ratio (color/contrast-ratio bg fg)]
+    [:div.token-contrast-row
+     [:span label]
+     [:span.token-contrast-pair
+      [:span.token-dot {:style {:background bg}}]
+      [:span.token-dot {:style {:background fg}}]]
+     [:strong (str ratio ":1")]]))
+
+(defn- css-vars-text [tokens]
+  (let [css-vars (color/theme->css-vars tokens)]
+    (str ":root {\n"
+         (str/join "\n"
+                   (map (fn [[k v]] (str "  " k ": " v ";"))
+                        (sort-by key css-vars)))
+         "\n}")))
+
+(defn theme-generator-section []
+  (let [{:keys [base mode level]} (:theme-generator @state)
+        tokens (color/accessible-theme base {:mode (keyword mode)
+                                             :level (keyword level)})
+        scale (:scale tokens)
+        preview-style {:background (:background tokens)
+                       :color (:on-background tokens)}
+        primary-style {:background (:primary tokens)
+                       :color (:on-primary tokens)}
+        secondary-style {:background (:secondary tokens)
+                         :color (:on-secondary tokens)}
+        accent-style {:background (:accent tokens)
+                      :color (:on-accent tokens)}]
+    [:section.section
+     [:h2 (:box icons) "Accessible Theme Generator"]
+     [:div.card
+      [:div.theme-controls
+       [:div.input-group
+        [:label "Brand Color:"]
+        [:input {:type "color" :value base
+                 :on-change #(swap! state assoc-in
+                                    [:theme-generator :base]
+                                    (-> % .-target .-value))}]]
+       [:div.input-group
+        [:label "Mode:"]
+        [:select {:value mode
+                  :on-change #(swap! state assoc-in
+                                     [:theme-generator :mode]
+                                     (-> % .-target .-value))}
+         [:option {:value "light"} "Light"]
+         [:option {:value "dark"} "Dark"]]]
+       [:div.input-group
+        [:label "Contrast:"]
+        [:select {:value level
+                  :on-change #(swap! state assoc-in
+                                     [:theme-generator :level]
+                                     (-> % .-target .-value))}
+         [:option {:value "aa"} "WCAG AA"]
+         [:option {:value "aa-large"} "WCAG AA Large"]
+         [:option {:value "aaa"} "WCAG AAA"]]]]
+      [:div.theme-preview {:style preview-style}
+       [:div.theme-preview__panel {:style {:background (:surface tokens)
+                                           :color (:on-surface tokens)}}
+        [:div.theme-preview__eyebrow "Generated tokens"]
+        [:h3 "Production UI theme from one color"]
+        [:p
+         "Primary, secondary, accent, surfaces, text, borders, focus, "
+         "and scale tokens are calculated together."]
+        [:div.theme-preview__actions
+         [:button.theme-preview__button {:style primary-style} "Primary"]
+         [:button.theme-preview__button {:style secondary-style} "Secondary"]
+         [:button.theme-preview__button {:style accent-style} "Accent"]]]]
+      [:div.token-grid
+       [:div.token-card
+        [:h4 "Role Tokens"]
+        [:div.token-list
+         (doall
+          (for [[label k] [["Background" :background]
+                           ["Surface" :surface]
+                           ["Primary" :primary]
+                           ["Secondary" :secondary]
+                           ["Accent" :accent]
+                           ["Focus" :focus-ring]]]
+            (let [hex (get tokens k)]
+              ^{:key label}
+              [:button.token-chip
+               {:on-click #(copy-to-clipboard (.toUpperCase hex))}
+               [:span.token-dot {:style {:background hex}}]
+               [:span label]
+               [:code (.toUpperCase hex)]])))]]
+       [:div.token-card
+        [:h4 "Contrast Pairs"]
+        [contrast-row tokens :background :on-background "Background"]
+        [contrast-row tokens :surface :on-surface "Surface"]
+        [contrast-row tokens :primary :on-primary "Primary"]
+        [contrast-row tokens :secondary :on-secondary "Secondary"]
+        [contrast-row tokens :accent :on-accent "Accent"]]]
+      [:div.theme-scale
+       (doall
+        (for [[k hex] scale]
+          ^{:key k}
+          [:button.theme-scale__swatch
+           {:style {:background hex :color (color/get-contrast-text hex)}
+            :on-click #(copy-to-clipboard (.toUpperCase hex))}
+           [:span (name k)]
+           [:code (.toUpperCase hex)]]))]
+      [:div.palette-export
+       [:button.btn.btn-primary
+        {:on-click #(copy-to-clipboard (css-vars-text tokens))}
+        (:clipboard icons) "Copy CSS Variables"]]]]))
+
 (defn contrast-section []
   (let [{:keys [bg fg]} (:contrast @state)
         ratio (color/contrast-ratio bg fg)
@@ -581,6 +693,7 @@
    {:id "alpha"     :icon :droplet     :label "Alpha"}
    {:id "delta"     :icon :eye         :label "Delta E"}
    {:id "kelvin"    :icon :thermometer :label "Kelvin"}
+   {:id "theme"     :icon :box         :label "Theme"}
    {:id "contrast"  :icon :contrast    :label "Contrast"}
    {:id "harmony"   :icon :aperture    :label "Harmony"}
    {:id "palette"   :icon :palette     :label "Palette"}])
@@ -609,6 +722,7 @@
    [:div {:id "alpha"}     [alpha-section]]
    [:div {:id "delta"}     [delta-section]]
    [:div {:id "kelvin"}    [kelvin-section]]
+   [:div {:id "theme"}     [theme-generator-section]]
    [:div {:id "contrast"}  [contrast-section]]
    [:div {:id "harmony"}   [harmony-section]]
    [:div {:id "palette"}   [palette-section]]])
