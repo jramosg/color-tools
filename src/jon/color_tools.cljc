@@ -713,6 +713,104 @@
     [base-color]))
 
 ;; =============================================================================
+;; Accessible Design Tokens
+;; =============================================================================
+
+(declare tint shade tone dark?)
+
+(defn- better-contrast-color
+  [background color1 color2]
+  (if (>= (contrast-ratio background color1)
+          (contrast-ratio background color2))
+    color1
+    color2))
+
+(defn- accessible-color
+  [background preferred-color level]
+  (if (accessible? background preferred-color level)
+    (->hex preferred-color)
+    (or (some-> (find-accessible-color background preferred-color level) ->hex)
+        (better-contrast-color background "#000000" "#ffffff"))))
+
+(defn- theme-scale
+  [base-color]
+  (let [steps [[:50 tint 0.95] [:100 tint 0.9] [:200 tint 0.75]
+               [:300 tint 0.6] [:400 tint 0.35] [:500 identity 0.0]
+               [:600 shade 0.15] [:700 shade 0.3] [:800 shade 0.45]
+               [:900 shade 0.6]]]
+    (into (array-map)
+          (map (fn [[k f amount]]
+                 [k (if (= :500 k)
+                      (->hex base-color)
+                      (->hex (f base-color amount)))])
+               steps))))
+
+(defn accessible-theme
+  "Generate WCAG-aware design tokens from a single brand color.
+
+  Options:
+  - `:mode`  `:light` or `:dark` (default `:light`)
+  - `:level` `:aa`, `:aa-large`, or `:aaa` (default `:aa`)
+
+  Returns a map of hex color tokens for app UIs, including foreground tokens
+  that meet the requested contrast level against their paired backgrounds."
+  [base-color & [options]]
+  (let [{:keys [mode level]
+         :or {mode :light level :aa}} options
+        light? (= mode :light)
+        base (->hex base-color)
+        background (if light? (tint base 0.96) (shade base 0.88))
+        surface (if light? (tint base 0.9) (shade base 0.78))
+        muted (if light? (tone (tint base 0.82) 0.45)
+                  (tone (shade base 0.65) 0.35))
+        primary base
+        secondary (->hex (adjust-hue base 35))
+        accent (->hex (complementary base))
+        ring (accessible-color background (adjust-hue base 65) :aa-large)]
+    {:mode mode
+     :level level
+     :scale (theme-scale base)
+     :background (->hex background)
+     :on-background (accessible-color background
+                                      (if light? "#111827" "#f9fafb")
+                                      level)
+     :surface (->hex surface)
+     :on-surface (accessible-color surface
+                                   (if light? "#111827" "#f9fafb")
+                                   level)
+     :muted (->hex muted)
+     :on-muted (accessible-color muted
+                                 (if light? "#374151" "#e5e7eb")
+                                 level)
+     :primary primary
+     :on-primary (accessible-color primary
+                                   (if (dark? primary) "#ffffff" "#000000")
+                                   level)
+     :secondary secondary
+     :on-secondary (accessible-color secondary
+                                     (if (dark? secondary) "#ffffff" "#000000")
+                                     level)
+     :accent accent
+     :on-accent (accessible-color accent
+                                  (if (dark? accent) "#ffffff" "#000000")
+                                  level)
+     :border (if light? (shade background 0.12) (tint background 0.16))
+     :focus-ring ring}))
+
+(defn theme->css-vars
+  "Convert an `accessible-theme` map to CSS custom properties.
+
+  By default variables use the `--ct-` prefix. Pass `:prefix` to override it."
+  [theme & [options]]
+  (let [prefix (:prefix options "--ct-")
+        scale (:scale theme)
+        top-level (dissoc theme :scale :mode :level)]
+    (into {}
+          (concat
+           (map (fn [[k v]] [(str prefix (name k)) v]) top-level)
+           (map (fn [[k v]] [(str prefix "scale-" (name k)) v]) scale)))))
+
+;; =============================================================================
 ;; Color Distance and Similarity
 ;; =============================================================================
 

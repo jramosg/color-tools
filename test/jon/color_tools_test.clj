@@ -384,6 +384,44 @@
       (is (seq (sut/generate-palette :split-complementary base)))
       (is (seq (sut/generate-palette :random base))))))
 
+(deftest test-accessible-theme
+  (testing "Generates a complete light theme from a brand color"
+    (let [theme (sut/accessible-theme "#3498db")]
+      (is (= :light (:mode theme)))
+      (is (= :aa (:level theme)))
+      (is (= "#3498db" (get-in theme [:scale :500])))
+      (is (= #{:50 :100 :200 :300 :400 :500 :600 :700 :800 :900}
+             (set (keys (:scale theme)))))
+      (is (every? sut/valid-hex?
+                  (concat (vals (:scale theme))
+                          (vals (dissoc theme :scale :mode :level)))))))
+
+  (testing "Generated foreground tokens meet the requested contrast level"
+    (let [theme (sut/accessible-theme "#3498db")]
+      (is (sut/accessible? (:background theme) (:on-background theme)))
+      (is (sut/accessible? (:surface theme) (:on-surface theme)))
+      (is (sut/accessible? (:muted theme) (:on-muted theme)))
+      (is (sut/accessible? (:primary theme) (:on-primary theme)))
+      (is (sut/accessible? (:secondary theme) (:on-secondary theme)))
+      (is (sut/accessible? (:accent theme) (:on-accent theme)))))
+
+  (testing "Can generate dark and AAA themes"
+    (let [theme (sut/accessible-theme "#ff7a59" {:mode :dark :level :aaa})]
+      (is (= :dark (:mode theme)))
+      (is (= :aaa (:level theme)))
+      (is (sut/accessible? (:background theme) (:on-background theme) :aaa))
+      (is (sut/accessible? (:surface theme) (:on-surface theme) :aaa))
+      (is (sut/accessible? (:primary theme) (:on-primary theme) :aaa))))
+
+  (testing "CSS custom properties can be exported with a custom prefix"
+    (let [theme (sut/accessible-theme "#3498db")
+          css-vars (sut/theme->css-vars theme {:prefix "--brand-"})]
+      (is (= (:primary theme) (get css-vars "--brand-primary")))
+      (is (= (get-in theme [:scale :500])
+             (get css-vars "--brand-scale-500")))
+      (is (not (contains? css-vars "--brand-mode")))
+      (is (not (contains? css-vars "--brand-level"))))))
+
 (deftest test-color-temperature
   (testing "Warm color detection"
     (is (sut/warm? "#ff0000"))  ; Red
