@@ -2,6 +2,8 @@
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## Unreleased
+
+## [1.2.0] - 2026-06-23
 ### Added
 - **Accessible Theme Generator**: Generate production-ready UI color tokens
   from a single brand color
