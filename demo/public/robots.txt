@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://color-tools.jonramos.dev/sitemap.xml

@@ -6,30 +6,51 @@
 
     <!-- SEO Meta Tags -->
     <title>
-      RGB to HEX Converter, Color Picker, HSL Converter & WCAG Contrast Checker
+      RGB to HEX Converter | HEX, HSL, HSV Color Tools
     </title>
     <meta
       name="description"
-      content="Free color converter for HEX, RGB, RGBA, HSL, and HSV. Convert RGB to HEX, HEX to RGB, HSL to HEX, generate palettes and gradients, and check WCAG contrast accessibility."
+      content="Free CSS color converter for RGB to HEX, HEX to RGB, HSL, HSV, RGBA, gradients, palettes, color harmonies, Kelvin colors, and WCAG contrast checks."
     />
     <meta
       name="keywords"
       content="rgb to hex, hex to rgb, hsl to hex, hex to hsl, rgba to hex, hsv to rgb, color converter, css color converter, color picker, gradient generator, contrast checker, wcag, accessibility, color harmony, color blending, tints shades tones, color palette generator, design tools, clojure, clojurescript, delta e, kelvin to rgb"
     />
     <meta name="author" content="Jon Ramos" />
-    <meta name="robots" content="index, follow" />
+    <meta name="application-name" content="Color Tools" />
+    <meta
+      name="robots"
+      content="index, follow, max-snippet:-1, max-image-preview:large"
+    />
+    <meta
+      name="googlebot"
+      content="index, follow, max-snippet:-1, max-image-preview:large"
+    />
     <link rel="canonical" href="https://color-tools.jonramos.dev/" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://color-tools.jonramos.dev/" />
     <meta
       property="og:title"
-      content="RGB to HEX Converter, Color Picker & WCAG Contrast Checker"
+      content="RGB to HEX Converter | Color Tools"
     />
     <meta
       property="og:description"
-      content="Convert HEX, RGB, RGBA, HSL, and HSV colors instantly. Generate gradients, palettes, harmonies, and WCAG contrast checks in one free color tools demo."
+      content="Convert RGB, HEX, RGBA, HSL, and HSV colors instantly, then generate palettes, gradients, harmonies, and accessible WCAG contrast pairs."
+    />
+    <meta
+      property="og:image"
+      content="https://color-tools.jonramos.dev/og/color-tools-preview.png"
+    />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Color Tools preview showing RGB to HEX, HSL, HSV, palettes, gradients, and contrast checks."
     />
     <meta property="og:site_name" content="Color Tools" />
     <meta property="og:locale" content="en_US" />
@@ -38,11 +59,19 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
-      content="RGB to HEX Converter, Color Picker & WCAG Contrast Checker"
+      content="RGB to HEX Converter | Color Tools"
     />
     <meta
       name="twitter:description"
-      content="Convert HEX, RGB, RGBA, HSL, and HSV colors instantly. Generate gradients, palettes, harmonies, and WCAG contrast checks in one free color tools demo."
+      content="Convert RGB, HEX, RGBA, HSL, and HSV colors instantly, then generate palettes, gradients, harmonies, and accessible WCAG contrast pairs."
+    />
+    <meta
+      name="twitter:image"
+      content="https://color-tools.jonramos.dev/og/color-tools-preview.png"
+    />
+    <meta
+      name="twitter:image:alt"
+      content="Color Tools preview showing RGB to HEX, HSL, HSV, palettes, gradients, and contrast checks."
     />
 
     <!-- Preconnect for fonts -->
@@ -58,13 +87,22 @@
       {
         "@context": "https://schema.org",
         "@type": "WebApplication",
+        "@id": "https://color-tools.jonramos.dev/#app",
         "name": "Color Tools",
-        "alternateName": "RGB to HEX Converter",
+        "alternateName": [
+          "RGB to HEX Converter",
+          "HEX to RGB Converter",
+          "CSS Color Converter"
+        ],
         "url": "https://color-tools.jonramos.dev/",
         "description": "Free interactive color converter and manipulation tools for designers and developers. Convert RGB to HEX, HEX to RGB, HSL to HEX, generate gradients, check WCAG contrast, blend colors, and create color harmonies.",
         "applicationCategory": "DesignApplication",
         "operatingSystem": "Any",
         "browserRequirements": "Requires JavaScript",
+        "softwareVersion": "1.2.0",
+        "inLanguage": "en",
+        "image": "https://color-tools.jonramos.dev/og/color-tools-preview.png",
+        "screenshot": "https://color-tools.jonramos.dev/og/color-tools-preview.png",
         "offers": {
           "@type": "Offer",
           "price": "0",
@@ -87,6 +125,10 @@
           "Kelvin color temperature conversion",
           "WCAG AA and AAA contrast ratio checking",
           "Complementary, analogous, triadic, and tetradic color harmonies"
+        ],
+        "sameAs": [
+          "https://github.com/jramosg/color-tools",
+          "https://clojars.org/com.github.jramosg/color-tools"
         ]
       }
     </script>
@@ -105,6 +147,14 @@
           },
           {
             "@type": "Question",
+            "name": "How do I convert HEX to RGB?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Paste a HEX color such as #3498db into the converter. Color Tools returns rgb(52, 152, 219), plus matching RGBA, HSL, and HSV values."
+            }
+          },
+          {
+            "@type": "Question",
             "name": "Can I convert HEX to HSL?",
             "acceptedAnswer": {
               "@type": "Answer",
@@ -117,6 +167,22 @@
             "acceptedAnswer": {
               "@type": "Answer",
               "text": "Yes. Color Tools is free to use in the browser and is powered by an open-source Clojure and ClojureScript library."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does the tool support alpha values?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The converter accepts rgba() values with alpha from 0 to 1 and keeps the alpha channel in the RGBA output."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What color tools are included?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Color Tools includes RGB, HEX, RGBA, HSL, and HSV conversion, WCAG contrast checking, gradient generation, palette generation, color harmonies, blending modes, tints, shades, tones, Delta E, and Kelvin color temperature conversion."
             }
           }
         ]
@@ -140,6 +206,34 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": "https://color-tools.jonramos.dev/#webpage",
+        "url": "https://color-tools.jonramos.dev/",
+        "name": "RGB to HEX Converter | HEX, HSL, HSV Color Tools",
+        "description": "Free CSS color converter for RGB to HEX, HEX to RGB, HSL, HSV, RGBA, gradients, palettes, color harmonies, Kelvin colors, and WCAG contrast checks.",
+        "inLanguage": "en",
+        "dateModified": "2026-07-08",
+        "isPartOf": {
+          "@type": "WebSite",
+          "@id": "https://color-tools.jonramos.dev/#website",
+          "name": "Color Tools",
+          "url": "https://color-tools.jonramos.dev/"
+        },
+        "mainEntity": {
+          "@id": "https://color-tools.jonramos.dev/#app"
+        },
+        "about": [
+          "RGB to HEX conversion",
+          "HEX to RGB conversion",
+          "CSS color formats",
+          "WCAG contrast checking",
+          "Color palette generation"
+        ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
         "@type": "BreadcrumbList",
         "itemListElement": [
           {
@@ -154,7 +248,7 @@
 
     <link
       rel="stylesheet"
-      href="css/styles_dd019c7b-c9c7-4ab6-87b3-577ebd6723ee.css"
+      href="css/styles_4fcd7f7b-d1ea-4a3f-9af8-aeb8789db302.css"
     />
   </head>
   <body>
@@ -351,6 +445,126 @@
         </article>
       </noscript>
     </main>
+
+    <article class="seo-reference container" id="color-conversion-reference">
+      <section class="seo-reference__intro">
+        <p class="seo-reference__eyebrow">CSS color conversion reference</p>
+        <h2>Convert RGB, HEX, RGBA, HSL, and HSV colors</h2>
+        <p>
+          Color Tools is built for quick CSS color work: paste a value, copy
+          the equivalent formats, then keep moving into contrast checks,
+          gradients, harmonies, tints, shades, tones, and palettes. The
+          converter supports common designer and developer workflows including
+          RGB to HEX, HEX to RGB, HSL to HEX, HSV to RGB, and RGBA values with
+          alpha.
+        </p>
+      </section>
+
+      <section class="seo-reference__grid" aria-label="Color conversion examples">
+        <div class="seo-reference__panel">
+          <h3>Common conversions</h3>
+          <table class="conversion-table">
+            <thead>
+              <tr>
+                <th scope="col">Input</th>
+                <th scope="col">Output</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>rgb(52, 152, 219)</code></td>
+                <td><code>#3498DB</code></td>
+              </tr>
+              <tr>
+                <td><code>#3498db</code></td>
+                <td><code>rgb(52, 152, 219)</code></td>
+              </tr>
+              <tr>
+                <td><code>hsl(204, 70%, 53%)</code></td>
+                <td><code>#3498DB</code></td>
+              </tr>
+              <tr>
+                <td><code>hsv(204, 76%, 86%)</code></td>
+                <td><code>#3498DB</code></td>
+              </tr>
+              <tr>
+                <td><code>rgba(52, 152, 219, 0.75)</code></td>
+                <td><code>#3498DB</code> plus alpha <code>0.75</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="seo-reference__panel">
+          <h3>What the demo includes</h3>
+          <ul class="feature-list">
+            <li>HEX, RGB, RGBA, HSL, and HSV conversion</li>
+            <li>WCAG AA and AAA foreground/background contrast checks</li>
+            <li>Palette generation for analogous, triadic, tetradic, and random schemes</li>
+            <li>Gradient interpolation in RGB, HSL, and HSV color spaces</li>
+            <li>Alpha compositing, blend modes, Delta E, and Kelvin to RGB</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="seo-faq" id="faq">
+        <p class="seo-reference__eyebrow">FAQ</p>
+        <h2>Color converter questions</h2>
+
+        <details open>
+          <summary>How do I convert RGB to HEX?</summary>
+          <p>
+            Enter an RGB value such as <code>rgb(52, 152, 219)</code> in the
+            color converter. The tool returns the equivalent HEX value, plus
+            RGBA, HSL, and HSV formats.
+          </p>
+        </details>
+
+        <details>
+          <summary>How do I convert HEX to RGB?</summary>
+          <p>
+            Paste a HEX color such as <code>#3498db</code> into the converter.
+            Color Tools returns <code>rgb(52, 152, 219)</code>, plus matching
+            RGBA, HSL, and HSV values.
+          </p>
+        </details>
+
+        <details>
+          <summary>Can I convert HEX to HSL?</summary>
+          <p>
+            Yes. Paste a HEX color such as <code>#3498db</code> and the
+            converter shows the matching HSL, RGB, RGBA, and HSV values.
+          </p>
+        </details>
+
+        <details>
+          <summary>Is this color converter free?</summary>
+          <p>
+            Yes. Color Tools is free to use in the browser and is powered by
+            an open-source Clojure and ClojureScript library.
+          </p>
+        </details>
+
+        <details>
+          <summary>Does the tool support alpha values?</summary>
+          <p>
+            Yes. The converter accepts <code>rgba()</code> values with alpha
+            from <code>0</code> to <code>1</code> and keeps the alpha channel
+            in the RGBA output.
+          </p>
+        </details>
+
+        <details>
+          <summary>What color tools are included?</summary>
+          <p>
+            Color Tools includes RGB, HEX, RGBA, HSL, and HSV conversion, WCAG
+            contrast checking, gradient generation, palette generation, color
+            harmonies, blending modes, tints, shades, tones, Delta E, and
+            Kelvin color temperature conversion.
+          </p>
+        </details>
+      </section>
+    </article>
 
     <footer class="footer" role="contentinfo">
       <div class="container">

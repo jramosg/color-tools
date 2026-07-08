@@ -1746,6 +1746,129 @@ main.container {
   justify-content: flex-end;
 }
 
+/* ---- SEO Reference Content ---- */
+
+.seo-reference {
+  margin-top: 2rem;
+  padding-top: 1rem;
+}
+
+.seo-reference__intro {
+  max-width: 760px;
+  margin-bottom: 1.5rem;
+}
+
+.seo-reference__eyebrow {
+  color: var(--accent-text);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+
+.seo-reference h2 {
+  font-size: 1.65rem;
+  line-height: 1.2;
+  margin-bottom: 0.6rem;
+}
+
+.seo-reference h3 {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.seo-reference p,
+.seo-reference li {
+  color: var(--text-secondary);
+}
+
+.seo-reference__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.seo-reference__panel,
+.seo-faq {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.conversion-table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+}
+
+.conversion-table th,
+.conversion-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.conversion-table th {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.conversion-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.conversion-table code,
+.seo-faq code {
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.feature-list {
+  display: grid;
+  gap: 0.65rem;
+  padding-left: 1.1rem;
+}
+
+.seo-faq {
+  margin-bottom: 1rem;
+}
+
+.seo-faq details {
+  border-top: 1px solid var(--border);
+  padding: 0.85rem 0;
+}
+
+.seo-faq details:first-of-type {
+  border-top: 0;
+}
+
+.seo-faq details:last-child {
+  padding-bottom: 0;
+}
+
+.seo-faq summary {
+  color: var(--text-primary);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.seo-faq summary:hover {
+  color: var(--accent-text);
+}
+
+.seo-faq details p {
+  margin-top: 0.5rem;
+}
+
 @media (max-width: 640px) {
   .palette-display {
     height: auto;
@@ -1940,6 +2063,7 @@ main.container {
   .color-picker-grid,
   .converter-layout,
   .converter-panel--preview,
+  .seo-reference__grid,
   .blend-controls,
   .gradient-controls,
   .delta-controls,
