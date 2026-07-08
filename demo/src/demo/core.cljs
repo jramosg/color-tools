@@ -7,6 +7,7 @@
    [demo.sitetools :refer [start!]]))
 
 (def default-color "#3498db")
+(def default-converter-input "rgb(52, 152, 219)")
 
 ;; Theme
 (defonce theme (r/atom "dark"))
@@ -60,6 +61,7 @@
   (r/atom
    {:format "hex"
     :color-picker default-color
+    :converter {:input default-converter-input :format "auto"}
     :blend {:base default-color :overlay "#ff0000"}
     :tst {:base default-color}
     :gradient {:start default-color :end "#0000ff" :steps 10 :space "rgb"}
@@ -99,6 +101,10 @@
    :droplet [icon [:path {:d "M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"}]]
    :eye [icon [:g [:path {:d "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"}]
                [:circle {:cx "12" :cy "12" :r "3"}]]]
+   :repeat [icon [:g [:path {:d "m17 1 4 4-4 4"}]
+                  [:path {:d "M3 11V9a4 4 0 0 1 4-4h14"}]
+                  [:path {:d "m7 23-4-4 4-4"}]
+                  [:path {:d "M21 13v2a4 4 0 0 1-4 4H3"}]]]
    :thermometer [icon [:path {:d "M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"}]]
    :contrast [icon [:path {:d "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" :fill-rule "evenodd"}]]
    :aperture [icon [:g [:circle {:cx "12" :cy "12" :r "10"}]
@@ -215,6 +221,231 @@
         [:div.conversion-item
          [:strong "HSV"]
          [:code (str "hsv(" (Math/round (:h hsv)) "°, " (Math/round (:s hsv)) "%, " (Math/round (:v hsv)) "%)")]]]]]]))
+
+(def converter-format-options
+  [{:value "auto" :label "Auto"}
+   {:value "hex" :label "HEX"}
+   {:value "rgb" :label "RGB"}
+   {:value "rgba" :label "RGBA"}
+   {:value "hsl" :label "HSL"}
+   {:value "hsv" :label "HSV"}])
+
+(def converter-examples
+  [{:label "HEX" :value "#e8a634"}
+   {:label "RGB" :value "rgb(52, 152, 219)"}
+   {:label "RGBA" :value "rgba(17, 24, 39, 0.72)"}
+   {:label "HSL" :value "hsl(204, 70%, 53%)"}
+   {:label "HSV" :value "hsv(204, 76%, 86%)"}])
+
+(defn- parse-float [s]
+  (let [n (js/parseFloat s)]
+    (when (and (not (js/isNaN n)) (js/isFinite n))
+      n)))
+
+(defn- numeric-tokens [s]
+  (mapv parse-float (re-seq #"-?\d+(?:\.\d+)?" s)))
+
+(defn- in-range? [n low high]
+  (and (number? n) (<= low n high)))
+
+(defn- rgb-vector? [rgb]
+  (and (= 3 (count rgb))
+       (every? #(in-range? % 0 255) rgb)))
+
+(defn- hsl-vector? [[h s l :as hsl]]
+  (and (= 3 (count hsl))
+       (in-range? h 0 360)
+       (in-range? s 0 100)
+       (in-range? l 0 100)))
+
+(defn- hsv-vector? [[h s v :as hsv]]
+  (and (= 3 (count hsv))
+       (in-range? h 0 360)
+       (in-range? s 0 100)
+       (in-range? v 0 100)))
+
+(defn- alpha? [a]
+  (in-range? a 0 1))
+
+(defn- rounded-rgb [tokens]
+  (mapv #(int (Math/round %)) tokens))
+
+(defn- converter-result [rgb alpha source]
+  (let [hex (color/rgb->hex rgb)
+        hsl (color/rgb->hsl rgb)
+        hsv (color/rgb->hsv rgb)]
+    {:source source
+     :hex hex
+     :rgb rgb
+     :rgba (conj rgb alpha)
+     :hsl hsl
+     :hsv hsv
+     :contrast (color/get-contrast-text hex)}))
+
+(defn- parse-as-hex [input]
+  (when (color/valid-hex? input)
+    (converter-result (color/hex->rgb input) 1 "HEX")))
+
+(defn- parse-as-rgb [input]
+  (let [rgb (if (color/valid-css-rgb? input)
+              (color/parse-css-rgb input)
+              (rounded-rgb (numeric-tokens input)))]
+    (when (rgb-vector? rgb)
+      (converter-result rgb 1 "RGB"))))
+
+(defn- parse-as-rgba [input]
+  (let [rgba (if (color/valid-css-rgba? input)
+               (color/parse-css-rgba input)
+               (let [tokens (numeric-tokens input)]
+                 (when (= 4 (count tokens))
+                   (conj (rounded-rgb (take 3 tokens)) (nth tokens 3)))))
+        rgb (vec (take 3 rgba))
+        alpha (nth rgba 3 nil)]
+    (when (and (rgb-vector? rgb) (alpha? alpha))
+      (converter-result rgb alpha "RGBA"))))
+
+(defn- parse-as-hsl [input]
+  (let [tokens (numeric-tokens input)
+        hsl (vec (take 3 tokens))
+        alpha (if (= 4 (count tokens)) (nth tokens 3) 1)]
+    (when (and (hsl-vector? hsl) (alpha? alpha))
+      (converter-result (color/hsl->rgb hsl) alpha "HSL"))))
+
+(defn- parse-as-hsv [input]
+  (let [tokens (numeric-tokens input)
+        hsv (vec (take 3 tokens))
+        alpha (if (= 4 (count tokens)) (nth tokens 3) 1)]
+    (when (and (hsv-vector? hsv) (alpha? alpha))
+      (converter-result (color/hsv->rgb hsv) alpha "HSV"))))
+
+(defn- parse-color-input [input format]
+  (let [trimmed (str/trim input)
+        lower (str/lower-case trimmed)
+        parse-by-format {"hex" parse-as-hex
+                         "rgb" parse-as-rgb
+                         "rgba" parse-as-rgba
+                         "hsl" parse-as-hsl
+                         "hsv" parse-as-hsv}]
+    (try
+      (if (= "auto" format)
+        (or (parse-as-hex trimmed)
+            (when (str/starts-with? lower "rgba")
+              (parse-as-rgba trimmed))
+            (when (str/starts-with? lower "rgb")
+              (parse-as-rgb trimmed))
+            (when (str/starts-with? lower "hsl")
+              (parse-as-hsl trimmed))
+            (when (str/starts-with? lower "hsv")
+              (parse-as-hsv trimmed))
+            (parse-as-rgb trimmed))
+        (when-let [parse-fn (get parse-by-format format)]
+          (parse-fn trimmed)))
+      (catch :default _
+        nil))))
+
+(defn- trim-decimal [n decimals]
+  (-> (.toFixed n decimals)
+      (str/replace #"\.?0+$" "")))
+
+(defn- format-rgb [[r g b]]
+  (str "rgb(" r ", " g ", " b ")"))
+
+(defn- format-rgba [[r g b a]]
+  (str "rgba(" r ", " g ", " b ", " (trim-decimal a 3) ")"))
+
+(defn- format-hsl [[h s l]]
+  (str "hsl(" h "°, " s "%, " l "%)"))
+
+(defn- format-hsv [[h s v]]
+  (str "hsv(" h "°, " s "%, " v "%)"))
+
+(defn- converter-output [label value]
+  [:button.converter-output
+   {:type "button"
+    :on-click #(copy-to-clipboard value)
+    :title (str "Copy " label)
+    :aria-label (str "Copy " label " value")}
+   [:span.converter-output__label label]
+   [:code.converter-output__value value]
+   [:span.converter-output__icon (:clipboard icons)]])
+
+(defn- converter-bar [label value max-val color-val]
+  (let [pct (* 100 (/ value max-val))]
+    [:div.converter-channel
+     [:div.converter-channel__meta
+      [:span label]
+      [:strong (trim-decimal value 1)]]
+     [:div.converter-channel__track
+      [:div.converter-channel__fill
+       {:style {:width (str pct "%") :background color-val}}]]]))
+
+(defn converter-section []
+  (let [{:keys [input format]} (:converter @state)
+        result (parse-color-input input format)
+        {:keys [hex rgb rgba hsl hsv contrast source]} result
+        [r g b] rgb
+        [h s l] hsl]
+    [:section.section.converter-section
+     [:h2 (:repeat icons) "Color Format Converter"]
+     [:div.card.converter-card
+      [:div.converter-layout
+       [:div.converter-panel.converter-panel--input
+        [:div.converter-field
+         [:label {:for "color-converter-input"}
+          "Paste a color value"]
+         [:textarea#color-converter-input.converter-input
+          {:value input
+           :rows 3
+           :spell-check false
+           :placeholder "#3498db, rgb(52, 152, 219), hsl(204, 70%, 53%)"
+           :on-change #(swap! state assoc-in
+                              [:converter :input]
+                              (-> % .-target .-value))}]]
+        [:div.converter-format-tabs
+         (doall
+          (for [{:keys [value label]} converter-format-options]
+            ^{:key value}
+            [:button.converter-format-tab
+             {:type "button"
+              :class (when (= format value) "is-active")
+              :on-click #(swap! state assoc-in [:converter :format] value)}
+             label]))]
+        [:div.converter-examples
+         (doall
+          (for [{:keys [label value]} converter-examples]
+            ^{:key label}
+            [:button.converter-example
+             {:type "button"
+              :on-click #(swap! state assoc :converter
+                                {:input value :format "auto"})}
+             label]))]]
+       [:div.converter-panel.converter-panel--preview
+        (if result
+          [:<>
+           [:div.converter-preview
+            {:style {:background hex :color contrast}}
+            [:span.converter-preview__source (str "Detected " source)]
+            [:strong (.toUpperCase hex)]
+            [:small (format-rgb rgb)]]
+           [:div.converter-channels
+            [converter-bar "R" r 255 "#f87171"]
+            [converter-bar "G" g 255 "#34d399"]
+            [converter-bar "B" b 255 "#60a5fa"]
+            [converter-bar "Hue" h 360 hex]
+            [converter-bar "Sat" s 100 hex]
+            [converter-bar "Light" l 100 hex]]]
+          [:div.converter-error
+           [:strong "No valid color yet"]
+           [:span "Try HEX, RGB, RGBA, HSL, or HSV."]])]]
+      (when result
+        [:div.converter-output-grid
+         [converter-output "HEX" (.toUpperCase hex)]
+         [converter-output "RGB" (format-rgb rgb)]
+         [converter-output "RGBA" (format-rgba rgba)]
+         [converter-output "HSL" (format-hsl hsl)]
+         [converter-output "HSV" (format-hsv hsv)]
+         [converter-output "CSS var"
+          (str "--color: " (.toUpperCase hex) ";")]])]]))
 
 (defn blending-section []
   (let [{:keys [base overlay]} (:blend @state)
@@ -707,6 +938,7 @@
 
 (def nav-items
   [{:id "picker"    :icon :target      :label "Picker"}
+   {:id "converter" :icon :repeat      :label "Converter"}
    {:id "blending"  :icon :layers      :label "Blending"}
    {:id "tst"       :icon :grid        :label "Tints/Shades"}
    {:id "gradient"  :icon :activity    :label "Gradients"}
@@ -736,6 +968,7 @@
    [toast-component]
    [section-nav]
    [:div {:id "picker"}    [color-picker-section]]
+   [:div {:id "converter"} [converter-section]]
    [:div {:id "blending"}  [blending-section]]
    [:div {:id "tst"}       [tst-section]]
    [:div {:id "gradient"}  [gradient-section]]
