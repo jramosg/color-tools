@@ -1,31 +1,128 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
-  <title id="title">Color Tools RGB to HEX converter preview</title>
-  <desc id="desc">Preview card for Color Tools, a CSS color converter with RGB, HEX, HSL, HSV, palettes, gradients, and contrast checks.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"
+     viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">color-tools library preview</title>
+  <desc id="desc">
+    Preview card for color-tools, a Clojure and ClojureScript toolkit for
+    palettes, accessible themes, gradients, and color math.
+  </desc>
   <defs>
-    <linearGradient id="accent" x1="80" x2="1120" y1="0" y2="0">
+    <linearGradient id="accent" x1="86" x2="1114" y1="78" y2="78"
+                    gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#f87171"/>
-      <stop offset="0.2" stop-color="#e8a634"/>
-      <stop offset="0.45" stop-color="#34d399"/>
-      <stop offset="0.7" stop-color="#60a5fa"/>
+      <stop offset="0.22" stop-color="#fbbf24"/>
+      <stop offset="0.47" stop-color="#34d399"/>
+      <stop offset="0.72" stop-color="#60a5fa"/>
       <stop offset="1" stop-color="#a78bfa"/>
     </linearGradient>
+    <linearGradient id="color-ramp" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#f87171"/>
+      <stop offset="0.24" stop-color="#fbbf24"/>
+      <stop offset="0.5" stop-color="#34d399"/>
+      <stop offset="0.76" stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="18"
+                    flood-color="#000000" flood-opacity="0.34"/>
+    </filter>
   </defs>
+
   <rect width="1200" height="630" fill="#0c0e14"/>
-  <rect x="56" y="54" width="1088" height="522" rx="28" fill="#13151d" stroke="#2c3140"/>
-  <rect x="86" y="84" width="1028" height="10" rx="5" fill="url(#accent)"/>
-  <text x="92" y="170" fill="#e8eaed" font-family="Arial, sans-serif" font-size="68" font-weight="700">RGB to HEX Converter</text>
-  <text x="96" y="224" fill="#9ca3af" font-family="Arial, sans-serif" font-size="30">HEX, RGBA, HSL, HSV, palettes, gradients, and WCAG contrast</text>
-  <rect x="96" y="290" width="456" height="168" rx="18" fill="#1a1d28" stroke="#343947"/>
-  <text x="124" y="346" fill="#9ca3af" font-family="Arial, sans-serif" font-size="24" font-weight="700">INPUT</text>
-  <text x="124" y="402" fill="#f5c563" font-family="Menlo, Consolas, monospace" font-size="34">rgb(52, 152, 219)</text>
-  <rect x="624" y="290" width="480" height="168" rx="18" fill="#3498db"/>
-  <text x="652" y="346" fill="#06111a" font-family="Arial, sans-serif" font-size="24" font-weight="700">OUTPUT</text>
-  <text x="652" y="404" fill="#06111a" font-family="Menlo, Consolas, monospace" font-size="48" font-weight="700">#3498DB</text>
-  <g transform="translate(96 506)">
-    <circle cx="20" cy="20" r="18" fill="#f87171"/>
-    <circle cx="76" cy="20" r="18" fill="#e8a634"/>
-    <circle cx="132" cy="20" r="18" fill="#34d399"/>
-    <circle cx="188" cy="20" r="18" fill="#60a5fa"/>
-    <text x="244" y="31" fill="#e8eaed" font-family="Arial, sans-serif" font-size="28" font-weight="700">color-tools.jonramos.dev</text>
+  <circle cx="1070" cy="80" r="190" fill="#60a5fa" opacity="0.035"/>
+  <circle cx="100" cy="590" r="190" fill="#a78bfa" opacity="0.035"/>
+  <rect x="56" y="44" width="1088" height="542" rx="28"
+        fill="#13151d" stroke="#2c3140" filter="url(#shadow)"/>
+  <rect x="86" y="74" width="1028" height="8" rx="4"
+        fill="url(#accent)"/>
+
+  <text x="92" y="166" fill="#f3f4f6"
+        font-family="Menlo, Consolas, monospace" font-size="68"
+        font-weight="700">color-tools</text>
+  <rect x="560" y="116" width="178" height="52" rx="26"
+        fill="#202431" stroke="#3a4152"/>
+  <circle cx="590" cy="142" r="8" fill="#34d399"/>
+  <text x="610" y="151" fill="#d1d5db"
+        font-family="Arial, sans-serif" font-size="22"
+        font-weight="700">CLJ + CLJS</text>
+  <text x="94" y="218" fill="#aeb4c0"
+        font-family="Arial, sans-serif" font-size="29">
+    Build complete color systems—not just conversions.
+  </text>
+
+  <g transform="translate(92 260)">
+    <rect width="308" height="216" rx="18" fill="#1a1d28"
+          stroke="#343947"/>
+    <text x="24" y="38" fill="#aeb4c0"
+          font-family="Arial, sans-serif" font-size="18"
+          font-weight="700" letter-spacing="1.5">PALETTES &amp; HARMONIES</text>
+    <g transform="translate(24 62)">
+      <rect width="52" height="92" rx="12" fill="#f87171"/>
+      <rect x="52" width="52" height="92" rx="12" fill="#fbbf24"/>
+      <rect x="104" width="52" height="92" rx="12" fill="#34d399"/>
+      <rect x="156" width="52" height="92" rx="12" fill="#60a5fa"/>
+      <rect x="208" width="52" height="92" rx="12" fill="#a78bfa"/>
+    </g>
+    <text x="24" y="188" fill="#e5e7eb"
+          font-family="Arial, sans-serif" font-size="20">
+      Analogous · Triadic · Tints
+    </text>
+  </g>
+
+  <g transform="translate(422 260)">
+    <rect width="308" height="216" rx="18" fill="#1a1d28"
+          stroke="#343947"/>
+    <text x="24" y="38" fill="#aeb4c0"
+          font-family="Arial, sans-serif" font-size="18"
+          font-weight="700" letter-spacing="1.5">ACCESSIBLE THEMES</text>
+    <rect x="24" y="62" width="260" height="92" rx="14" fill="#f8fafc"/>
+    <rect x="40" y="78" width="111" height="60" rx="10" fill="#2563eb"/>
+    <text x="58" y="115" fill="#ffffff"
+          font-family="Arial, sans-serif" font-size="18"
+          font-weight="700">Primary</text>
+    <rect x="168" y="78" width="100" height="60" rx="10" fill="#dcfce7"/>
+    <text x="187" y="103" fill="#166534"
+          font-family="Arial, sans-serif" font-size="15"
+          font-weight="700">WCAG</text>
+    <text x="187" y="126" fill="#166534"
+          font-family="Arial, sans-serif" font-size="20"
+          font-weight="700">AA  ✓</text>
+    <text x="24" y="188" fill="#e5e7eb"
+          font-family="Arial, sans-serif" font-size="20">
+      Tokens · Contrast · CSS vars
+    </text>
+  </g>
+
+  <g transform="translate(752 260)">
+    <rect width="360" height="216" rx="18" fill="#1a1d28"
+          stroke="#343947"/>
+    <text x="24" y="38" fill="#aeb4c0"
+          font-family="Arial, sans-serif" font-size="18"
+          font-weight="700" letter-spacing="1.5">GRADIENTS &amp; COLOR MATH</text>
+    <rect x="24" y="62" width="312" height="58" rx="12"
+          fill="url(#color-ramp)"/>
+    <g transform="translate(24 142)" font-family="Arial, sans-serif"
+       font-size="17" font-weight="700">
+      <rect width="78" height="44" rx="12" fill="#242936" stroke="#42495a"/>
+      <text x="22" y="29" fill="#f3f4f6">ΔE</text>
+      <rect x="90" width="103" height="44" rx="12" fill="#242936"
+            stroke="#42495a"/>
+      <text x="106" y="29" fill="#f3f4f6">KELVIN</text>
+      <rect x="205" width="107" height="44" rx="12" fill="#242936"
+            stroke="#42495a"/>
+      <text x="221" y="29" fill="#f3f4f6">BLEND</text>
+    </g>
+  </g>
+
+  <g transform="translate(94 530)">
+    <circle cx="8" cy="8" r="8" fill="#f87171"/>
+    <circle cx="34" cy="8" r="8" fill="#fbbf24"/>
+    <circle cx="60" cy="8" r="8" fill="#34d399"/>
+    <circle cx="86" cy="8" r="8" fill="#60a5fa"/>
+    <text x="116" y="17" fill="#d1d5db"
+          font-family="Arial, sans-serif" font-size="23"
+          font-weight="700">Clojure color toolkit</text>
+    <text x="680" y="17" fill="#d1d5db"
+          font-family="Arial, sans-serif" font-size="23"
+          font-weight="700">color-tools.jonramos.dev</text>
   </g>
 </svg>
