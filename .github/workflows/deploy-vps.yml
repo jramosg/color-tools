@@ -86,28 +86,24 @@ jobs:
       - name: Package static files
         run: tar -czf color-tools-demo.tar.gz -C demo/public .
 
-      - name: Upload to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT }}
-          source: 'color-tools-demo.tar.gz'
-          target: '/tmp/'
-
-      - name: Deploy on server
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Deploy through the restricted CI gate
+        # The key can only run `deploy color-tools` on the server, which
+        # replaces /var/www/color-tools with the uploaded plain files.
         env:
-          DEPLOY_DIR: ${{ secrets.COLOR_TOOLS_DEPLOY_DIR }}
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT }}
-          envs: DEPLOY_DIR
-          script: |
-            mkdir -p "$DEPLOY_DIR"
-            tar -xzf /tmp/color-tools-demo.tar.gz -C "$DEPLOY_DIR"
-            rm -f /tmp/color-tools-demo.tar.gz
-            echo "Deployed to $DEPLOY_DIR"
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          HOST_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEmoaMAZ9yKpppVl6J2NPsXsirLII1K5/FR47keXM215
+        run: |
+          set -eu
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          echo "vps $HOST_KEY" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy -o HostKeyAlias=vps \
+            -o StrictHostKeyChecking=yes "ci@$SERVER_HOST" \
+            deploy color-tools < color-tools-demo.tar.gz
+
+      - name: Verify site
+        run: >-
+          curl -fsS --retry 5 --retry-delay 3 -o /dev/null
+          https://color-tools.jonramos.dev/
