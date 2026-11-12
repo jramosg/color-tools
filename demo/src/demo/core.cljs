@@ -10,14 +10,15 @@
 (def default-converter-input "rgb(52, 152, 219)")
 
 ;; Theme
-(defonce theme (r/atom "dark"))
+(defonce theme (r/atom "light"))
 
-(defn init-theme! []
+(defn init-theme!
+  "Stored choice first, then the OS preference, light by default (as on
+  jonramos.dev)."
+  []
   (let [stored (js/localStorage.getItem "color-tools-theme")
-        preferred (if (and (nil? stored)
-                           (.-matches (js/matchMedia "(prefers-color-scheme: light)")))
-                    "light"
-                    (or stored "dark"))]
+        os-dark? (.-matches (js/matchMedia "(prefers-color-scheme: dark)"))
+        preferred (or stored (if os-dark? "dark" "light"))]
     (reset! theme preferred)
     (.setAttribute js/document.documentElement "data-theme" preferred)))
 
