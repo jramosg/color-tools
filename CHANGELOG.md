@@ -13,6 +13,16 @@ All notable changes to this project will be documented in this file. This change
 - Expanded cljdoc documentation for accessible theme generation, CSS variable
   export, public API coverage, and workflow examples
 
+### Fixed
+- `accessible?`, `find-accessible-color`, `get-contrast-text` and
+  `accessible-theme` compared the contrast ratio after rounding it to 2
+  decimal places, so pairs just below a WCAG threshold passed. They now
+  compare the unrounded ratio. `contrast-ratio` still returns a rounded value.
+  `accessible-theme` output changes for brands near a threshold: `#006ffb`
+  now gets black `:on-primary` text instead of white (4.4999:1).
+- The demo contrast checker showed WCAG levels as passing for pairs just below
+  the threshold. It now uses `accessible?`.
+
 ## [1.2.0] - 2026-06-23
 ### Added
 - **Accessible Theme Generator**: Generate production-ready UI color tokens
