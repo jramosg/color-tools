@@ -171,6 +171,20 @@
      display-text
      [:div.copyable-color__icon (:clipboard icons)]]))
 
+(defn- format-oklab
+  "Format Oklab coordinates as CSS oklab(), with lightness as a percentage."
+  [[l a b]]
+  (let [[l%] (color/round-coords [(* 100 l)] {:decimal-places 2})
+        [a b] (color/round-coords [a b] {:decimal-places 4})]
+    (str "oklab(" l% "% " a " " b ")")))
+
+(defn- format-oklch
+  "Format OKLCh coordinates as CSS oklch(), with lightness as a percentage."
+  [[l c h]]
+  (let [[l% h] (color/round-coords [(* 100 l) h] {:decimal-places 2})
+        [c] (color/round-coords [c] {:decimal-places 4})]
+    (str "oklch(" l% "% " c " " h ")")))
+
 (defn color-picker-section []
   (let [hex (:color-picker @state)
         format (:format @state)
@@ -222,7 +236,13 @@
          [:code (str "hsl(" h "°, " s "%, " l "%)")]]
         [:div.conversion-item
          [:strong "HSV"]
-         [:code (str "hsv(" hsv-h "°, " hsv-s "%, " v "%)")]]]]]]))
+         [:code (str "hsv(" hsv-h "°, " hsv-s "%, " v "%)")]]
+        [:div.conversion-item
+         [:strong "OKLAB"]
+         [:code (format-oklab (color/rgb->oklab rgb))]]
+        [:div.conversion-item
+         [:strong "OKLCH"]
+         [:code (format-oklch (color/rgb->oklch rgb))]]]]]]))
 
 (def converter-format-options
   [{:value "auto" :label "Auto"}
@@ -230,14 +250,19 @@
    {:value "rgb" :label "RGB"}
    {:value "rgba" :label "RGBA"}
    {:value "hsl" :label "HSL"}
-   {:value "hsv" :label "HSV"}])
+   {:value "hsv" :label "HSV"}
+   {:value "oklab" :label "OKLAB"}
+   {:value "oklch" :label "OKLCH"}])
 
 (def converter-examples
   [{:label "HEX" :value "#e8a634"}
    {:label "RGB" :value "rgb(52, 152, 219)"}
    {:label "RGBA" :value "rgba(17, 24, 39, 0.72)"}
    {:label "HSL" :value "hsl(204, 70%, 53%)"}
-   {:label "HSV" :value "hsv(204, 76%, 86%)"}])
+   {:label "HSV" :value "hsv(204, 76%, 86%)"}
+   {:label "OKLAB" :value "oklab(62.8% 0.2249 0.1258)"}
+   {:label "OKLCH" :value "oklch(65% 0.13 245)"}
+   {:label "Outside sRGB" :value "oklch(90% 0.3 30)"}])
 
 (defn- parse-float [s]
   (let [n (js/parseFloat s)]
@@ -272,17 +297,22 @@
 (defn- rounded-rgb [tokens]
   (mapv #(int (Math/round %)) tokens))
 
-(defn- converter-result [rgb alpha source]
-  (let [hex (color/rgb->hex rgb)
-        hsl (color/rgb->hsl rgb)
-        hsv (color/rgb->hsv rgb)]
-    {:source source
-     :hex hex
-     :rgb rgb
-     :rgba (conj rgb alpha)
-     :hsl hsl
-     :hsv hsv
-     :contrast (color/get-contrast-text hex)}))
+(defn- converter-result
+  ([rgb alpha source] (converter-result rgb alpha source false))
+  ([rgb alpha source clamped?]
+   (let [hex (color/rgb->hex rgb)
+         hsl (color/rgb->hsl rgb)
+         hsv (color/rgb->hsv rgb)]
+     {:source source
+      :hex hex
+      :rgb rgb
+      :rgba (conj rgb alpha)
+      :hsl hsl
+      :hsv hsv
+      :oklab (color/rgb->oklab rgb)
+      :oklch (color/rgb->oklch rgb)
+      :clamped? clamped?
+      :contrast (color/get-contrast-text hex)})))
 
 (defn- parse-as-hex [input]
   (when (color/valid-hex? input)
@@ -320,6 +350,47 @@
     (when (and (hsv-vector? hsv) (alpha? alpha))
       (converter-result (color/hsv->rgb hsv) alpha "HSV"))))
 
+(defn- css-tokens
+  "Numbers in a CSS color function, with whether each one is a percentage."
+  [s]
+  (for [[_ n pct] (re-seq #"(-?\d*\.?\d+)(%?)" s)]
+    {:n (parse-float n) :pct? (= "%" pct)}))
+
+(defn- css-value
+  "A CSS number, scaling a percentage so that 100% equals `full`."
+  [{:keys [n pct?]} full]
+  (if pct? (* full (/ n 100)) n))
+
+(defn- oklab-input
+  "Parse oklab(L a b / alpha) or oklch(L C H / alpha) tokens. Lightness is
+   a number from 0 to 1 or a percentage. For a, b and chroma, 100% is 0.4,
+   as in CSS Color 4."
+  [input polar?]
+  (let [[l x y alpha & more] (css-tokens input)
+        l (some-> l (css-value 1))
+        x (some-> x (css-value 0.4))
+        y (when y (if polar? (:n y) (css-value y 0.4)))
+        alpha (if alpha (css-value alpha 1) 1)]
+    (when (and (nil? more) (in-range? l 0 1) (number? x) (number? y)
+               (alpha? alpha) (or (not polar?) (>= x 0)))
+      {:coords [l x y] :alpha alpha})))
+
+(defn- oklab-result [oklab alpha source]
+  (let [exact (color/oklab->rgb oklab)
+        rgb (mapv #(Math/round %) (color/clamp-rgb exact))
+        ;; Typed CSS values are rounded, so only report clamping when it
+        ;; changes the 8-bit result.
+        clamped? (boolean (some #(or (< % -0.5) (> % 255.5)) exact))]
+    (converter-result rgb alpha source clamped?)))
+
+(defn- parse-as-oklab [input]
+  (when-let [{:keys [coords alpha]} (oklab-input input false)]
+    (oklab-result coords alpha "OKLAB")))
+
+(defn- parse-as-oklch [input]
+  (when-let [{:keys [coords alpha]} (oklab-input input true)]
+    (oklab-result (color/oklch->oklab coords) alpha "OKLCH")))
+
 (defn- parse-color-input [input format]
   (let [trimmed (str/trim input)
         lower (str/lower-case trimmed)
@@ -327,9 +398,20 @@
                          "rgb" parse-as-rgb
                          "rgba" parse-as-rgba
                          "hsl" parse-as-hsl
-                         "hsv" parse-as-hsv}]
+                         "hsv" parse-as-hsv
+                         "oklab" parse-as-oklab
+                         "oklch" parse-as-oklch}]
     (try
-      (if (= "auto" format)
+      (cond
+        (not= "auto" format)
+        (when-let [parse-fn (get parse-by-format format)]
+          (parse-fn trimmed))
+
+        ;; Don't let an invalid oklab() or oklch() fall back to RGB parsing.
+        (str/starts-with? lower "oklab") (parse-as-oklab trimmed)
+        (str/starts-with? lower "oklch") (parse-as-oklch trimmed)
+
+        :else
         (or (parse-as-hex trimmed)
             (when (str/starts-with? lower "rgba")
               (parse-as-rgba trimmed))
@@ -339,9 +421,7 @@
               (parse-as-hsl trimmed))
             (when (str/starts-with? lower "hsv")
               (parse-as-hsv trimmed))
-            (parse-as-rgb trimmed))
-        (when-let [parse-fn (get parse-by-format format)]
-          (parse-fn trimmed)))
+            (parse-as-rgb trimmed)))
       (catch :default _
         nil))))
 
@@ -384,7 +464,7 @@
 (defn converter-section []
   (let [{:keys [input format]} (:converter @state)
         result (parse-color-input input format)
-        {:keys [hex rgb rgba hsl hsv contrast source]} result
+        {:keys [hex rgb rgba hsl hsv oklab oklch clamped? contrast source]} result
         [r g b] rgb
         [h s l] hsl]
     [:section.section.converter-section
@@ -399,7 +479,8 @@
           {:value input
            :rows 3
            :spell-check false
-           :placeholder "#3498db, rgb(52, 152, 219), hsl(204, 70%, 53%)"
+           :placeholder (str "#3498db, rgb(52, 152, 219), hsl(204, 70%, 53%), "
+                             "oklch(60% 0.12 245)")
            :on-change #(swap! state assoc-in
                               [:converter :input]
                               (-> % .-target .-value))}]]
@@ -428,7 +509,9 @@
             {:style {:background hex :color contrast}}
             [:span.converter-preview__source (str "Detected " source)]
             [:strong (.toUpperCase hex)]
-            [:small (format-rgb rgb)]]
+            [:small (format-rgb rgb)]
+            (when clamped?
+              [:small "Outside sRGB: channels clamped"])]
            [:div.converter-channels
             [converter-bar "R" r 255 "#f87171"]
             [converter-bar "G" g 255 "#34d399"]
@@ -438,7 +521,7 @@
             [converter-bar "Light" l 100 hex]]]
           [:div.converter-error
            [:strong "No valid color yet"]
-           [:span "Try HEX, RGB, RGBA, HSL, or HSV."]])]]
+           [:span "Try HEX, RGB, RGBA, HSL, HSV, OKLAB, or OKLCH."]])]]
       (when result
         [:div.converter-output-grid
          [converter-output "HEX" (.toUpperCase hex)]
@@ -446,6 +529,8 @@
          [converter-output "RGBA" (format-rgba rgba)]
          [converter-output "HSL" (format-hsl hsl)]
          [converter-output "HSV" (format-hsv hsv)]
+         [converter-output "OKLAB" (format-oklab oklab)]
+         [converter-output "OKLCH" (format-oklch oklch)]
          [converter-output "CSS var"
           (str "--color: " (.toUpperCase hex) ";")]])]]))
 
