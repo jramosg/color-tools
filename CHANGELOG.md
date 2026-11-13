@@ -41,6 +41,9 @@ All notable changes to this project will be documented in this file. This change
 - `round` overflowed a long on the JVM for large values at high precision:
   `(round 40000.0 15)` returned `9223.37`. It now returns the value unchanged
   once no fractional digit is left at the requested precision.
+- `valid-hex?` returned a regex match vector or `nil` instead of `true` or
+  `false`. Code that used it as a condition is unaffected; code that read the
+  match vector or tested for `nil` relied on undocumented behavior.
 
 ## [1.2.0] - 2026-06-23
 ### Added
