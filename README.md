@@ -63,6 +63,7 @@ npx http-server demo/public -p 8000
 - **Alpha Blending**: Porter-Duff compositing for transparent colors
 - **Color Interpolation**: Gradients in RGB, HSL, or HSV
 - **Perceptual Difference**: Delta E calculations in CIE LAB color space
+- **Oklab Conversion (Unreleased)**: Convert sRGB vectors to Oklab coordinates
 - **Color Temperature**: Kelvin to RGB conversions for lighting UIs
 - **Palette Generation**: Color harmonies from color theory
 - **Accessibility**: WCAG-compliant contrast checking and accessible color finding
@@ -573,6 +574,24 @@ These projects influenced the API:
 ;=> [53.24 80.09 67.20]
 ```
 
+### Oklab Conversion (Unreleased)
+
+Use `rgb->oklab` with sRGB channels from `0` to `255`. You get `[l a b]`
+coordinates with lightness on a 0 to 1 scale. Use `->rgb` first for hex
+strings, CSS strings, or `Color` records. The conversion preserves full
+precision; use `round` to format coordinates for display.
+
+```clojure
+(->> "#336699"
+     color/->rgb
+     color/rgb->oklab
+     (mapv #(color/round % 4)))
+;=> [0.4993 -0.033 -0.093]
+```
+
+See the [API reference](doc/api-reference.md#rgb-oklab-unreleased) for axis
+definitions and input requirements.
+
 ### Color Temperature (Kelvin)
 
 ```clojure
@@ -601,7 +620,7 @@ These projects influenced the API:
 - Lab/CIE Lab color space for perceptually uniform calculations (added in
   v1.1.0)
 - LCH (Lightness, Chroma, Hue) cylindrical color space
-- OKLab/OKLCh modern perceptually uniform color spaces
+- OKLCh (Lightness, Chroma, Hue) color space and Oklab-to-RGB conversion
 - CMYK for print applications
 - HWB (Hue, Whiteness, Blackness) color space
 

@@ -724,6 +724,52 @@ Checks RGB distance against `threshold`, which defaults to `50`.
 
 Converts RGB to CIE L*a*b*.
 
+### `rgb->oklab` (Unreleased)
+
+```clojure
+(rgb->oklab rgb) => [l a b]
+```
+
+Pass an sRGB vector `[r g b]` with each channel from `0` to `255`.
+`rgb->oklab` removes sRGB gamma encoding, then converts the linear RGB
+channels to Oklab using
+[Björn Ottosson's reference formula](https://bottosson.github.io/posts/oklab/).
+
+Interpret the result as follows:
+
+- `l`: lightness on a 0 to 1 scale for sRGB, from black to white.
+- `a`: green (negative) to red (positive).
+- `b`: blue (negative) to yellow (positive).
+
+`rgb->oklab` preserves the computed floating-point values. Use the existing
+`round` helper to round coordinates for display. The `l` scale differs from
+the 0 to 100 lightness scale of `rgb->lab`.
+
+```clojure
+(require '[jon.color-tools :as color])
+
+(mapv #(color/round % 4) (color/rgb->oklab [255 0 0]))
+;=> [0.628 0.2249 0.1258]
+
+(mapv #(color/round % 4) (color/rgb->oklab [128 128 128]))
+;=> [0.5999 0.0 0.0]
+
+;; Normalize hex strings, CSS strings, or Color records with ->rgb.
+(->> "#336699"
+     color/->rgb
+     color/rgb->oklab
+     (mapv #(color/round % 4)))
+;=> [0.4993 -0.033 -0.093]
+```
+
+The function checks `valid-rgb?` with an assertion precondition. With
+assertions enabled, invalid RGB inputs cause an `AssertionError`.
+Use `valid-rgb?` at user-input boundaries to handle validation before calling
+the converter. The function does not clamp channels.
+
+Treat the result as Oklab coordinates: `color` and `->hex` interpret
+three-element vectors as RGB.
+
 ### `delta-e`
 
 ```clojure
