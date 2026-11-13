@@ -144,10 +144,11 @@
 ;; =============================================================================
 
 (defn valid-hex?
-  "Check if string is a valid hex color"
+  "Check if string is a valid 3- or 6-digit hex color, with or without a
+   leading #. Returns true or false."
   [hex]
-  (and (string? hex)
-       (re-matches #"^#?[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$" hex)))
+  (boolean (and (string? hex)
+                (re-matches #"^#?[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$" hex))))
 
 (defn valid-rgb?
   "Check if vector is a valid RGB color"
