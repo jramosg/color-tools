@@ -292,6 +292,35 @@
     (is (sut/accessible? "#000000" "#ffffff" :aaa))
     (is (not (sut/accessible? "#777777" "#888888"))))
 
+  (testing "Thresholds compare the unrounded contrast ratio"
+    ;; Each pair displays as the threshold but falls just below it.
+    (are [fg bg level shown]
+         (and (= shown (sut/contrast-ratio fg bg))
+              (not (sut/accessible? fg bg level)))
+      [0 111 251] [255 255 255] :aa       4.5
+      [0 120 215] [255 255 255] :aa       4.5
+      [0 135 40]  [0 0 0]       :aa       4.5
+      [0 153 255] [255 255 255] :aa-large 3.0
+      [0 96 130]  [0 0 0]       :aa-large 3.0
+      [4 96 130]  [255 255 255] :aaa      7.0
+      [2 159 220] [0 0 0]       :aaa      7.0))
+
+  (testing "Identical colors fail every level"
+    (doseq [level [:aa :aa-large :aaa]]
+      (is (not (sut/accessible? "#808080" "#808080" level)) (pr-str level))))
+
+  (testing "Unknown levels fall back to AA"
+    (is (= (sut/accessible? [0 120 215] [255 255 255] :aa)
+           (sut/accessible? [0 120 215] [255 255 255] :unknown))))
+
+  (testing "find-accessible-color results meet the unrounded threshold"
+    (doseq [bg ["#ffffff" "#000000" "#3498db" "#f0f0f0"]
+            target ["#0078d7" "#006ffb" "#777777" "#e74c3c" "#2ecc71"]
+            level [:aa :aa-large :aaa]
+            :let [found (sut/find-accessible-color bg target level)]
+            :when found]
+      (is (sut/accessible? bg found level) (pr-str [bg target level found]))))
+
   (testing "Find accessible color"
     (let [accessible (sut/find-accessible-color "#ffffff" "#777777")]
       (is (string? accessible))
