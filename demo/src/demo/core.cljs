@@ -789,9 +789,9 @@
 (defn contrast-section []
   (let [{:keys [bg fg]} (:contrast @state)
         ratio (color/contrast-ratio bg fg)
-        pass-aa (>= ratio 4.5)
-        pass-aa-large (>= ratio 3)
-        pass-aaa (>= ratio 7)]
+        pass-aa (color/accessible? bg fg :aa)
+        pass-aa-large (color/accessible? bg fg :aa-large)
+        pass-aaa (color/accessible? bg fg :aaa)]
     [:section.section
      [:h2 (:contrast icons) "Accessibility & Contrast"]
      [:div.card
@@ -808,7 +808,7 @@
         [copyable-color fg]]]
       [:div.contrast-result
        [:div.contrast-ratio-display
-        [:div.contrast-ratio-value (str ratio #_(.toFixed ratio 2) ":1")]]
+        [:div.contrast-ratio-value (str ratio ":1")]]
        [:div.contrast-wcag
         [:div.wcag-item {:class (if pass-aa "pass" "fail")}
          [:strong "WCAG AA"]
