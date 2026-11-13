@@ -441,9 +441,17 @@ Key namespaces:
 
 ### Running Tests
 
+The tests live in `.cljc` files and run on both platforms:
+
 ```bash
+# Clojure (JVM)
 clojure -T:build test
+
+# ClojureScript (Node.js)
+clojure -M:test-cljs
 ```
+
+The ClojureScript run needs Node.js on your `PATH`.
 
 ### Code Quality
 
