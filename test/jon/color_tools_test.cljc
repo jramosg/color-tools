@@ -1270,3 +1270,67 @@
         actual (sut/rgb->oklab [255 0 0])]
     (is (every? #(< (Math/abs (double %)) 1e-12)
                 (map - expected actual)))))
+
+(def ^:private one-third #?(:clj 1/3 :cljs (/ 1 3)))
+
+(def ^:private max-double
+  #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE))
+
+(deftest round-coords-test
+  (testing "Round to decimal places"
+    (are [coords places expected]
+         (= expected (sut/round-coords coords {:decimal-places places}))
+      [0.6279553606 0.2248630610 0.1258462985] 4 [0.628 0.2249 0.1258]
+      [1.25 -1.25 0.0]                         1 [1.3 -1.2 0.0]
+      [1.4 1.5 -1.5 2.5]                       0 [1.0 2.0 -1.0 3.0]
+      [255 0 128]                              2 [255.0 0.0 128.0]
+      '(1.234 5.678)                           1 [1.2 5.7]
+      []                                       3 []))
+
+  (testing "Round to significant digits"
+    (are [coords digits expected]
+         (= expected (sut/round-coords coords {:significant-digits digits}))
+      [123.456 0.001234]       3  [123.0 0.00123]
+      [123456.0 -0.0004567]    3  [123000.0 -4.57E-4]
+      [0 0.0 -0.0]             2  [0.0 0.0 0.0]
+      [0.6279553606 29.233885] 4  [0.628 29.23]
+      [one-third]              3  [0.333]
+      [(/ 1.0 3)]              17 [(/ 1.0 3)]))
+
+  (testing "Return doubles at every precision"
+    (doseq [options [{:decimal-places 0} {:significant-digits 1}]
+            x (sut/round-coords [1 2.5 300] options)]
+      (is (double? x) (pr-str options x))))
+
+  (testing "Keep large values instead of overflowing"
+    (is (= [40000.0 1.0E17 -1.0E300]
+           (sut/round-coords [40000.0 1.0E17 -1.0E300]
+                             {:decimal-places 15})))
+    (is (= [max-double 1.0E-300 4.9E-324]
+           (sut/round-coords [max-double 1.0E-300 4.9E-324]
+                             {:significant-digits 2}))))
+
+  (testing "Pass NaN and infinities through"
+    (let [[nan inf neg-inf x]
+          (sut/round-coords [##NaN ##Inf ##-Inf 1.23456] {:decimal-places 2})]
+      (is (NaN? nan))
+      (is (= [##Inf ##-Inf 1.23] [inf neg-inf x]))))
+
+  (testing "Reject invalid options"
+    (doseq [options (concat
+                     [nil {} {:decimal-places 2 :significant-digits 2}
+                      {:decimal-places -1} {:decimal-places 16}
+                      {:decimal-places "2"}
+                      {:significant-digits 0} {:significant-digits 18}
+                      {:significant-digits 1.5}]
+                     ;; JavaScript has no separate integer type: 2.0 is 2.
+                     #?(:clj [{:decimal-places 2.0}] :cljs []))]
+      (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo)
+                   (sut/round-coords [1.0] options))
+          (pr-str options))))
+
+  (testing "Reject non-numeric coordinates"
+    (doseq [coords [nil "1.0" {:l 1.0} ["1.0"] [1.0 nil] #{1.0}]]
+      (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo)
+                   (sut/round-coords coords {:decimal-places 2}))
+          (pr-str coords)))))
