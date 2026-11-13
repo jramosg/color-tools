@@ -1141,16 +1141,19 @@
 ;; Perceptual Color Difference (Delta E)
 ;; =============================================================================
 
+(defn- to-linear-rgb
+  "Remove sRGB gamma encoding from a channel in the 0-1 range."
+  [c]
+  (if (<= c 0.04045)
+    (/ c 12.92)
+    (Math/pow (/ (+ c 0.055) 1.055) 2.4)))
+
 (defn rgb->lab
   "Convert RGB to LAB color space (CIE L*a*b*)"
   [rgb]
   (let [[r g b] (map #(/ % 255.0) rgb)
         ;; Convert to linear RGB
-        to-linear (fn [c]
-                    (if (<= c 0.04045)
-                      (/ c 12.92)
-                      (Math/pow (/ (+ c 0.055) 1.055) 2.4)))
-        [r-lin g-lin b-lin] (map to-linear [r g b])
+        [r-lin g-lin b-lin] (map to-linear-rgb [r g b])
         ;; Convert to XYZ
         x (* 100 (+ (* r-lin 0.4124) (* g-lin 0.3576) (* b-lin 0.1805)))
         y (* 100 (+ (* r-lin 0.2126) (* g-lin 0.7152) (* b-lin 0.0722)))
@@ -1252,11 +1255,6 @@
 ;; =============================================================================
 ;; Oklab
 ;; =============================================================================
-
-(defn- to-linear-rgb [c]
-  (if (<= c 0.04045)
-    (/ c 12.92)
-    (Math/pow (/ (+ c 0.055) 1.055) 2.4)))
 
 (defn rgb->oklab
   "Convert an sRGB vector [r g b], with channels from 0 to 255, to Oklab.
