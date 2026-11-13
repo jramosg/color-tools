@@ -34,15 +34,36 @@
   [value min-val max-val]
   (max min-val (min max-val value)))
 
+(def ^:private max-fractional-double
+  "2^52. Doubles at or above this magnitude have no fractional part."
+  4503599627370496.0)
+
+(defn- round-places
+  "Round a finite number to `places` decimal places and return a double.
+   Places may be negative to round to tens, hundreds and so on. Returns x
+   unchanged when the scaled value has no fractional part, which also keeps
+   Math/round from overflowing a long on the JVM, and when rounding up would
+   exceed the largest double."
+  [x places]
+  (let [x (double x)]
+    (if (neg? places)
+      (let [factor (Math/pow 10 (- places))
+            rounded (* (double (Math/round (/ x factor))) factor)]
+        (if (infinite? rounded) x rounded))
+      (let [factor (Math/pow 10 places)
+            scaled (* x factor)]
+        (if (>= (Math/abs scaled) max-fractional-double)
+          x
+          (/ (double (Math/round scaled)) factor))))))
+
 (defn round
-  "Round a number to specified decimal places"
+  "Round a number to specified decimal places. Returns an integer at 0
+   places and a double otherwise. Large values that have no fractional
+   digit at the requested precision come back unchanged."
   ([n] (round n 0))
   ([n decimals]
-   (let [decimals (or decimals 0)
-         factor (Math/pow 10 decimals)]
-     (cond-> (/ (Math/round #?(:clj (double (* n factor))
-                               :cljs (* n factor)))
-                factor)
+   (let [decimals (or decimals 0)]
+     (cond-> (round-places n decimals)
        (= decimals 0) int))))
 
 (defn round-int [n]
