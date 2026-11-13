@@ -408,6 +408,25 @@ Delta E uses the CIE L\*a\*b\* color space:
 ;; Negative a = more green
 ```
 
+### Oklab Lightness (Unreleased)
+
+Use `rgb->oklab` to work with Oklab coordinates. Pass an sRGB vector with
+channels from `0` to `255`, or convert another input format with `->rgb`.
+The first output coordinate measures lightness on a 0 to 1 scale.
+
+Sort swatches from dark to light:
+
+```clojure
+(sort-by (comp first color/rgb->oklab color/->rgb)
+         ["#ffffff" "#336699" "#000000"])
+;=> ("#000000" "#336699" "#ffffff")
+```
+
+For the other axes and numeric examples, see
+[`rgb->oklab` in the API reference](api-reference.md#rgb-oklab-unreleased).
+Use `delta-e` for CIE76 differences in CIE L*a*b*; adding Oklab conversion
+does not change that calculation.
+
 ### Practical Applications
 
 **Color Palette Deduplication:**
