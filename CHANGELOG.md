@@ -7,6 +7,13 @@ All notable changes to this project will be documented in this file. This change
   `[l a b]` coordinates at full precision, with lightness on a 0 to 1 scale
 - `round-coords` rounds each value in a coordinate vector to a number of
   decimal places or significant digits, for display and export
+- `oklab->rgb` converts Oklab coordinates back to sRGB at full precision,
+  without clamping, as the exact inverse of `rgb->oklab`
+- `oklab->hex` converts Oklab coordinates to a hex string, clamping colors
+  outside sRGB
+- `in-gamut?` checks whether Oklab coordinates fall inside the sRGB gamut
+- `clamp-rgb` clamps computed RGB channels to 0 to 255 before `->hex` or
+  `color`
 
 ### Changed
 - Bump Clojure from 1.12.1 to 1.12.6
