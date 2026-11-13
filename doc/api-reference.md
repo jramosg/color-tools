@@ -1041,7 +1041,9 @@ Checks whether saturation is not above `threshold`, which defaults to `60`.
 (kelvin->rgb kelvin) => [r g b]
 ```
 
-Converts a color temperature from 1000K to 40000K into RGB.
+Converts a color temperature from 1000K to 40000K into RGB with Tanner
+Helland's approximation of the black-body curve. Throws `ex-info` outside that
+range.
 
 ### `kelvin->hex`
 
@@ -1065,8 +1067,24 @@ Converts a color temperature into a `Color` record.
 (rgb->kelvin rgb) => number | nil
 ```
 
-Approximates correlated color temperature from RGB. Returns `nil` for colors
-too far from the black-body curve.
+Approximates the correlated color temperature of an sRGB color. It converts to
+CIE 1931 xy chromaticity and applies McCamy's formula, which is accurate from
+about 2000K to 12500K.
+
+Returns `nil` for black, for colors more than `0.05` from the black-body curve
+in CIE 1960 uv (Duv), and for results outside 1000K to 40000K. Saturated
+primaries such as pure red have no meaningful temperature.
+
+```clojure
+(rgb->kelvin [255 255 255])
+;=> 6504  ; sRGB white is D65
+
+(rgb->kelvin (kelvin->rgb 3000))
+;=> 2879
+
+(rgb->kelvin [255 0 0])
+;=> nil
+```
 
 ## Numeric Helpers
 
