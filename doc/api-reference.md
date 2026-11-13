@@ -868,6 +868,64 @@ white at `l = 0.99999999`, so `[1 0 0]` lands just above `255`.
 ;=> false
 ```
 
+### `oklab->oklch` (Unreleased)
+
+```clojure
+(oklab->oklch oklab) => [l c h]
+```
+
+Converts Oklab coordinates to OKLCh, the polar form that CSS `oklch()` uses:
+
+- `l`: lightness, unchanged from Oklab.
+- `c`: chroma, `0` and up. sRGB colors stay below about `0.33`.
+- `h`: hue in degrees, from `0` up to `360`.
+
+Colors with chroma below `1e-6` get hue `0`; CSS writes that hue as `none`.
+Grays converted from sRGB carry about `2e-8` of chroma noise, so their
+computed hue would be meaningless. The result is unrounded.
+
+```clojure
+(color/round-coords (color/oklab->oklch [0.628 0.2249 0.1258])
+                    {:decimal-places 4})
+;=> [0.628 0.2577 29.2209]
+```
+
+### `oklch->oklab` (Unreleased)
+
+```clojure
+(oklch->oklab oklch) => [l a b]
+```
+
+Converts OKLCh back to Oklab. Hue wraps, so `-30` and `330` give the same
+color. Negative chroma fails the assertion precondition.
+
+```clojure
+(color/round-coords (color/oklch->oklab [0.628 0.2577 29.23])
+                    {:decimal-places 4})
+;=> [0.628 0.2249 0.1258]
+```
+
+### `rgb->oklch`, `oklch->rgb` and `oklch->hex` (Unreleased)
+
+```clojure
+(rgb->oklch rgb) => [l c h]
+(oklch->rgb oklch) => [r g b]
+(oklch->hex oklch) => string
+```
+
+Shortcuts that go through Oklab. `rgb->oklch` takes the same sRGB input as
+`rgb->oklab`. `oklch->rgb` returns unrounded, unclamped channels like
+`oklab->rgb`, and `oklch->hex` clamps like `oklab->hex`. To check the gamut,
+convert to Oklab first: `(in-gamut? (oklch->oklab lch))`.
+
+```clojure
+(color/round-coords (color/rgb->oklch [255 0 0]) {:decimal-places 4})
+;=> [0.628 0.2577 29.2339]
+
+(color/oklch->hex [0.628 0.2577 29.23])
+;=> "#ff0000"
+```
+
 ### `delta-e`
 
 ```clojure
