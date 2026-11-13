@@ -1350,3 +1350,62 @@
       (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo)
                    (sut/round-coords coords {:decimal-places 2}))
           (pr-str coords)))))
+
+(defn- max-channel-error [expected actual]
+  (apply max (map #(Math/abs (double (- %1 %2))) expected actual)))
+
+(def ^:private oklab-reference-rgb
+  [[0 0 0] [255 255 255] [128 128 128] [255 0 0] [0 255 0] [0 0 255]
+   [255 255 0] [0 255 255] [255 0 255] [255 128 0] [51 102 153]])
+
+(deftest oklab->rgb-test
+  (testing "Round trip sRGB through Oklab"
+    (doseq [rgb (concat oklab-reference-rgb
+                        (for [r (range 0 256 15) g (range 0 256 15)
+                              b (range 0 256 15)]
+                          [r g b]))]
+      (is (< (max-channel-error rgb (sut/oklab->rgb (sut/rgb->oklab rgb)))
+             1e-9)
+          (pr-str rgb))))
+
+  (testing "Neutral colors decode to the gamma-encoded cube of lightness"
+    ;; With a = b = 0 every cone response equals l^3, independent of the
+    ;; matrices, so each channel is the sRGB encoding of l^3.
+    (doseq [l [0.1 0.25 0.5 0.75 0.9]
+            :let [linear (* l l l)
+                  encoded (if (<= linear 0.0031308)
+                            (* 12.92 linear)
+                            (- (* 1.055 (Math/pow linear (/ 1 2.4))) 0.055))
+                  channel (* 255 encoded)]]
+      (is (< (max-channel-error [channel channel channel]
+                                (sut/oklab->rgb [l 0 0]))
+             1e-3)
+          (pr-str l))))
+
+  (testing "Return unrounded, unclamped floats"
+    (let [[r g b] (sut/oklab->rgb [0.9 0.3 0.3])]
+      (is (> r 255))
+      (is (neg? g))
+      (is (neg? b)))
+    (is (every? double? (sut/oklab->rgb [0.5 0.1 -0.1]))))
+
+  (testing "Reject malformed input"
+    (doseq [oklab [nil [] [0.5 0] [0.5 0 0 1] '(0.5 0 0) ["0.5" 0 0]
+                   [##NaN 0 0] [0 ##Inf 0] [0 0 ##-Inf] "oklab(0.5 0 0)"]]
+      (is (thrown? #?(:clj AssertionError :cljs :default)
+                   (sut/oklab->rgb oklab))
+          (pr-str oklab)))))
+
+(deftest in-gamut?-test
+  (testing "Colors converted from sRGB are in gamut"
+    (doseq [rgb oklab-reference-rgb]
+      (is (sut/in-gamut? (sut/rgb->oklab rgb)) (pr-str rgb))))
+
+  (testing "Oklab black and white are in gamut"
+    (is (sut/in-gamut? [0 0 0]))
+    (is (sut/in-gamut? [1 0 0])))
+
+  (testing "Colors outside sRGB are out of gamut"
+    (doseq [oklab [[0.9 0.3 0.3] [1.01 0 0] [-0.01 0 0] [0.5 0.4 0]
+                   [0.7 0 -0.4]]]
+      (is (not (sut/in-gamut? oklab)) (pr-str oklab)))))
