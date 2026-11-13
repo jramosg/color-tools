@@ -12,10 +12,11 @@ and theme tokens. `jon/color-tools` puts those operations in one namespace.
 The library follows these core principles:
 
 ### Functional and Pure
-All functions are pure with no side effects. Colors in, colors out.
+Every function is pure: it takes colors and returns new colors without side
+effects.
 
 ### Cross-Platform
-Works identically in Clojure (JVM) and ClojureScript (browser/Node.js) environments.
+The same API runs in Clojure (JVM) and ClojureScript (browser and Node.js).
 
 ### Format Agnostic
 Functions accept colors in multiple formats, including hex strings and RGB
@@ -96,7 +97,7 @@ Built-in support for WCAG (Web Content Accessibility Guidelines) compliance:
 
 ## Getting Started
 
-Require the namespace and call the functions directly:
+Require the namespace and call the functions:
 
 ```clojure
 (require '[jon.color-tools :as color])
@@ -182,5 +183,5 @@ The implementation keeps runtime overhead low:
 
 For examples and installation notes, see [README.md](../README.md).
 
-For workflow examples and best practices, see the workflow guide and the
-examples in the test suite.
+For design system, accessibility, and lighting workflows, see the workflow
+guide. The test suite has more examples.
