@@ -63,8 +63,8 @@ npx http-server demo/public -p 8000
 - **Alpha Blending**: Porter-Duff compositing for transparent colors
 - **Color Interpolation**: Gradients in RGB, HSL, or HSV
 - **Perceptual Difference**: Delta E calculations in CIE LAB color space
-- **Oklab Conversion (Unreleased)**: Convert between sRGB and Oklab, with gamut
-  checks
+- **Oklab and OKLCh (Unreleased)**: Convert between sRGB, Oklab and OKLCh,
+  with gamut checks
 - **Color Temperature**: Kelvin to RGB conversions for lighting UIs
 - **Palette Generation**: Color harmonies from color theory
 - **Accessibility**: WCAG-compliant contrast checking and accessible color finding
@@ -603,6 +603,13 @@ precision; use `round-coords` to format coordinates for display.
 
 (color/in-gamut? [0.9 0.3 0.3])
 ;=> false
+
+;; OKLCh: lightness, chroma, hue in degrees
+(color/round-coords (color/rgb->oklch [255 0 0]) {:decimal-places 4})
+;=> [0.628 0.2577 29.2339]
+
+(color/oklch->hex [0.628 0.2577 29.23])
+;=> "#ff0000"
 ```
 
 `oklab->rgb` returns unrounded, unclamped channels; `oklab->hex` clamps colors
@@ -637,7 +644,6 @@ for axis definitions, gamut handling, and input requirements.
 - Lab/CIE Lab color space for perceptually uniform calculations (added in
   v1.1.0)
 - LCH (Lightness, Chroma, Hue) cylindrical color space
-- OKLCh (Lightness, Chroma, Hue) color space
 - CMYK for print applications
 - HWB (Hue, Whiteness, Blackness) color space
 
