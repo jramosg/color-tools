@@ -17,6 +17,8 @@ All notable changes to this project will be documented in this file. This change
 - `oklab->oklch`, `oklch->oklab`, `rgb->oklch`, `oklch->rgb` and `oklch->hex`
   convert to and from OKLCh, the lightness, chroma and hue form CSS `oklch()`
   uses
+- The demo shows Oklab and OKLCh in the color picker, and its converter
+  accepts `oklab()` and `oklch()` input
 
 ### Changed
 - Bump Clojure from 1.12.1 to 1.12.6
