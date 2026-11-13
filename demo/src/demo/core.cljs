@@ -175,8 +175,9 @@
   (let [hex (:color-picker @state)
         format (:format @state)
         rgb (color/->rgb hex)
-        hsl (color/->hsl hex)
-        hsv (color/->hsv hex)
+        ;; ->hsl and ->hsv return [h s l] and [h s v] vectors, not maps
+        [h s l] (color/->hsl hex)
+        [hsv-h hsv-s v] (color/->hsv hex)
         text-color (color/get-contrast-text hex)]
     [:section.section
      [:h2 (:target icons) "Color Picker & Conversions"]
@@ -218,10 +219,10 @@
          [:code (str "rgb(" (first rgb) ", " (second rgb) ", " (last rgb) ")")]]
         [:div.conversion-item
          [:strong "HSL"]
-         [:code (str "hsl(" (Math/round (:h hsl)) "°, " (Math/round (:s hsl)) "%, " (Math/round (:l hsl)) "%)")]]
+         [:code (str "hsl(" h "°, " s "%, " l "%)")]]
         [:div.conversion-item
          [:strong "HSV"]
-         [:code (str "hsv(" (Math/round (:h hsv)) "°, " (Math/round (:s hsv)) "%, " (Math/round (:v hsv)) "%)")]]]]]]))
+         [:code (str "hsv(" hsv-h "°, " hsv-s "%, " v "%)")]]]]]]))
 
 (def converter-format-options
   [{:value "auto" :label "Auto"}
