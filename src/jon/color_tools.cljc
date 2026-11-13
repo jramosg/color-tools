@@ -1310,14 +1310,16 @@
           ;; Calculate red
           r (if (<= temp 66)
               255
-              (let [r-calc (- temp 60)]
-                (* 255 (clamp (Math/pow r-calc -0.1332047592) 0 1))))
+              (clamp (* 329.698727446
+                        (Math/pow (- temp 60) -0.1332047592))
+                     0 255))
           ;; Calculate green
           g (if (<= temp 66)
               (let [g-calc (* 99.4708025861 (Math/log temp))]
                 (* 255 (clamp (/ (- g-calc 161.1195681661) 255) 0 1)))
-              (let [g-calc (- temp 60)]
-                (* 255 (clamp (Math/pow g-calc -0.0755148492) 0 1))))
+              (clamp (* 288.1221695283
+                        (Math/pow (- temp 60) -0.0755148492))
+                     0 255))
           ;; Calculate blue
           b (cond
               (>= temp 66) 255
