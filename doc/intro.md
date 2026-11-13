@@ -1,26 +1,30 @@
 # Introduction to jon/color-tools
 
-`jon/color-tools` is a comprehensive color manipulation library for Clojure and ClojureScript that provides everything you need to work with colors in your applications.
+`jon/color-tools` is a color toolkit for Clojure and ClojureScript.
 
-## What is color-tools?
+## Library Scope
 
-Color manipulation is a common need in many applications - from web development to data visualization, design tools, and accessibility compliance. `jon/color-tools` provides a unified, functional API for all your color needs.
+Clojure apps often need format conversion, palette generation, contrast checks,
+and theme tokens. `jon/color-tools` puts those operations in one namespace.
 
 ## Design Philosophy
 
 The library follows these core principles:
 
 ### Functional and Pure
-All functions are pure with no side effects. Colors in, colors out.
+Every function is pure: it takes colors and returns new colors without side
+effects.
 
 ### Cross-Platform
-Works identically in Clojure (JVM) and ClojureScript (browser/Node.js) environments.
+The same API runs in Clojure (JVM) and ClojureScript (browser and Node.js).
 
 ### Format Agnostic
-Functions accept colors in multiple formats (hex strings, RGB vectors) and return results in the same format, making it easy to integrate into existing codebases.
+Functions accept colors in multiple formats, including hex strings and RGB
+vectors, and return the same shape when the operation can preserve it.
 
-### Comprehensive
-From basic format conversions to advanced color theory and accessibility compliance - all in one library.
+### Broad API
+One namespace covers format conversions, color theory, accessibility, blending,
+gradients, and theme tokens.
 
 ## Core Concepts
 
@@ -93,12 +97,12 @@ Built-in support for WCAG (Web Content Accessibility Guidelines) compliance:
 
 ## Getting Started
 
-The quickest way to get started is to require the namespace and try some basic operations:
+Require the namespace and call the functions:
 
 ```clojure
 (require '[jon.color-tools :as color])
 
-;; Convert formats - universal conversion functions work with any input
+;; Convert formats
 (color/->rgb "#3498db")          ; hex to RGB
 ;=> [52 152 219]
 
@@ -108,7 +112,7 @@ The quickest way to get started is to require the namespace and try some basic o
 (color/->hex [52 152 219])       ; RGB to hex
 ;=> "#3498db"
 
-;; Manipulate colors - works with any format
+;; Manipulate colors
 (color/lighten "#3498db" 0.2)           ; hex input
 ;=> "#5dade2"
 
@@ -138,45 +142,46 @@ The quickest way to get started is to require the namespace and try some basic o
 
 ## Architecture
 
-The library is organized into several functional areas:
+The namespace groups functions by task:
 
 ### Validation and Normalization
-Functions to validate color formats and normalize values (e.g., expanding 3-digit hex codes).
+Validate color formats and normalize values, such as expanding 3-digit hex
+codes.
 
 ### Format Conversions
-Bidirectional conversion functions between all supported color formats.
+Convert between supported color formats.
 
 ### Color Manipulation
-Functions to modify colors: lighten, darken, saturate, adjust hue, invert, etc.
+Modify colors with `lighten`, `darken`, `saturate`, `adjust-hue`, `invert`,
+and related functions.
 
 ### Color Analysis
-Functions to analyze color properties: brightness, warmth, vibrancy, etc.
+Analyze brightness, warmth, vibrancy, and related properties.
 
 ### Palette Generation
-Functions implementing color theory for generating harmonious color combinations.
+Generate color harmonies and palette variants.
 
 ### Accessibility
-Functions for WCAG compliance checking and accessible color generation.
+Check WCAG contrast and find accessible alternatives.
 
 ### Design Tokens
-Functions for generating accessible UI theme tokens and exporting them as CSS
-custom properties.
+Generate accessible UI theme tokens and export CSS custom properties.
 
 ### Color Mixing and Blending
-Functions for combining colors mathematically.
+Combine colors with mixing, blending, and alpha compositing.
 
 ## Performance Considerations
 
-The library is designed for performance:
+The implementation keeps runtime overhead low:
 
-- Pure functions enable easy caching and memoization
+- Pure functions work well with caching and memoization
 - Minimal external dependencies
-- Efficient algorithms for color space conversions
+- Direct algorithms for color space conversions
 - No unnecessary object creation
 
 ## Examples and Tutorials
 
-For comprehensive examples and tutorials, see the main [README.md](../README.md) file.
+For examples and installation notes, see [README.md](../README.md).
 
-For workflow examples and best practices, see the workflow guide and the
-examples in the test suite.
+For design system, accessibility, and lighting workflows, see the workflow
+guide. The test suite has more examples.

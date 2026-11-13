@@ -1,7 +1,7 @@
 # Workflow Guide
 
-This guide covers practical workflows for design systems, data visualization,
-accessibility, and lighting interfaces.
+Use these workflows for design systems, data visualization, accessibility, and
+lighting interfaces.
 
 ## Table of Contents
 
@@ -15,11 +15,13 @@ accessibility, and lighting interfaces.
 
 ## Color Blending Modes
 
-Blending modes are essential for design work, allowing you to combine colors in different ways similar to popular design tools like Photoshop or Figma.
+Blending modes combine two colors with the same rules designers use in tools
+like Photoshop or Figma.
 
 ### Multiply
 
-Multiply darkens colors by multiplying the color channels. It's useful for creating shadows and darkening effects.
+Multiply darkens colors by multiplying the color channels. Use it for shadows
+and dark overlays.
 
 ```clojure
 (require '[jon.color-tools :as color])
@@ -32,19 +34,19 @@ Multiply darkens colors by multiplying the color channels. It's useful for creat
 (color/blend-multiply "#ff8800" "#88ff00")
 ;=> "#885500"
 
-;; Works with RGB vectors too
+;; RGB vectors work too
 (color/blend-multiply [255 128 64] [128 255 200])
 ;=> [127 127 50]
 ```
 
 **Use cases:**
-- Creating shadow effects
-- Darkening images or backgrounds
+- Shadows
+- Dark image or background overlays
 - Layer compositing in design tools
 
 ### Screen
 
-Screen lightens colors by inverting, multiplying, and inverting again. It's the opposite of multiply.
+Screen lightens colors by inverting, multiplying, and inverting again.
 
 ```clojure
 ;; Screen brightens dark colors
@@ -57,43 +59,44 @@ Screen lightens colors by inverting, multiplying, and inverting again. It's the 
 ```
 
 **Use cases:**
-- Creating highlight effects
+- Highlights
 - Lightening images
-- Glow and light effects
+- Glow and light treatments
 
 ### Overlay
 
-Overlay combines multiply and screen based on the base color's brightness. Dark areas get darker (multiply), light areas get lighter (screen).
+Overlay combines multiply and screen based on base brightness. Dark areas get
+darker; light areas get lighter.
 
 ```clojure
 ;; Overlay creates high contrast
 (color/blend-overlay "#ff0000" "#808080")
 ;=> "#ff0000"
 
-;; Works great for texture overlays
+;; Texture overlay
 (color/blend-overlay "#3498db" "#f0f0f0")
 ;=> "#6db4e8"
 ```
 
 **Use cases:**
-- Adding texture to surfaces
-- Increasing contrast
-- Dramatic color effects
+- Surface textures
+- Contrast adjustments
+- High-contrast color effects
 
 ### Preserving Input Format
 
-All blending functions preserve the input format of the base color:
+Blending functions preserve the base color's input format:
 
 ```clojure
-;; Hex input → hex output
+;; Hex input returns hex output
 (color/blend-multiply "#ff0000" "#0000ff")
 ;=> "#000000"
 
-;; Vector input → vector output
+;; Vector input returns vector output
 (color/blend-multiply [255 0 0] [0 0 255])
 ;=> [0 0 0]
 
-;; Color record input → Color record output
+;; Color record input returns Color record output
 (def red-color (color/color 255 0 0))
 (def blue-color (color/color 0 0 255))
 (color/blend-multiply red-color blue-color)
@@ -102,7 +105,7 @@ All blending functions preserve the input format of the base color:
 
 ## Tints, Shades, and Tones
 
-These are fundamental concepts in color theory and design systems. They create color variations while maintaining color harmony.
+Tints, shades, and tones create related colors from one base color.
 
 ### Understanding the Difference
 
@@ -135,18 +138,18 @@ The amount parameter (0-1) controls how much white/black/gray to mix:
 
 ### Generating Color Scales
 
-Creating a series of tints, shades, or tones is perfect for design systems and UI palettes:
+Use tint, shade, and tone series for design system scales:
 
 ```clojure
-;; Generate 5 progressively lighter tints
+;; Generate 5 lighter tints
 (color/tints "#e74c3c" 5)
 ;=> ["#eb6757" "#ef8272" "#f39c8d" "#f7b7a8" "#fbd2c3"]
 
-;; Generate 5 progressively darker shades
+;; Generate 5 darker shades
 (color/shades "#e74c3c" 5)
 ;=> ["#b83d30" "#892d24" "#5a1e18" "#2b0f0c" "#000000"]
 
-;; Generate 5 progressively less saturated tones
+;; Generate 5 less saturated tones
 (color/tones "#e74c3c" 5)
 ;=> ["#dd6b5e" "#ce8980" "#bfa8a2" "#b0c6c4" "#a1e5e6"]
 ```
@@ -154,7 +157,7 @@ Creating a series of tints, shades, or tones is perfect for design systems and U
 ### Building Design Systems
 
 ```clojure
-;; Create a complete color palette for a brand
+;; Create a brand palette
 (def brand-primary "#2ecc71")
 
 (def palette
@@ -176,11 +179,11 @@ palette
 
 ## Alpha Blending and Compositing
 
-Proper alpha blending is essential for working with transparency and creating layered interfaces.
+Alpha blending controls how transparent colors stack.
 
 ### Porter-Duff Alpha Compositing
 
-The `alpha-blend` function implements the standard Porter-Duff "source over" compositing algorithm:
+`alpha-blend` implements Porter-Duff "source over" compositing:
 
 ```clojure
 ;; Blend semi-transparent blue over opaque red
@@ -287,7 +290,7 @@ Different color spaces produce different results:
 
 ;; HSL interpolation (through hue wheel)
 (color/interpolate [red yellow] 0.5 :hsl)
-;=> "#ff8000"  ; Orange (through hue 0→60)
+;=> "#ff8000"  ; Orange through hue 0 to 60
 
 ;; For colors across the hue wheel, HSL is more natural
 (def red "#ff0000")
@@ -345,9 +348,10 @@ Different color spaces produce different results:
 
 ## Perceptual Color Difference
 
-RGB distance doesn't match how humans perceive color differences. The CIE Delta E formula provides perceptually uniform measurements.
+RGB distance does not match human color perception. CIE Delta E measures
+perceived difference in LAB color space.
 
-### Why Delta E?
+### Delta E
 
 ```clojure
 ;; These have similar RGB distances
@@ -357,7 +361,7 @@ RGB distance doesn't match how humans perceive color differences. The CIE Delta 
 (color/color-distance "#00ff00" "#00ff01")
 ;=> 1.0
 
-;; But humans perceive them differently!
+;; Delta E separates these cases.
 (color/delta-e "#ff0000" "#ff0100")
 ;=> 0.8  ; Imperceptible
 
@@ -443,8 +447,8 @@ Color temperature represents the color of light emitted by a black body at a giv
 - **3000K**: Warm white LED
 - **4000K**: Neutral white
 - **5000K**: Cool white
-- **6500K**: Daylight (slightly cool)
-- **10000K**: Clear blue sky (very cool)
+- **6500K**: Daylight (bluish white)
+- **10000K**: Clear blue sky (deep blue)
 
 ### Converting Temperature to Color
 
@@ -481,12 +485,12 @@ Color temperature represents the color of light emitted by a black body at a giv
 
 ;; Returns nil for non-black-body colors
 (color/rgb->kelvin [255 0 0])
-;=> nil  ; Pure red isn't on the curve
+;=> nil  ; Pure red is outside the curve
 ```
 
 ### Valid Range
 
-The functions support temperatures from 1000K to 40000K:
+The temperature functions accept values from 1000K to 40000K:
 
 ```clojure
 (color/kelvin->rgb 1000)   ; OK
@@ -598,8 +602,8 @@ Use `:mode :dark` to derive dark surfaces from the same brand color. Use
 
 ### Exporting CSS Variables
 
-`theme->css-vars` converts theme maps into CSS custom properties. This is the
-fastest path from Clojure/ClojureScript token generation to browser styling.
+`theme->css-vars` converts theme maps into CSS custom properties. Use it to
+apply Clojure/ClojureScript token generation in browser CSS.
 
 ```clojure
 (color/theme->css-vars theme {:prefix "--brand-"})
@@ -627,7 +631,7 @@ fastest path from Clojure/ClojureScript token generation to browser styling.
     "Save"]])
 ```
 
-### When to Use Palettes vs Themes
+### Palettes vs Themes
 
 Use palette functions such as `analogous`, `triadic`, and `monochromatic` when
 you need color ideas or data visualization ranges. Use `accessible-theme` when
