@@ -1249,30 +1249,35 @@
     (when (and (>= cct 1000) (<= cct 40000))
       (round cct 0))))
 
-
 ;; =============================================================================
-;; OkLab
+;; Oklab
 ;; =============================================================================
 
-
-
-(defn to-linear-rgb [c] 
-    (if (<= c 0.04045)
-            (/ c 12.92)
-            (Math/pow (/ (+ c 0.055) 1.055) 2.4)))
+(defn- to-linear-rgb [c]
+  (if (<= c 0.04045)
+    (/ c 12.92)
+    (Math/pow (/ (+ c 0.055) 1.055) 2.4)))
 
 (defn rgb->oklab
-  "Convert RGB to oklab color space. 
-  Formula taken from https://bottosson.github.io/posts/oklab/#converting-from-linear-srgb-to-oklab"
+  "Convert an sRGB vector [r g b] to Oklab [l a b].
+   Formula taken from https://bottosson.github.io/posts/oklab/."
   [rgb]
   (let [rgb01 (map #(/ % 255.0) rgb)
         ;; Convert to linear RGB
         [r-lin g-lin b-lin] (map to-linear-rgb rgb01)
-         _l (Math/cbrt (+ (* 0.4122214708   r-lin) (* 0.5363325363 g-lin) (* 0.0514459929 b-lin)))  
-         _m (Math/cbrt (+ (* 0.2119034982  r-lin) (* 0.6806995451 g-lin) (* 0.1073969566 b-lin)))
-         _s (Math/cbrt (+ (* 0.0883024619 r-lin)  (* 0.2817188376 g-lin) (* 0.6299787005 b-lin)))  
-         
-         L  (- (+ (* 0.2104542553 _l) (* 0.7936177850 _m)) (* 0.0040720468 _s)) 
-         a  (+ (- (* 1.9779984951 _l) (* 2.4285922050 _m))  (* 0.4505937099 _s)) 
-         b  (- (+ (* 0.0259040371 _l) (* 0.7827717662 _m)) (* 0.8086757660 _s))]
-    [L a b]))
+        l-root (Math/cbrt (+ (* 0.4122214708 r-lin)
+                             (* 0.5363325363 g-lin)
+                             (* 0.0514459929 b-lin)))
+        m-root (Math/cbrt (+ (* 0.2119034982 r-lin)
+                             (* 0.6806995451 g-lin)
+                             (* 0.1073969566 b-lin)))
+        s-root (Math/cbrt (+ (* 0.0883024619 r-lin)
+                             (* 0.2817188376 g-lin)
+                             (* 0.6299787005 b-lin)))
+        l (- (+ (* 0.2104542553 l-root) (* 0.7936177850 m-root))
+             (* 0.0040720468 s-root))
+        a (+ (- (* 1.9779984951 l-root) (* 2.4285922050 m-root))
+             (* 0.4505937099 s-root))
+        b (- (+ (* 0.0259040371 l-root) (* 0.7827717662 m-root))
+             (* 0.8086757660 s-root))]
+    [l a b]))
