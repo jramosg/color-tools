@@ -51,6 +51,9 @@ All notable changes to this project will be documented in this file. This change
   xy chromaticity and had two coefficient signs flipped, so a 2700 K warm white
   came back as 24514 K. It now returns 6504 K for sRGB white and `nil` for
   colors far from the black-body curve, as documented.
+- Documented example outputs in the README and guides didn't match the
+  library in about 100 places. They are corrected, and a test now checks every
+  documented result.
 
 ## [1.2.0] - 2026-06-23
 ### Added
