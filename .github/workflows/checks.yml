@@ -46,6 +46,13 @@ jobs:
       - name: Run clj-kondo linter
         run: clj-kondo --lint src test
 
-      - name: Run tests
-        run: |
-          clojure -T:build test
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Run Clojure tests
+        run: clojure -T:build test
+
+      - name: Run ClojureScript tests
+        run: clojure -M:test-cljs
