@@ -79,10 +79,10 @@ These functions accept any supported color input:
 
 ;; Convert any color type to HSL
 (color/->hsl "#ff5733")                ; hex to HSL
-;=> [9 100 60]
+;=> [11 100 60]
 
 (color/->hsl "rgb(255, 87, 51)")       ; CSS RGB to HSL
-;=> [9 100 60]
+;=> [11 100 60]
 ```
 
 #### Format-Specific Functions
@@ -107,7 +107,7 @@ Format-specific conversions stay useful at API boundaries:
 
 ;; RGB to HSL for color manipulation
 (color/rgb->hsl [255 87 51])
-;=> [9 100 60]
+;=> [11 100 60]
 
 ;; Chain conversions
 (-> "#3498db"
@@ -125,7 +125,7 @@ Validate colors at user-input boundaries:
 (color/valid-hex? "invalid")   ;=> false
 
 (color/valid-rgb? [255 87 51]) ;=> true
-(color/valid-rgb? [300 87 51]) ;=> false (out of range)
+(color/valid-rgb? [300 87 51]) ;=> false  ; out of range
 
 (color/valid-hsl? [204 70 53]) ;=> true
 ```
@@ -142,26 +142,26 @@ Adjust lightness while preserving the input type:
 
 ;; Make it 20% lighter
 (color/lighten blue 0.2)         ; hex input -> hex output
-;=> "#5dade2"
+;=> "#8ac4ea"
 
 (color/lighten blue-css 0.2)     ; CSS RGB input -> hex output  
-;=> "#5dade2"
+;=> "#8ac4ea"
 
 (color/lighten [52 152 219] 0.2) ; RGB vector input -> RGB vector output
-;=> [93 173 226]
+;=> [138 196 234]
 
 ;; Make it 30% darker  
 (color/darken blue 0.3)
-;=> "#2471a3"
+;=> "#124364"
 
 (color/darken blue-css 0.3)      ; CSS input
-;=> "#2471a3"
+;=> "#124364"
 
 ;; Chain operations
 (-> blue
     (color/lighten 0.1)
     (color/darken 0.05))
-;=> "#4fa3d6"
+;=> "#49a3df"
 ```
 
 ### Saturation
@@ -174,21 +174,21 @@ Control saturation. These functions also accept CSS color strings:
 
 ;; More vivid
 (color/saturate orange 0.2)      ; hex input
-;=> "#ff7700"
+;=> "#ff8c00"  ; already fully saturated
 
 (color/saturate orange-css 0.2)  ; CSS RGB input
-;=> "#ff7700"
+;=> "#ff8c00"
 
 ;; More muted
 (color/desaturate orange 0.4)
-;=> "#cc9633"
+;=> "#cc8733"
 
 (color/desaturate "rgba(255, 140, 0, 0.8)" 0.4) ; CSS RGBA input
-;=> "#cc9633"
+;=> "#cc8733"
 
 ;; Complete desaturation = grayscale
 (color/desaturate orange 1.0)
-;=> "#999999"
+;=> "#808080"
 ```
 
 ### Hue Shifting
@@ -200,15 +200,15 @@ Rotate colors around the color wheel:
 
 ;; Shift 60 degrees toward orange
 (color/adjust-hue red 60)
-;=> "#e7e73c"
+;=> "#d6e73c"
 
 ;; Complement (180 degrees)
 (color/adjust-hue red 180)
-;=> "#3ce7e7"
+;=> "#3cd6e7"
 
 ;; Or use the convenience function
 (color/complementary red)
-;=> "#3ce7e7"
+;=> "#3cd6e7"
 ```
 
 ## Chapter 3: Accessibility and Contrast
@@ -226,10 +226,10 @@ WCAG defines minimum contrast ratios for accessibility:
 ;=> 21.0  ; Perfect contrast
 
 (color/contrast-ratio "#3498db" "#ffffff") 
-;=> 3.14  ; Not enough for AA normal text
+;=> 3.15  ; Not enough for AA normal text
 
 (color/contrast-ratio "#2c3e50" "#ffffff")
-;=> 12.63 ; Excellent contrast
+;=> 10.98  ; Excellent contrast
 ```
 
 ### Accessibility Checking
@@ -259,11 +259,11 @@ Find accessible alternatives by adjusting lightness:
 
 ;; Find an accessible version of the text color
 (color/find-accessible-color bg desired-text :aa)
-;=> "#b71c1c"  ; Darker red that meets AA standards
+;=> "#000000"  ; Black is the first candidate that meets AA
 
 ;; For large text (lower requirements)
 (color/find-accessible-color bg desired-text :aa-large)
-;=> "#c62828"  ; Slightly lighter option
+;=> "#000000"  ; Black passes the large-text threshold too
 ```
 
 ### Generating Accessible Theme Tokens
@@ -323,19 +323,19 @@ Generate harmonious color combinations based on color theory:
 
 ;; Complementary (opposite on color wheel)
 (color/complementary base-color)
-;=> "#3ce7e7"
+;=> "#3cd6e7"
 
 ;; Triadic (three colors forming triangle)
 (color/triadic base-color)
-;=> ["#4ce73c" "#3c4ce7"]
+;=> ["#3ce74d" "#4d3ce7"]
 
 ;; Split complementary (base + two colors near complement)
 (color/split-complementary base-color)
-;=> ["#3ce77b" "#3c7be7"]
+;=> ["#3ce7b4" "#3c6fe7"]
 
 ;; Analogous (adjacent colors)
 (color/analogous base-color 4 30)  ; 4 colors, 30° apart
-;=> ["#e7743c" "#e7ac3c" "#e7e43c" "#afe73c"]
+;=> ["#e7a23c" "#d6e73c" "#80e73c" "#3ce74d"]
 ```
 
 ### Monochromatic Palettes
@@ -344,7 +344,7 @@ Create palettes using variations of a single hue:
 
 ```clojure
 (color/monochromatic "#3498db" 5)
-;=> ["#2980b9" "#3498db" "#5dade2" "#85c1e9" "#aed6f1"]
+;=> ["#003d66" "#066aad" "#1096ef" "#5db4ee" "#a6d4f2"]
 ```
 
 ### Theme Generation
@@ -354,15 +354,15 @@ Use the palette generator for different strategies:
 ```clojure
 ;; Generate a triadic theme
 (color/generate-palette :triadic "#e74c3c")
-;=> ["#4ce73c" "#3c4ce7"]
+;=> ["#3ce74d" "#4d3ce7"]
 
 ;; Generate analogous theme with custom options
 (color/generate-palette :analogous "#3498db" {:count 5 :angle 20})
-;=> ["#3498db" "#34b8db" "#34dbd8" "#34dbaf" "#34db87"]
+;=> ["#3360db" "#3e33db" "#7633db" "#ae33db" "#db33d0"]
 
 ;; Random palette for experimentation
 (color/generate-palette :random nil {:count 3})
-;=> ["#a47f3c" "#2e8b57" "#ff6347"]
+;; Returns three random hex colors, different on each call
 ```
 
 ## Chapter 5: Color Analysis
@@ -376,14 +376,14 @@ Analyze color characteristics:
 (def coral "#ff6b6b")
 
 ;; Brightness (perceived luminance)
-(color/brightness navy)   ;=> 60  (dark)
-(color/brightness coral)  ;=> 122 (medium)
+(color/brightness navy)   ;=> 59   ; dark
+(color/brightness coral)  ;=> 151  ; light
 
 ;; Boolean checks
 (color/dark? navy)        ;=> true
-(color/light? coral)      ;=> false
-(color/warm? coral)       ;=> true (red family)
-(color/cool? navy)        ;=> true (blue family)
+(color/light? coral)      ;=> true
+(color/warm? coral)       ;=> true  ; red family
+(color/cool? navy)        ;=> true  ; blue family
 ```
 
 ### Vibrancy and Saturation
@@ -397,7 +397,7 @@ Analyze color characteristics:
 
 ;; Custom thresholds
 (color/vibrant? "#ff6b6b" 70)  ; 70% saturation threshold
-;=> false
+;=> true   ; saturation is 100%
 ```
 
 ### Color Distance
@@ -465,7 +465,7 @@ Measure RGB distance between two colors:
       (color/mix start-color end-color ratio))))
 
 (create-color-scale "#3498db" "#e74c3c" 5)
-;=> ("#3498db" "#5d7bc9" "#855fb7" "#ad42a4" "#e74c3c")
+;=> ["#3498db" "#6185b3" "#8e728c" "#ba5f64" "#e74c3c"]
 ```
 
 ## Next Steps

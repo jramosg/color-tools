@@ -111,21 +111,21 @@ Or for Leiningen, add to your `project.clj`:
 
 ;; Manipulate colors
 (color/lighten "#ff5733" 0.2)
-;=> "#ff8566"
+;=> "#ffac99"
 
 (color/darken [255 87 51] 0.3)
-;=> [178 61 36]
+;=> [153 28 0]
 
 ;; Generate palettes
 (color/triadic "#ff5733")
-;=> ["#33ff57" "#5733ff"]
+;=> ["#33ff58" "#5833ff"]
 
 ;; Check accessibility
 (color/accessible? "#000000" "#ffffff")
 ;=> true
 
 (color/contrast-ratio "#ff5733" "#ffffff")
-;=> 3.07
+;=> 3.15
 
 ;; Generate accessible UI tokens from a brand color
 (def theme (color/accessible-theme "#3498db" {:mode :light :level :aa}))
@@ -160,7 +160,7 @@ strings through your code:
 ;; Convert any color type to different formats
 (def red-color (color/color 255 0 0))
 (color/->hex red-color)         ;=> "#ff0000"
-(color/->hex "#ff0000")         ;=> "#ff0000" (passthrough)
+(color/->hex "#ff0000")         ;=> "#ff0000"  ; passthrough
 (color/->hex [255 0 0])         ;=> "#ff0000"
 (color/->hex "rgb(255, 0, 0)")  ;=> "#ff0000"
 
@@ -249,13 +249,13 @@ The parser accepts common CSS color string formats:
 ;=> "#ff5733"
 
 (color/->hsl [255 87 51])      ; RGB to HSL
-;=> [9 100 60]
+;=> [11 100 60]
 
 (color/->hsl "#ff5733")        ; hex to HSL
-;=> [9 100 60]
+;=> [11 100 60]
 
 (color/->hsl "rgba(255, 87, 51, 0.8)") ; CSS RGBA string to HSL
-;=> [9 100 60]
+;=> [11 100 60]
 
 ;; Traditional format-specific functions still available
 (color/hex->rgb "#ff5733")     ; specific hex to RGB
@@ -277,12 +277,12 @@ The parser accepts common CSS color string formats:
 
 ;; Lighten and darken, preserving the input type
 (color/lighten blue 0.2)               ;=> Color record (lighter blue)
-(color/lighten "#3498db" 0.2)          ;=> "#5dade2"
-(color/darken [52 152 219] 0.3)        ;=> [36 106 153]
+(color/lighten "#3498db" 0.2)          ;=> "#8ac4ea"
+(color/darken [52 152 219] 0.3)        ;=> [18 67 100]
 
 ;; Adjust saturation
 (color/saturate blue 0.4)              ;=> Color record (more saturated)
-(color/desaturate "#e74c3c" 0.3)       ;=> "#d66357"
+(color/desaturate "#e74c3c" 0.3)       ;=> "#c6675d"
 
 ;; Invert colors
 (color/invert blue)                    ;=> Color record (inverted)
@@ -294,26 +294,26 @@ The parser accepts common CSS color string formats:
 ```clojure
 ;; Complementary colors
 (color/complementary "#3498db")
-;=> "#db7634"
+;=> "#db7633"
 
 ;; Triadic harmony
 (color/triadic "#3498db")
-;=> ["#34db76" "#db3498"]
+;=> ["#db3398" "#98db33"]
 
 ;; Analogous colors
 (color/analogous "#3498db" 4 20)  ; 4 colors, 20° apart
-;=> ["#34c6db" "#34dbae" "#3adb34" "#68db34"]
+;=> ["#3360db" "#3e33db" "#7633db" "#ae33db"]
 
 ;; Monochromatic palette
 (color/monochromatic "#3498db" 5)
-;=> ["#3498db" "#5ba7e0" "#7fb6e5" "#a3c5ea" "#c7d4ef"]
+;=> ["#003d66" "#066aad" "#1096ef" "#5db4ee" "#a6d4f2"]
 
 ;; Generate palettes by strategy
 (color/generate-palette :triadic "#e74c3c")
-;=> ["#4ce7a0" "#a04ce7"]
+;=> ["#3ce74d" "#4d3ce7"]
 
 (color/generate-palette :split-complementary "#2ecc71" {:angle 25})
-;=> ["#cc2e99" "#2e59cc"]
+;=> ["#8acc2e" "#2ecc56"]
 ```
 
 ### Accessibility and Contrast
@@ -334,11 +334,11 @@ The parser accepts common CSS color string formats:
 ;=> 21.0
 
 (color/contrast-ratio "#3498db" "#ffffff")
-;=> 3.14
+;=> 3.15
 
 ;; Find an accessible color by adjusting lightness
 (color/find-accessible-color "#3498db" "#e74c3c" :aa)
-;=> "#b71c1c"  ; Darkened version that meets AA standards
+;=> "#000000"  ; Black is the first candidate that meets AA
 ```
 
 ### Accessible Theme Generation
@@ -368,7 +368,7 @@ The parser accepts common CSS color string formats:
 ```clojure
 ;; Analyze color properties
 (color/brightness "#3498db")
-;=> 123
+;=> 130
 
 (color/dark? "#2c3e50")
 ;=> true
@@ -428,8 +428,8 @@ The parser accepts common CSS color string formats:
 (color/mix "#ff0000" "#0000ff")        ; 50/50 mix
 ;=> "#800080"
 
-(color/mix "#ff0000" "#0000ff" 0.25)   ; 25% first color, 75% second
-;=> "#4000bf"
+(color/mix "#ff0000" "#0000ff" 0.25)   ; 75% first color, 25% second
+;=> "#bf0040"
 ```
 
 ## API Documentation
@@ -518,24 +518,24 @@ These projects influenced the API:
 
 ;; Tints, shades, and tones for design systems
 (color/tint "#3498db" 0.3)                    ; Mix with white
-;=> "#6fb3e5"
+;=> "#71b7e6"
 
 (color/shade "#3498db" 0.3)                   ; Mix with black
-;=> "#236a91"
+;=> "#246a99"
 
 (color/tone "#3498db" 0.3)                    ; Mix with gray
-;=> "#4d98c3"
+;=> "#4b91c0"
 
 ;; Generate series of variations
 (color/tints "#e74c3c" 5)
-;=> ["#eb6757" "#ef8272" "#f39c8d" "#f7b7a8" "#fbd2c3"]
+;=> ["#ec7063" "#f1948a" "#f5b7b1" "#fadbd8" "#ffffff"]
 
 (color/shades "#e74c3c" 3)
-;=> ["#b83d30" "#892d24" "#5a1e18"]
+;=> ["#9a3328" "#4d1914" "#000000"]
 
 ;; Alpha blending with source-over compositing
 (color/alpha-blend [255 0 0 0.8] [0 0 255 0.6])
-;=> [102 0 153 0.92]
+;=> [89 0 166 0.92]
 
 (color/with-alpha "#ff0000" 0.5)
 ;=> "rgba(255,0,0,0.5)"
@@ -554,7 +554,7 @@ These projects influenced the API:
 
 ;; Generate gradients
 (color/gradient ["#ff0000" "#0000ff"] 5 :rgb)
-;=> ["#ff0000" "#bf003f" "#80007f" "#4000bf" "#0000ff"]
+;=> ["#ff0000" "#bf0040" "#800080" "#4000bf" "#0000ff"]
 
 ;; Use HSL for more natural color transitions
 (color/gradient ["#ff0000" "#ffff00"] 3 :hsl)
@@ -566,10 +566,10 @@ These projects influenced the API:
 ```clojure
 ;; Use perceptual distance instead of RGB distance
 (color/delta-e "#ff0000" "#fe0000")
-;=> 1.2  ; Small difference (barely perceptible)
+;=> 0.37  ; Under 1.0: imperceptible
 
 (color/delta-e "#ff0000" "#0000ff")
-;=> 176.5  ; Large difference
+;=> 176.3  ; Large difference
 
 ;; Check perceptual similarity
 (color/perceptually-similar? "#ff0000" "#fe0101")
@@ -580,7 +580,7 @@ These projects influenced the API:
 
 ;; Convert to LAB color space
 (color/rgb->lab [255 0 0])
-;=> [53.24 80.09 67.20]
+;=> [53.23 80.11 67.2]
 ```
 
 ### Oklab Conversion (Unreleased)
@@ -621,20 +621,20 @@ for axis definitions, gamut handling, and input requirements.
 ```clojure
 ;; Convert temperature to color (1000K - 40000K)
 (color/kelvin->rgb 1800)      ; Candlelight
-;=> [255 147 41]
+;=> [255 126 0]
 
 (color/kelvin->hex 3000)      ; Warm white
-;=> "#ffd6aa"
+;=> "#ffb16e"
 
 (color/kelvin->rgb 6500)      ; Daylight
-;=> [255 249 253]
+;=> [255 254 250]
 
 (color/kelvin->color 10000)   ; Cool/blue
 ;=> Color record
 
 ;; Approximate temperature from color
-(color/rgb->kelvin [255 147 41])
-;=> 1856  ; Close to original 1800K
+(color/rgb->kelvin (color/kelvin->rgb 1800))
+;=> 1805  ; Close to the original 1800K
 ```
 
 ### Planned Features (Inspired by these libraries)
