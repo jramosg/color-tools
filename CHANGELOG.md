@@ -14,6 +14,9 @@ All notable changes to this project will be documented in this file. This change
 - `in-gamut?` checks whether Oklab coordinates fall inside the sRGB gamut
 - `clamp-rgb` clamps computed RGB channels to 0 to 255 before `->hex` or
   `color`
+- `oklab->oklch`, `oklch->oklab`, `rgb->oklch`, `oklch->rgb` and `oklch->hex`
+  convert to and from OKLCh, the lightness, chroma and hue form CSS `oklch()`
+  uses
 
 ### Changed
 - Bump Clojure from 1.12.1 to 1.12.6
