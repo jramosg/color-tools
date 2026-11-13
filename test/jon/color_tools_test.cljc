@@ -1429,3 +1429,66 @@
     (is (= "#ff0000" (sut/oklab->hex [0.9 0.3 0.3])))
     (is (= "#ffffff" (sut/oklab->hex [1.5 0 0])))
     (is (= "#000000" (sut/oklab->hex [-0.5 0 0])))))
+
+(deftest rgb->oklch-test
+  (testing "Match the CSS Color 4 reference values"
+    ;; https://www.w3.org/TR/css-color-4/ and Color.js give these for the
+    ;; sRGB primaries and secondaries.
+    (are [rgb lch] (< (max-channel-error lch (sut/rgb->oklch rgb)) 1e-4)
+      [255 0 0]   [0.62796 0.25768 29.2339]
+      [0 255 0]   [0.86644 0.29483 142.4953]
+      [0 0 255]   [0.45201 0.31321 264.0520]
+      [255 0 255] [0.70167 0.32249 328.3634]
+      [0 255 255] [0.90540 0.15455 194.7689]
+      [255 255 0] [0.96798 0.21101 109.7692]))
+
+  (testing "Grays have hue 0"
+    (doseq [rgb [[0 0 0] [128 128 128] [255 255 255]]
+            :let [[_ c h] (sut/rgb->oklch rgb)]]
+      (is (< c 1e-6) (pr-str rgb))
+      (is (= 0.0 h) (pr-str rgb))))
+
+  (testing "Hue stays in [0, 360) and is never -0.0"
+    (doseq [oklab [[0.5 0.1 0.0] [0.5 0.1 -0.0] [0.5 -0.1 0.0]
+                   [0.5 0.0 -0.1] [0.5 0.1 -1e-12]]
+            :let [[_ _ h] (sut/oklab->oklch oklab)]]
+      (is (<= 0.0 h) (pr-str oklab))
+      (is (< h 360.0) (pr-str oklab))
+      (is (not (and (zero? h) (neg? (/ 1.0 h)))) (pr-str oklab)))))
+
+(deftest oklch->oklab-test
+  (testing "Round trip sRGB through OKLCh"
+    ;; Grays carry about 2e-8 of chroma noise. Snapping their hue to 0 moves
+    ;; that noise to the a axis, which shifts the round trip by up to 1e-5.
+    (doseq [rgb (for [r (range 0 256 15) g (range 0 256 15)
+                      b (range 0 256 15)]
+                  [r g b])
+            :let [gray? (apply = rgb)]]
+      (is (< (max-channel-error rgb (sut/oklch->rgb (sut/rgb->oklch rgb)))
+             (if gray? 1e-4 1e-9))
+          (pr-str rgb))))
+
+  (testing "Hue wraps around"
+    (let [lab (sut/oklch->oklab [0.6 0.2 30])]
+      (doseq [h [-330 390 750 -690]]
+        (is (< (max-channel-error lab (sut/oklch->oklab [0.6 0.2 h])) 1e-12)
+            (pr-str h)))))
+
+  (testing "Zero chroma gives a neutral color at any hue"
+    (doseq [h [0 90 180 270]]
+      (is (= [0.5 0.0 0.0]
+             (mapv #(if (zero? %) 0.0 %)
+                   (sut/oklch->oklab [0.5 0 h])))
+          (pr-str h))))
+
+  (testing "Convert to hex"
+    (is (= "#ff0000" (sut/oklch->hex [0.62796 0.25768 29.2339])))
+    (is (= "#336699" (sut/oklch->hex (sut/rgb->oklch [51 102 153]))))
+    (is (= "#ffffff" (sut/oklch->hex [1.5 0.1 120]))))
+
+  (testing "Reject malformed input and negative chroma"
+    (doseq [oklch [nil [0.5 0.1] [0.5 -0.1 30] [##NaN 0.1 30] '(0.5 0.1 30)
+                   ["0.5" 0.1 30]]]
+      (is (thrown? #?(:clj AssertionError :cljs :default)
+                   (sut/oklch->oklab oklch))
+          (pr-str oklch)))))
