@@ -24,6 +24,8 @@ All notable changes to this project will be documented in this file. This change
   now gets black `:on-primary` text instead of white (4.4999:1).
 - The demo contrast checker showed WCAG levels as passing for pairs just below
   the threshold. It now uses `accessible?`.
+- The demo color picker showed every color as `hsl(0°, 0%, 0%)` and
+  `hsv(0°, 0%, 0%)`
 - `round` overflowed a long on the JVM for large values at high precision:
   `(round 40000.0 15)` returned `9223.37`. It now returns the value unchanged
   once no fractional digit is left at the requested precision.
