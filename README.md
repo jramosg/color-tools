@@ -1,23 +1,27 @@
 # jon/color-tools
 
-A comprehensive color manipulation library for Clojure and ClojureScript. Provides utilities for color format conversions, color manipulation, palette generation, accessibility checking, and color analysis.
+A color toolkit for Clojure and ClojureScript. Convert formats, manipulate
+colors, generate palettes, check contrast, and build accessible theme tokens.
 
 [![Clojars Project](https://img.shields.io/clojars/v/com.github.jramosg/color-tools.svg)](https://clojars.org/com.github.jramosg/color-tools)
 [![cljdoc badge](https://cljdoc.org/badge/com.github.jramosg/color-tools)](https://cljdoc.org/d/com.github.jramosg/color-tools)
 
-## 🎨 [**Try the Live Demo →**](https://color-tools.jonramos.dev/)
+## [Live Demo](https://color-tools.jonramos.dev/)
 
-Explore all the features interactively: color picker, format converter, gradient generator, WCAG contrast checker, color harmonies, and more!
+Try the color picker, format converter, gradient generator, WCAG contrast
+checker, and color harmonies.
 
 ## Overview
 
-`jon/color-tools` is designed to be a complete toolkit for working with colors in Clojure applications. Whether you're building web applications, data visualizations, or design tools, this library provides the essential color utilities you need.
+`jon/color-tools` gives Clojure apps one namespace for common color work:
+format conversion, color adjustment, palettes, contrast checks, gradients, and
+theme tokens.
 
 ### Demo
 
-🌐 **[Live Demo](https://color-tools.jonramos.dev/)** - Try it online now!
+**[Live Demo](https://color-tools.jonramos.dev/)**
 
-You can also run the demo locally from the `demo` directory:
+Run the demo from the `demo` directory:
 
 Options:
 
@@ -52,17 +56,17 @@ npx http-server demo/public -p 8000
 # open http://localhost:8000
 ```
 
-- **Accessible Theme Generator**: WCAG-aware UI tokens from one brand color ✨ NEW
-- **CSS Variable Export**: Turn generated tokens into frontend-ready custom properties ✨ NEW
+- **Accessible Theme Generator**: WCAG-aware UI tokens from one brand color
+- **CSS Variable Export**: Turn generated tokens into frontend-ready custom properties
 - **Blending Modes**: Multiply, screen, overlay (Photoshop-style blending)
-- **Tints/Shades/Tones**: Design system color scale generation ✨ NEW
-- **Alpha Blending**: Porter-Duff compositing for transparent colors ✨ NEW
-- **Color Interpolation**: Smooth gradients in RGB, HSL, or HSV ✨ NEW
-- **Perceptual Difference**: Delta E calculations in CIE LAB color space ✨ NEW
-- **Color Temperature**: Kelvin to RGB conversions for realistic lighting ✨ NEW
-- **Palette Generation**: Create harmonious color palettes using various color theory principles
+- **Tints/Shades/Tones**: Design system color scale generation
+- **Alpha Blending**: Porter-Duff compositing for transparent colors
+- **Color Interpolation**: Gradients in RGB, HSL, or HSV
+- **Perceptual Difference**: Delta E calculations in CIE LAB color space
+- **Color Temperature**: Kelvin to RGB conversions for lighting UIs
+- **Palette Generation**: Color harmonies from color theory
 - **Accessibility**: WCAG-compliant contrast checking and accessible color finding
-- **Color Analysis**: Determine color properties like brightness, warmth, and vibrancy
+- **Color Analysis**: Brightness, warmth, and vibrancy checks
 - **Cross-platform**: Works in both Clojure (JVM) and ClojureScript (browser/Node.js)
 
 ## Installation
@@ -121,7 +125,7 @@ Or for Leiningen, add to your `project.clj`:
 (color/contrast-ratio "#ff5733" "#ffffff")
 ;=> 3.07
 
-;; Generate a complete accessible UI theme from a brand color
+;; Generate accessible UI tokens from a brand color
 (def theme (color/accessible-theme "#3498db" {:mode :light :level :aa}))
 
 (:primary theme)
@@ -138,7 +142,8 @@ Or for Leiningen, add to your `project.clj`:
 
 ### Working with the Color Record Type
 
-The library includes a proper `Color` datatype that provides type safety and cleaner APIs:
+Use `Color` records when you want type safety instead of passing raw vectors or
+strings through your code:
 
 ```clojure
 ;; Create Color records from various inputs
@@ -171,7 +176,7 @@ The library includes a proper `Color` datatype that provides type safety and cle
 (color/->rgba [255 0 0 128])    ;=> [255 0 0 128] (RGBA passthrough)
 (color/->rgba "rgba(255, 0, 0, 0.5)") ;=> [255 0 0 0.5]
 
-;; Colors work seamlessly with all library functions
+;; Color records work with the same functions as strings and vectors
 (color/lighten red-color 0.2)   ;=> Color record (lighter red)
 (color/contrast-ratio red-color (color/color "#ffffff"))  ;=> 4.0
 
@@ -182,7 +187,7 @@ The library includes a proper `Color` datatype that provides type safety and cle
 
 ### CSS Color String Support
 
-The library fully supports CSS color strings with flexible formatting:
+The parser accepts common CSS color string formats:
 
 ```clojure
 ;; CSS RGB strings - various formats supported
@@ -219,7 +224,7 @@ The library fully supports CSS color strings with flexible formatting:
 ### Universal Format Conversions
 
 ```clojure
-;; Universal conversion functions work with any color input type
+;; Universal conversion functions accept any supported color input
 (color/->rgb "#ff5733")        ; hex to RGB
 ;=> [255 87 51]
 
@@ -268,7 +273,7 @@ The library fully supports CSS color strings with flexible formatting:
 ;; Works with Color records, hex strings, or RGB vectors
 (def blue (color/color "#3498db"))
 
-;; Lighten and darken - returns same type as input
+;; Lighten and darken, preserving the input type
 (color/lighten blue 0.2)               ;=> Color record (lighter blue)
 (color/lighten "#3498db" 0.2)          ;=> "#5dade2"
 (color/darken [52 152 219] 0.3)        ;=> [36 106 153]
@@ -301,7 +306,7 @@ The library fully supports CSS color strings with flexible formatting:
 (color/monochromatic "#3498db" 5)
 ;=> ["#3498db" "#5ba7e0" "#7fb6e5" "#a3c5ea" "#c7d4ef"]
 
-;; Generate themed palettes
+;; Generate palettes by strategy
 (color/generate-palette :triadic "#e74c3c")
 ;=> ["#4ce7a0" "#a04ce7"]
 
@@ -329,7 +334,7 @@ The library fully supports CSS color strings with flexible formatting:
 (color/contrast-ratio "#3498db" "#ffffff")
 ;=> 3.14
 
-;; Find accessible colors automatically
+;; Find an accessible color by adjusting lightness
 (color/find-accessible-color "#3498db" "#e74c3c" :aa)
 ;=> "#b71c1c"  ; Darkened version that meets AA standards
 ```
@@ -345,7 +350,7 @@ The library fully supports CSS color strings with flexible formatting:
 (:on-primary theme)    ;=> "#000000"
 (:focus-ring theme)    ;=> "#8433db"
 
-;; Dark mode and stricter contrast are supported too
+;; Use dark mode or stricter contrast
 (color/accessible-theme "#ff7a59" {:mode :dark :level :aaa})
 
 ;; Export tokens as CSS custom properties
@@ -472,18 +477,19 @@ clojure -T:build deploy
 
 ## Supported Platforms
 
-- **Clojure (JVM)**: Full support for all features
-- **ClojureScript**: Full support for all features in browser and Node.js environments
+- **Clojure (JVM)**: Supports the full API
+- **ClojureScript**: Supports the full API in browsers and Node.js
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests on [GitHub](https://github.com/jon/color-tools).
+Open issues, feature requests, or pull requests on
+[GitHub](https://github.com/jon/color-tools).
 
 ## Acknowledgements
 
-This library draws inspiration from various color manipulation libraries across different programming languages:
+These projects influenced the API:
 
-- [Sass color functions](https://sass-lang.com/documentation/modules/color) - Advanced color manipulation and modern color space support
+- [Sass color functions](https://sass-lang.com/documentation/modules/color) - Color manipulation and modern color spaces
 - [Chroma.js](https://gka.github.io/chroma.js/) for JavaScript - Color scales, interpolation, and Delta E calculations
 - [colorsys](https://github.com/vaab/colour) for Python - Color space conversions and color picking algorithms
 
@@ -517,7 +523,7 @@ This library draws inspiration from various color manipulation libraries across 
 (color/shades "#e74c3c" 3)
 ;=> ["#b83d30" "#892d24" "#5a1e18"]
 
-;; Alpha blending with proper compositing
+;; Alpha blending with source-over compositing
 (color/alpha-blend [255 0 0 0.8] [0 0 255 0.6])
 ;=> [102 0 153 0.92]
 
@@ -536,7 +542,7 @@ This library draws inspiration from various color manipulation libraries across 
 (color/interpolate ["#ff0000" "#00ff00" "#0000ff"] 0.5 :hsl)
 ;=> "#00ff00"  ; At the green midpoint
 
-;; Generate smooth gradients
+;; Generate gradients
 (color/gradient ["#ff0000" "#0000ff"] 5 :rgb)
 ;=> ["#ff0000" "#bf003f" "#80007f" "#4000bf" "#0000ff"]
 
@@ -548,7 +554,7 @@ This library draws inspiration from various color manipulation libraries across 
 ### Perceptual Color Difference
 
 ```clojure
-;; More accurate than RGB distance
+;; Use perceptual distance instead of RGB distance
 (color/delta-e "#ff0000" "#fe0000")
 ;=> 1.2  ; Small difference (barely perceptible)
 
@@ -590,7 +596,7 @@ This library draws inspiration from various color manipulation libraries across 
 
 ### Planned Features (Inspired by these libraries)
 
-**Advanced Color Spaces:**
+**Color Spaces:**
 
 - ✅ Lab/CIE Lab color space for perceptually uniform calculations (ADDED in v1.1.0)
 - LCH (Lightness, Chroma, Hue) cylindrical color space
@@ -598,7 +604,8 @@ This library draws inspiration from various color manipulation libraries across 
 - CMYK for print applications
 - HWB (Hue, Whiteness, Blackness) color space
 
-Special thanks to the Clojure community for excellent tooling and libraries that made this project possible.
+Thanks to the Clojure community for the tooling and libraries behind this
+project.
 
 ## Changelog
 
@@ -618,7 +625,8 @@ The repository runs GitHub Actions checks on every branch. Deployments to Clojar
 
 ### Automatic Deployment
 
-Deployments only run from the `master` branch after the Checks workflow completes successfully **and** the commit message contains `[deploy]`.
+Deployments run from the `master` branch after the Checks workflow completes
+and the commit message contains `[deploy]`.
 
 Example:
 
@@ -629,7 +637,8 @@ git push origin master
 
 ### Manual Deployment
 
-You can manually trigger deployment from the GitHub Actions UI by going to the "Deploy to Clojars" workflow and clicking "Run workflow".
+To deploy from GitHub, open the "Deploy to Clojars" workflow and click
+"Run workflow".
 
 **Requirements:**
 

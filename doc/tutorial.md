@@ -1,10 +1,10 @@
 # Tutorial: Working with Colors in Clojure
 
-This tutorial will walk you through the main features of `jon/color-tools` with practical examples.
+Use these examples to learn the main `jon/color-tools` workflows.
 
 ## Setup
 
-First, add the library to your project and require it:
+Add the library to your project and require it:
 
 ```clojure
 (require '[jon.color-tools :as color])
@@ -14,7 +14,7 @@ First, add the library to your project and require it:
 
 ### Understanding Color Formats
 
-Colors can be represented in many ways. This library supports the most common formats:
+The library accepts the color formats Clojure apps tend to pass around:
 
 ```clojure
 ;; HEX - Web standard, strings starting with #
@@ -46,11 +46,12 @@ Colors can be represented in many ways. This library supports the most common fo
 
 ### Basic Conversions
 
-The library provides two approaches for conversions: format-specific functions and universal conversion functions.
+Use universal conversion functions for application code. Use format-specific
+functions when you know the input format.
 
-#### Universal Conversion Functions (Recommended)
+#### Universal Conversion Functions
 
-These functions work with any color input type:
+These functions accept any supported color input:
 
 ```clojure
 ;; Convert any color type to RGB
@@ -84,9 +85,9 @@ These functions work with any color input type:
 ;=> [9 100 60]
 ```
 
-#### Format-Specific Functions (Legacy)
+#### Format-Specific Functions
 
-Traditional format-specific conversions are still available:
+Format-specific conversions stay useful at API boundaries:
 
 ```clojure
 ;; HEX to RGB
@@ -117,7 +118,7 @@ Traditional format-specific conversions are still available:
 
 ### Validation
 
-Always validate colors when accepting user input:
+Validate colors at user-input boundaries:
 
 ```clojure
 (color/valid-hex? "#ff5733")   ;=> true
@@ -133,13 +134,13 @@ Always validate colors when accepting user input:
 
 ### Lightness and Darkness
 
-Adjust the lightness of colors. The functions work with any input format and preserve the input type:
+Adjust lightness while preserving the input type:
 
 ```clojure
 (def blue "#3498db")
 (def blue-css "rgb(52, 152, 219)")
 
-;; Make it 20% lighter - works with any format
+;; Make it 20% lighter
 (color/lighten blue 0.2)         ; hex input -> hex output
 ;=> "#5dade2"
 
@@ -153,10 +154,10 @@ Adjust the lightness of colors. The functions work with any input format and pre
 (color/darken blue 0.3)
 ;=> "#2471a3"
 
-(color/darken blue-css 0.3)      ; CSS input also works
+(color/darken blue-css 0.3)      ; CSS input
 ;=> "#2471a3"
 
-;; Chain operations - seamless format handling
+;; Chain operations
 (-> blue
     (color/lighten 0.1)
     (color/darken 0.05))
@@ -165,13 +166,13 @@ Adjust the lightness of colors. The functions work with any input format and pre
 
 ### Saturation
 
-Control the intensity of colors. These functions also work with CSS color strings:
+Control saturation. These functions also accept CSS color strings:
 
 ```clojure
 (def orange "#ff8c00")
 (def orange-css "rgb(255, 140, 0)")
 
-;; More vivid - works with any input format
+;; More vivid
 (color/saturate orange 0.2)      ; hex input
 ;=> "#ff7700"
 
@@ -250,7 +251,7 @@ WCAG defines minimum contrast ratios for accessibility:
 
 ### Finding Accessible Colors
 
-Automatically find accessible alternatives:
+Find accessible alternatives by adjusting lightness:
 
 ```clojure
 (def bg "#3498db")
@@ -267,10 +268,9 @@ Automatically find accessible alternatives:
 
 ### Generating Accessible Theme Tokens
 
-When you need a real UI theme, start with `accessible-theme` instead of
-manually picking every foreground color. It generates semantic tokens,
-foreground pairs, a focus ring, borders, and a 50-900 scale from one brand
-color.
+Use `accessible-theme` instead of hand-picking foreground colors. It generates
+semantic tokens, foreground pairs, a focus ring, borders, and a 50-900 scale
+from one brand color.
 
 ```clojure
 (def theme
