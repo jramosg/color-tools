@@ -175,7 +175,7 @@
     (is (= [255 0 0] (sut/parse-css-rgb "rgb(255, 0, 0)")))
     (is (= [0 255 0] (sut/parse-css-rgb "rgb(0, 255, 0)")))
     (is (= [0 0 255] (sut/parse-css-rgb "rgb(0, 0, 255)")))
-    (is (thrown? Exception (sut/parse-css-rgb "rgb(0, 0, 256)")))
+    (is (thrown? #?(:clj Exception :cljs :default) (sut/parse-css-rgb "rgb(0, 0, 256)")))
 
     ;; Space-separated format
     (is (= [255 128 64] (sut/parse-css-rgb "rgb(255 128 64)")))
@@ -1174,8 +1174,8 @@
     (is (sut/kelvin->rgb 1000))
     (is (sut/kelvin->rgb 40000))
     ;; Should throw for invalid range
-    (is (thrown? Exception (sut/kelvin->rgb 500)))
-    (is (thrown? Exception (sut/kelvin->rgb 50000))))
+    (is (thrown? #?(:clj Exception :cljs :default) (sut/kelvin->rgb 500)))
+    (is (thrown? #?(:clj Exception :cljs :default) (sut/kelvin->rgb 50000))))
 
   (testing "Common color temperatures produce expected results"
     ;; Candlelight ~1800K - should be very warm/orange
@@ -1234,7 +1234,7 @@
                [0 0 -1] [0 0 256] ["255" 0 0]
                [##NaN 0 0] [##Inf 0 0] [##-Inf 0 0]
                '(255 0 0) "#ff0000" (sut/color "#ff0000")]]
-    (is (thrown? AssertionError (sut/rgb->oklab rgb)) (pr-str rgb))))
+    (is (thrown? #?(:clj AssertionError :cljs :default) (sut/rgb->oklab rgb)) (pr-str rgb))))
 
 (deftest rgb->oklab-precision-test
   (let [expected [0.6279553606145516 0.22486306106597398 0.1258462985307351]
