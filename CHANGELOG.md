@@ -44,6 +44,13 @@ All notable changes to this project will be documented in this file. This change
 - `valid-hex?` returned a regex match vector or `nil` instead of `true` or
   `false`. Code that used it as a condition is unaffected; code that read the
   match vector or tested for `nil` relied on undocumented behavior.
+- `kelvin->rgb` made every temperature above 6600 K too blue: it scaled red
+  and green by 255 instead of Helland's coefficients. 10000 K now gives
+  `[202 218 255]` instead of `[156 193 255]`.
+- `rgb->kelvin` returned wrong temperatures: it skipped the conversion to CIE
+  xy chromaticity and had two coefficient signs flipped, so a 2700 K warm white
+  came back as 24514 K. It now returns 6504 K for sRGB white and `nil` for
+  colors far from the black-body curve, as documented.
 
 ## [1.2.0] - 2026-06-23
 ### Added
