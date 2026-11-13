@@ -1468,3 +1468,60 @@
    outside the sRGB gamut with clamp-rgb, then rounds each to 8 bits."
   [oklab]
   (rgb->hex (clamp-rgb (oklab->rgb oklab))))
+
+;; =============================================================================
+;; OKLCh
+;; =============================================================================
+
+(def ^:private achromatic-chroma
+  "Chroma below which a color counts as gray and its hue as 0. Grays
+   converted from sRGB carry float noise around 2e-8."
+  1e-6)
+
+(defn- valid-oklch?
+  [oklch]
+  (and (valid-oklab? oklch)
+       (not (neg? (second oklch)))))
+
+(defn oklab->oklch
+  "Convert Oklab coordinates [l a b] to OKLCh [l c h], the polar form:
+   l is unchanged, c is chroma (0 and up) and h is hue in degrees, from 0
+   up to 360. Colors with chroma below 1e-6 get hue 0; CSS calls that hue
+   `none`. Returns unrounded values."
+  [oklab]
+  {:pre [(valid-oklab? oklab)]}
+  (let [[l a b] oklab
+        c (Math/sqrt (+ (* a a) (* b b)))
+        h (if (< c achromatic-chroma)
+            0.0
+            ;; Adding 0.0 turns -0.0 into 0.0.
+            (+ 0.0 (mod (* (Math/atan2 b a) (/ 180.0 Math/PI)) 360.0)))]
+    [(double l) c h]))
+
+(defn oklch->oklab
+  "Convert OKLCh [l c h] to Oklab coordinates [l a b]. Hue is in degrees
+   and wraps, so -30 and 330 give the same color. Chroma must not be
+   negative."
+  [oklch]
+  {:pre [(valid-oklch? oklch)]}
+  (let [[l c h] oklch
+        radians (* h (/ Math/PI 180.0))]
+    [(double l) (* c (Math/cos radians)) (* c (Math/sin radians))]))
+
+(defn rgb->oklch
+  "Convert an sRGB vector [r g b], with channels from 0 to 255, to OKLCh
+   [l c h]. See rgb->oklab and oklab->oklch."
+  [rgb]
+  (oklab->oklch (rgb->oklab rgb)))
+
+(defn oklch->rgb
+  "Convert OKLCh [l c h] to an sRGB vector on the 0 to 255 scale. Returns
+   unrounded, unclamped channels, like oklab->rgb."
+  [oklch]
+  (oklab->rgb (oklch->oklab oklch)))
+
+(defn oklch->hex
+  "Convert OKLCh [l c h] to a hex string, clamping colors outside the sRGB
+   gamut like oklab->hex."
+  [oklch]
+  (oklab->hex (oklch->oklab oklch)))
