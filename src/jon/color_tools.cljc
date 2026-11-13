@@ -48,6 +48,92 @@
 (defn round-int [n]
   (round n 0))
 
+(defn- finite? [x]
+  (and (number? x) (not (NaN? x)) (not (infinite? x))))
+
+(def ^:private max-fractional-double
+  "2^52. Doubles at or above this magnitude have no fractional part."
+  4503599627370496.0)
+
+(defn- round-places
+  "Round a finite number to `places` decimal places and return a double.
+   Places may be negative to round to tens, hundreds and so on. Returns x
+   unchanged when the scaled value has no fractional part, which also keeps
+   Math/round from overflowing a long on the JVM, and when rounding up would
+   exceed the largest double."
+  [x places]
+  (let [x (double x)]
+    (if (neg? places)
+      (let [factor (Math/pow 10 (- places))
+            rounded (* (double (Math/round (/ x factor))) factor)]
+        (if (infinite? rounded) x rounded))
+      (let [factor (Math/pow 10 places)
+            scaled (* x factor)]
+        (if (>= (Math/abs scaled) max-fractional-double)
+          x
+          (/ (double (Math/round scaled)) factor))))))
+
+(defn- round-significant
+  "Round a finite number to `digits` significant digits."
+  [x digits]
+  (if (zero? x)
+    0.0
+    (let [magnitude (long (Math/floor (Math/log10 (Math/abs (double x)))))]
+      (round-places x (- digits 1 magnitude)))))
+
+(defn- rounding-fn
+  [{:keys [decimal-places significant-digits] :as options}]
+  (cond
+    (and decimal-places significant-digits)
+    (throw (ex-info (str "Pass either :decimal-places or :significant-digits,"
+                         " not both")
+                    {:options options}))
+
+    (some? decimal-places)
+    (if (and (integer? decimal-places) (<= 0 decimal-places 15))
+      #(round-places % decimal-places)
+      (throw (ex-info ":decimal-places must be an integer from 0 to 15"
+                      {:options options})))
+
+    (some? significant-digits)
+    (if (and (integer? significant-digits) (<= 1 significant-digits 17))
+      #(round-significant % significant-digits)
+      (throw (ex-info ":significant-digits must be an integer from 1 to 17"
+                      {:options options})))
+
+    :else
+    (throw (ex-info "Pass :decimal-places or :significant-digits"
+                    {:options options}))))
+
+(defn round-coords
+  "Round each coordinate in `coords` for display and return a vector.
+   Conversions such as rgb->oklab return full precision; round only the
+   values you show or export.
+
+   options takes exactly one of:
+   - :decimal-places, an integer from 0 to 15
+   - :significant-digits, an integer from 1 to 17
+
+   Returns doubles, even at 0 decimal places; use round-int for integers.
+   Ties round up, toward positive infinity, as Math/round does. Rounding
+   works on the binary double, so 1.005 rounds to 1.0 at 2 places: the
+   stored value is slightly below 1.005. Results match on the JVM and in
+   JavaScript.
+
+   NaN and infinite values pass through unchanged. Throws ex-info for invalid
+   options or non-numeric coordinates."
+  [coords options]
+  (when-not (sequential? coords)
+    (throw (ex-info "Coordinates must be a vector or list" {:coords coords})))
+  (let [round-one (rounding-fn options)]
+    (mapv (fn [x]
+            (cond
+              (finite? x) (round-one x)
+              (number? x) x
+              :else (throw (ex-info "Coordinates must be numbers"
+                                    {:coords coords}))))
+          coords)))
+
 (defn parse-int
   ([s] (parse-int s 10))
   ([s radix]
