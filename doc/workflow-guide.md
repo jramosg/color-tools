@@ -427,6 +427,26 @@ For the other axes and numeric examples, see
 Use `delta-e` for CIE76 differences in CIE L*a*b*; adding Oklab conversion
 does not change that calculation.
 
+### Lightness Ramps in Oklab (Unreleased)
+
+Oklab lightness steps look even, so you can build a ramp by changing `l` and
+keeping `a` and `b`. Convert each step back with `oklab->hex`:
+
+```clojure
+(let [[_ a b] (color/rgb->oklab (color/->rgb "#336699"))]
+  (mapv #(color/oklab->hex [% a b]) [0.35 0.45 0.55 0.65 0.75]))
+;=> ["#023c6b" "#24588a" "#4275a9" "#5f93c9" "#7db3ea"]
+```
+
+Lighter steps eventually leave the sRGB gamut, and `oklab->hex` clamps them.
+Check each step with `in-gamut?` to catch that:
+
+```clojure
+(let [[_ a b] (color/rgb->oklab (color/->rgb "#336699"))]
+  (color/in-gamut? [0.85 a b]))
+;=> false
+```
+
 ### Practical Applications
 
 **Color Palette Deduplication:**
