@@ -34,20 +34,6 @@
   [value min-val max-val]
   (max min-val (min max-val value)))
 
-(defn round
-  "Round a number to specified decimal places"
-  ([n] (round n 0))
-  ([n decimals]
-   (let [decimals (or decimals 0)
-         factor (Math/pow 10 decimals)]
-     (cond-> (/ (Math/round #?(:clj (double (* n factor))
-                               :cljs (* n factor)))
-                factor)
-       (= decimals 0) int))))
-
-(defn round-int [n]
-  (round n 0))
-
 (defn- finite? [x]
   (and (number? x) (not (NaN? x)) (not (infinite? x))))
 
@@ -72,6 +58,19 @@
         (if (>= (Math/abs scaled) max-fractional-double)
           x
           (/ (double (Math/round scaled)) factor))))))
+
+(defn round
+  "Round a number to specified decimal places. Returns an integer at 0
+   places and a double otherwise. Large values that have no fractional
+   digit at the requested precision come back unchanged."
+  ([n] (round n 0))
+  ([n decimals]
+   (let [decimals (or decimals 0)]
+     (cond-> (round-places n decimals)
+       (= decimals 0) int))))
+
+(defn round-int [n]
+  (round n 0))
 
 (defn- round-significant
   "Round a finite number to `digits` significant digits."

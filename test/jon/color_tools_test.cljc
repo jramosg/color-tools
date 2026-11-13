@@ -1276,6 +1276,22 @@
 (def ^:private max-double
   #?(:clj Double/MAX_VALUE :cljs js/Number.MAX_VALUE))
 
+(deftest round-test
+  (testing "Round to decimal places"
+    (are [n places expected] (= expected (sut/round n places))
+      1.4       0 1
+      1.5       0 2
+      -1.5      0 -1
+      3.14159   2 3.14
+      one-third 3 0.333
+      1.005     2 1.0))
+  (testing "Return an integer at 0 places"
+    (is (int? (sut/round 2.7))))
+  (testing "Keep large values instead of overflowing a long"
+    (is (= 40000.0 (sut/round 40000.0 15)))
+    (is (= 1.0E10 (sut/round 1.0E10 10)))
+    (is (= -1.0E17 (sut/round -1.0E17 4)))))
+
 (deftest round-coords-test
   (testing "Round to decimal places"
     (are [coords places expected]
