@@ -3,11 +3,11 @@
   "version": "1.2.0",
   "private": true,
   "devDependencies": {
-    "shadow-cljs": "2.26.2"
+    "shadow-cljs": "3.5.14"
   },
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "scripts": {
     "start": "shadow-cljs watch app",
