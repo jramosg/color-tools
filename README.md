@@ -63,7 +63,7 @@ npx http-server demo/public -p 8000
 - **Alpha Blending**: Porter-Duff compositing for transparent colors
 - **Color Interpolation**: Gradients in RGB, HSL, or HSV
 - **Perceptual Difference**: Delta E calculations in CIE LAB color space
-- **Oklab and OKLCh (Unreleased)**: Convert between sRGB, Oklab and OKLCh,
+- **Oklab and OKLCh**: Convert between sRGB, Oklab and OKLCh,
   with gamut checks
 - **Color Temperature**: Kelvin to RGB conversions for lighting UIs
 - **Palette Generation**: Color harmonies from color theory
@@ -76,13 +76,13 @@ npx http-server demo/public -p 8000
 Add the following dependency to your `deps.edn`:
 
 ```clojure
-{:deps com.github.jramosg/color-tools {:mvn/version "1.2.0"}}
+{:deps com.github.jramosg/color-tools {:mvn/version "1.3.0"}}
 ```
 
 Or for Leiningen, add to your `project.clj`:
 
 ```clojure
-[com.github.jramosg/color-tools "1.2.0"]
+[com.github.jramosg/color-tools "1.3.0"]
 ```
 
 ## Quick Start
@@ -583,7 +583,7 @@ These projects influenced the API:
 ;=> [53.23 80.11 67.2]
 ```
 
-### Oklab Conversion (Unreleased)
+### Oklab Conversion
 
 Use `rgb->oklab` with sRGB channels from `0` to `255`. You get `[l a b]`
 coordinates with lightness on a 0 to 1 scale. Use `->rgb` first for hex
@@ -613,7 +613,7 @@ precision; use `round-coords` to format coordinates for display.
 ```
 
 `oklab->rgb` returns unrounded, unclamped channels; `oklab->hex` clamps colors
-outside sRGB. See the [API reference](doc/api-reference.md#rgb-oklab-unreleased)
+outside sRGB. See the [API reference](doc/api-reference.md#rgb-oklab)
 for axis definitions, gamut handling, and input requirements.
 
 ### Color Temperature (Kelvin)
