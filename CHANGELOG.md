@@ -2,6 +2,10 @@
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- `rgb->oklab` converts sRGB vectors with channels from 0 to 255 into Oklab
+  `[l a b]` coordinates at full precision, with lightness on a 0 to 1 scale
+
 ### Changed
 - Improved the Accessible Theme Generator demo layout for clearer token,
   contrast, and color scale previews
