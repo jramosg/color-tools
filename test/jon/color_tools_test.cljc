@@ -36,6 +36,12 @@
     (is (not (sut/valid-hex? "#gg0000")))
     (is (not (sut/valid-hex? "#ff000"))))
 
+  (testing "Hex validation returns booleans"
+    (doseq [hex ["#ff0000" "#f00" "ff0000" "ABCDEF"]]
+      (is (true? (sut/valid-hex? hex)) hex))
+    (doseq [hex ["#gg0000" "#ff000" "invalid" "" nil 255 [255 0 0]]]
+      (is (false? (sut/valid-hex? hex)) (pr-str hex))))
+
   (testing "RGB color validation"
     (is (sut/valid-rgb? [255 0 0]))
     (is (sut/valid-rgb? [0 128 255]))
