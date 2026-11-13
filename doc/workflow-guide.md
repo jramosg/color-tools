@@ -408,7 +408,7 @@ Delta E uses the CIE L\*a\*b\* color space:
 ;; Negative a = more green
 ```
 
-### Oklab Lightness (Unreleased)
+### Oklab Lightness
 
 Use `rgb->oklab` to work with Oklab coordinates. Pass an sRGB vector with
 channels from `0` to `255`, or convert another input format with `->rgb`.
@@ -423,11 +423,11 @@ Sort swatches from dark to light:
 ```
 
 For the other axes and numeric examples, see
-[`rgb->oklab` in the API reference](api-reference.md#rgb-oklab-unreleased).
+[`rgb->oklab` in the API reference](api-reference.md#rgb-oklab).
 Use `delta-e` for CIE76 differences in CIE L*a*b*; adding Oklab conversion
 does not change that calculation.
 
-### Lightness Ramps in Oklab (Unreleased)
+### Lightness Ramps in Oklab
 
 Oklab lightness steps look even, so you can build a ramp by changing `l` and
 keeping `a` and `b`. Convert each step back with `oklab->hex`:
@@ -447,7 +447,7 @@ Check each step with `in-gamut?` to catch that:
 ;=> false
 ```
 
-### Hue and Chroma in OKLCh (Unreleased)
+### Hue and Chroma in OKLCh
 
 OKLCh splits Oklab into lightness, chroma and hue. Rotating the hue keeps
 lightness and chroma, so every color in the palette has the same perceived

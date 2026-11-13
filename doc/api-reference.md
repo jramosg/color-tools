@@ -121,7 +121,7 @@ Converts a valid hex color to an RGB vector.
 
 Converts an RGB vector to a `#rrggbb` string.
 
-### `clamp-rgb` (Unreleased)
+### `clamp-rgb`
 
 ```clojure
 (clamp-rgb rgb) => [r g b]
@@ -751,7 +751,7 @@ Checks RGB distance against `threshold`, which defaults to `50`.
 
 Converts RGB to CIE L*a*b*.
 
-### `rgb->oklab` (Unreleased)
+### `rgb->oklab`
 
 ```clojure
 (rgb->oklab rgb) => [l a b]
@@ -797,7 +797,7 @@ the converter. The function does not clamp channels.
 Treat the result as Oklab coordinates: `color` and `->hex` interpret
 three-element vectors as RGB.
 
-### `oklab->rgb` (Unreleased)
+### `oklab->rgb`
 
 ```clojure
 (oklab->rgb oklab) => [r g b]
@@ -810,7 +810,7 @@ channels to within `1e-9`.
 
 The result keeps full precision and is not clamped. Colors outside the sRGB
 gamut produce channels below `0` or above `255`; check them with
-[`in-gamut?`](#in-gamut-unreleased).
+[`in-gamut?`](#in-gamut).
 
 ```clojure
 (color/round-coords (color/oklab->rgb [0.628 0.2249 0.1258])
@@ -822,14 +822,14 @@ gamut produce channels below `0` or above `255`; check them with
 ```
 
 `->hex` and `color` reject channels outside `0` to `255`, including float
-noise such as `-1e-12`. Use [`oklab->hex`](#oklab-hex-unreleased) for hex
-output, or [`clamp-rgb`](#clamp-rgb-unreleased) before `color`. `color`
+noise such as `-1e-12`. Use [`oklab->hex`](#oklab-hex) for hex
+output, or [`clamp-rgb`](#clamp-rgb) before `color`. `color`
 truncates fractional channels, so round them first.
 
 The function checks that the input is a vector of three finite numbers with
 an assertion precondition.
 
-### `oklab->hex` (Unreleased)
+### `oklab->hex`
 
 ```clojure
 (oklab->hex oklab) => string
@@ -849,7 +849,7 @@ the sRGB gamut with `clamp-rgb`, then rounds each one to 8 bits.
 Clamping moves an out-of-gamut color's hue and lightness. Check
 `in-gamut?` first when that matters.
 
-### `in-gamut?` (Unreleased)
+### `in-gamut?`
 
 ```clojure
 (in-gamut? oklab) => boolean
@@ -868,7 +868,7 @@ white at `l = 0.99999999`, so `[1 0 0]` lands just above `255`.
 ;=> false
 ```
 
-### `oklab->oklch` (Unreleased)
+### `oklab->oklch`
 
 ```clojure
 (oklab->oklch oklab) => [l c h]
@@ -890,7 +890,7 @@ computed hue would be meaningless. The result is unrounded.
 ;=> [0.628 0.2577 29.2209]
 ```
 
-### `oklch->oklab` (Unreleased)
+### `oklch->oklab`
 
 ```clojure
 (oklch->oklab oklch) => [l a b]
@@ -905,7 +905,7 @@ color. Negative chroma fails the assertion precondition.
 ;=> [0.628 0.2249 0.1258]
 ```
 
-### `rgb->oklch`, `oklch->rgb` and `oklch->hex` (Unreleased)
+### `rgb->oklch`, `oklch->rgb` and `oklch->hex`
 
 ```clojure
 (rgb->oklch rgb) => [l c h]
