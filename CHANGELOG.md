@@ -13,6 +13,11 @@ All notable changes to this project will be documented in this file. This change
 - Expanded cljdoc documentation for accessible theme generation, CSS variable
   export, public API coverage, and workflow examples
 
+### Fixed
+- `round` overflowed a long on the JVM for large values at high precision:
+  `(round 40000.0 15)` returned `9223.37`. It now returns the value unchanged
+  once no fractional digit is left at the requested precision.
+
 ## [1.2.0] - 2026-06-23
 ### Added
 - **Accessible Theme Generator**: Generate production-ready UI color tokens
