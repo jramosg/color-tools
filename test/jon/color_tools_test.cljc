@@ -1409,3 +1409,23 @@
     (doseq [oklab [[0.9 0.3 0.3] [1.01 0 0] [-0.01 0 0] [0.5 0.4 0]
                    [0.7 0 -0.4]]]
       (is (not (sut/in-gamut? oklab)) (pr-str oklab)))))
+
+(deftest clamp-rgb-test
+  (is (= [255.0 0.0 254.6] (sut/clamp-rgb [300.0 -5.0 254.6])))
+  (is (= [0 128 255] (sut/clamp-rgb [0 128 255])))
+  (doseq [rgb [nil [1 2] '(1 2 3) [##NaN 0 0] ["1" 2 3]]]
+    (is (thrown? #?(:clj AssertionError :cljs :default) (sut/clamp-rgb rgb))
+        (pr-str rgb))))
+
+(deftest oklab->hex-test
+  (testing "Round trip hex strings through Oklab"
+    (doseq [rgb (for [r (range 0 256 17) g (range 0 256 17)
+                      b (range 0 256 17)]
+                  [r g b])]
+      (is (= (sut/rgb->hex rgb) (sut/oklab->hex (sut/rgb->oklab rgb)))
+          (pr-str rgb))))
+
+  (testing "Clamp out-of-gamut colors"
+    (is (= "#ff0000" (sut/oklab->hex [0.9 0.3 0.3])))
+    (is (= "#ffffff" (sut/oklab->hex [1.5 0 0])))
+    (is (= "#000000" (sut/oklab->hex [-0.5 0 0])))))
