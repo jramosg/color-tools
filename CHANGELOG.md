@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file. This change
 ### Added
 - `rgb->oklab` converts sRGB vectors with channels from 0 to 255 into Oklab
   `[l a b]` coordinates at full precision, with lightness on a 0 to 1 scale
+- `round-coords` rounds each value in a coordinate vector to a number of
+  decimal places or significant digits, for display and export
 
 ### Changed
 - Bump Clojure from 1.12.1 to 1.12.6
@@ -22,6 +24,9 @@ All notable changes to this project will be documented in this file. This change
   now gets black `:on-primary` text instead of white (4.4999:1).
 - The demo contrast checker showed WCAG levels as passing for pairs just below
   the threshold. It now uses `accessible?`.
+- `round` overflowed a long on the JVM for large values at high precision:
+  `(round 40000.0 15)` returned `9223.37`. It now returns the value unchanged
+  once no fractional digit is left at the requested precision.
 
 ## [1.2.0] - 2026-06-23
 ### Added
