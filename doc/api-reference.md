@@ -121,6 +121,24 @@ Converts a valid hex color to an RGB vector.
 
 Converts an RGB vector to a `#rrggbb` string.
 
+### `clamp-rgb` (Unreleased)
+
+```clojure
+(clamp-rgb rgb) => [r g b]
+```
+
+Clamps each channel to the `0` to `255` range and keeps fractions. Use it on
+computed channels, such as `oklab->rgb` output, before `->hex` or `color`,
+which reject values outside that range.
+
+```clojure
+(clamp-rgb [300.0 -5.0 254.6])
+;=> [255.0 0.0 254.6]
+```
+
+Clamping an out-of-gamut color changes its hue and lightness. It does not
+find the closest in-gamut color.
+
 ### `hex->rgba`
 
 ```clojure
@@ -778,6 +796,77 @@ the converter. The function does not clamp channels.
 
 Treat the result as Oklab coordinates: `color` and `->hex` interpret
 three-element vectors as RGB.
+
+### `oklab->rgb` (Unreleased)
+
+```clojure
+(oklab->rgb oklab) => [r g b]
+```
+
+Converts Oklab coordinates `[l a b]` back to an sRGB vector on the `0` to
+`255` scale. It is the inverse of `rgb->oklab`: the matrices are the exact
+inverses of the ones `rgb->oklab` uses, so a round trip returns the original
+channels to within `1e-9`.
+
+The result keeps full precision and is not clamped. Colors outside the sRGB
+gamut produce channels below `0` or above `255`; check them with
+[`in-gamut?`](#in-gamut-unreleased).
+
+```clojure
+(color/round-coords (color/oklab->rgb [0.628 0.2249 0.1258])
+                    {:decimal-places 2})
+;=> [255.02 -0.01 0.23]
+
+(color/round-coords (color/oklab->rgb [0.9 0.3 0.3]) {:decimal-places 2})
+;=> [422.12 -66.4 -134.52]  ; outside sRGB
+```
+
+`->hex` and `color` reject channels outside `0` to `255`, including float
+noise such as `-1e-12`. Use [`oklab->hex`](#oklab-hex-unreleased) for hex
+output, or [`clamp-rgb`](#clamp-rgb-unreleased) before `color`. `color`
+truncates fractional channels, so round them first.
+
+The function checks that the input is a vector of three finite numbers with
+an assertion precondition.
+
+### `oklab->hex` (Unreleased)
+
+```clojure
+(oklab->hex oklab) => string
+```
+
+Converts Oklab coordinates to a `#rrggbb` string. Clamps channels outside
+the sRGB gamut with `clamp-rgb`, then rounds each one to 8 bits.
+
+```clojure
+(color/oklab->hex [0.4993 -0.033 -0.093])
+;=> "#336699"
+
+(color/oklab->hex [0.9 0.3 0.3])
+;=> "#ff0000"  ; clamped
+```
+
+Clamping moves an out-of-gamut color's hue and lightness. Check
+`in-gamut?` first when that matters.
+
+### `in-gamut?` (Unreleased)
+
+```clojure
+(in-gamut? oklab) => boolean
+```
+
+Checks whether Oklab coordinates fall inside the sRGB gamut, so that
+`oklab->rgb` returns every channel between `0` and `255`. It allows `1e-4` on
+the `0` to `255` scale for float error: Ottosson's 10-digit constants put sRGB
+white at `l = 0.99999999`, so `[1 0 0]` lands just above `255`.
+
+```clojure
+(color/in-gamut? (color/rgb->oklab [51 102 153]))
+;=> true
+
+(color/in-gamut? [0.9 0.3 0.3])
+;=> false
+```
 
 ### `delta-e`
 

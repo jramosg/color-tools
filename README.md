@@ -63,7 +63,8 @@ npx http-server demo/public -p 8000
 - **Alpha Blending**: Porter-Duff compositing for transparent colors
 - **Color Interpolation**: Gradients in RGB, HSL, or HSV
 - **Perceptual Difference**: Delta E calculations in CIE LAB color space
-- **Oklab Conversion (Unreleased)**: Convert sRGB vectors to Oklab coordinates
+- **Oklab Conversion (Unreleased)**: Convert between sRGB and Oklab, with gamut
+  checks
 - **Color Temperature**: Kelvin to RGB conversions for lighting UIs
 - **Palette Generation**: Color harmonies from color theory
 - **Accessibility**: WCAG-compliant contrast checking and accessible color finding
@@ -595,10 +596,18 @@ precision; use `round-coords` to format coordinates for display.
     color/rgb->oklab
     (color/round-coords {:decimal-places 4}))
 ;=> [0.4993 -0.033 -0.093]
+
+;; Convert back to sRGB or hex
+(color/oklab->hex [0.4993 -0.033 -0.093])
+;=> "#336699"
+
+(color/in-gamut? [0.9 0.3 0.3])
+;=> false
 ```
 
-See the [API reference](doc/api-reference.md#rgb-oklab-unreleased) for axis
-definitions and input requirements.
+`oklab->rgb` returns unrounded, unclamped channels; `oklab->hex` clamps colors
+outside sRGB. See the [API reference](doc/api-reference.md#rgb-oklab-unreleased)
+for axis definitions, gamut handling, and input requirements.
 
 ### Color Temperature (Kelvin)
 
@@ -628,7 +637,7 @@ definitions and input requirements.
 - Lab/CIE Lab color space for perceptually uniform calculations (added in
   v1.1.0)
 - LCH (Lightness, Chroma, Hue) cylindrical color space
-- OKLCh (Lightness, Chroma, Hue) color space and Oklab-to-RGB conversion
+- OKLCh (Lightness, Chroma, Hue) color space
 - CMYK for print applications
 - HWB (Hue, Whiteness, Blackness) color space
 
