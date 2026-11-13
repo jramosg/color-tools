@@ -20,9 +20,7 @@ Thumbs.db
 # Ignore CI/CD files (they're not needed in the container)
 .github/
 
-# Ignore documentation that's not needed for building
-doc/
-*.md
+# README.md and doc/ stay: the doc example test reads them during the build.
 
 # Ignore local development files
 .env
