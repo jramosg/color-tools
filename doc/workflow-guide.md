@@ -447,6 +447,30 @@ Check each step with `in-gamut?` to catch that:
 ;=> false
 ```
 
+### Hue and Chroma in OKLCh (Unreleased)
+
+OKLCh splits Oklab into lightness, chroma and hue. Rotating the hue keeps
+lightness and chroma, so every color in the palette has the same perceived
+lightness:
+
+```clojure
+(let [[l c h] (color/rgb->oklch (color/->rgb "#336699"))]
+  (mapv #(color/oklch->hex [l c (+ h %)]) [0 120 240]))
+;=> ["#336699" "#924956" "#4f6e2e"]
+```
+
+Changing only the chroma moves a color from gray to fully saturated at the
+same lightness and hue:
+
+```clojure
+(let [[l _ h] (color/rgb->oklch (color/->rgb "#336699"))]
+  (mapv #(color/oklch->hex [l % h]) [0 0.05 0.1 0.15]))
+;=> ["#636363" "#4d657f" "#32669a" "#0064b4"]
+```
+
+High chroma leaves the sRGB gamut quickly. Check with
+`(color/in-gamut? (color/oklch->oklab lch))` before relying on the hex.
+
 ### Practical Applications
 
 **Color Palette Deduplication:**
