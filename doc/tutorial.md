@@ -441,12 +441,12 @@ Measure RGB distance between two colors:
 ```clojure
 (defn check-color-accessibility [bg-color text-colors]
   (for [text-color text-colors]
-    (let [ratio (color/contrast-ratio bg-color text-color)]
-      {:color text-color
-       :ratio ratio
-       :aa-normal (>= ratio 4.5)
-       :aa-large (>= ratio 3.0)
-       :aaa-normal (>= ratio 7.0)})))
+    {:color text-color
+     ;; Rounded for display. Use accessible? for pass/fail checks.
+     :ratio (color/contrast-ratio bg-color text-color)
+     :aa-normal (color/accessible? bg-color text-color :aa)
+     :aa-large (color/accessible? bg-color text-color :aa-large)
+     :aaa-normal (color/accessible? bg-color text-color :aaa)}))
 
 (check-color-accessibility "#ffffff" 
                           ["#000000" "#333333" "#666666" "#999999"])
