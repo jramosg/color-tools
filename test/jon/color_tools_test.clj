@@ -1197,11 +1197,27 @@
       (is (>= b g)))))
 
 (defn- close? [expected actual]
-  (every? #(< (Math/abs (double %)) 1e-4) (map - expected actual)))
+  (and (vector? actual)
+       (= 3 (count expected) (count actual))
+       (every? number? actual)
+       (every? #(< (Math/abs (double %)) 1e-4) (map - expected actual))))
+
+(deftest close?-test
+  (let [expected [0.6280 0.2249 0.1258]]
+    (is (close? expected expected))
+    (doseq [actual [nil [] [0.6280] [0.6280 0.2249]
+                    [0.6280 0.2249 0.1258 1]
+                    '(0.6280 0.2249 0.1258)
+                    ["0.6280" 0.2249 0.1258]
+                    [##NaN 0.2249 0.1258]
+                    [##Inf 0.2249 0.1258]
+                    [0.7 0.2249 0.1258]]]
+      (is (false? (close? expected actual)) (pr-str actual)))))
 
 (deftest rgb->oklab-test
   (are [rgb lab] (close? lab (sut/rgb->oklab rgb))
     [0 0 0]       [0.0000  0.0000  0.0000]
+    [255 255 255] [1.0000  0.0000  0.0000]
     [128 128 128] [0.5999  0.0000  0.0000]
     [255 0 0]     [0.6280  0.2249  0.1258]
     [0 255 0]     [0.8664 -0.2339  0.1795]
@@ -1211,3 +1227,17 @@
     [255 0 255]   [0.7017  0.2746 -0.1692]
     [255 128 0]   [0.7319  0.1119  0.1484]
     [51 102 153]  [0.4993 -0.0330 -0.0930]))
+
+(deftest rgb->oklab-validation-test
+  (doseq [rgb [nil [] [255 0] [255 0 0 0.5]
+               [-1 0 0] [256 0 0] [0 -1 0] [0 256 0]
+               [0 0 -1] [0 0 256] ["255" 0 0]
+               [##NaN 0 0] [##Inf 0 0] [##-Inf 0 0]
+               '(255 0 0) "#ff0000" (sut/color "#ff0000")]]
+    (is (thrown? AssertionError (sut/rgb->oklab rgb)) (pr-str rgb))))
+
+(deftest rgb->oklab-precision-test
+  (let [expected [0.6279553606145516 0.22486306106597398 0.1258462985307351]
+        actual (sut/rgb->oklab [255 0 0])]
+    (is (every? #(< (Math/abs (double %)) 1e-12)
+                (map - expected actual)))))

@@ -1259,9 +1259,15 @@
     (Math/pow (/ (+ c 0.055) 1.055) 2.4)))
 
 (defn rgb->oklab
-  "Convert an sRGB vector [r g b] to Oklab [l a b].
+  "Convert an sRGB vector [r g b], with channels from 0 to 255, to Oklab.
+   Returns [l a b] without rounding: l uses a 0-1 lightness scale;
+   a runs from green (negative) to red (positive), and b from blue
+   (negative) to yellow (positive). Linearizes sRGB before conversion.
+   Checks valid-rgb? with an assertion precondition.
+   Use ->rgb first for hex strings, CSS strings, or Color records.
    Formula taken from https://bottosson.github.io/posts/oklab/."
   [rgb]
+  {:pre [(valid-rgb? rgb)]}
   (let [rgb01 (map #(/ % 255.0) rgb)
         ;; Convert to linear RGB
         [r-lin g-lin b-lin] (map to-linear-rgb rgb01)
