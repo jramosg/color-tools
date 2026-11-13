@@ -1498,3 +1498,28 @@
       (is (thrown? #?(:clj AssertionError :cljs :default)
                    (sut/oklch->oklab oklch))
           (pr-str oklch)))))
+
+(deftest kelvin->rgb-helland-test
+  (testing "Match Tanner Helland's published values"
+    (are [kelvin rgb] (= rgb (sut/kelvin->rgb kelvin))
+      1000  [255 68 0]
+      1800  [255 126 0]
+      2700  [255 167 87]
+      6500  [255 254 250]
+      8000  [221 230 255]
+      10000 [202 218 255]
+      20000 [171 198 255]
+      40000 [152 186 255]))
+
+  (testing "Stay continuous across 6600 K"
+    (let [[r1 g1 b1] (sut/kelvin->rgb 6600)
+          [r2 g2 b2] (sut/kelvin->rgb 6700)]
+      (is (<= (Math/abs (- r1 r2)) 3))
+      (is (<= (Math/abs (- g1 g2)) 8))
+      (is (<= (Math/abs (- b1 b2)) 3))))
+
+  (testing "Red falls and blue rises as temperature increases"
+    (doseq [[[r1 _ b1] [r2 _ b2]]
+            (partition 2 1 (map sut/kelvin->rgb (range 1000 40001 500)))]
+      (is (>= r1 r2))
+      (is (<= b1 b2)))))
