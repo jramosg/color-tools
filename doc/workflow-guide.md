@@ -32,11 +32,11 @@ and dark overlays.
 
 ;; Multiply with semi-bright colors
 (color/blend-multiply "#ff8800" "#88ff00")
-;=> "#885500"
+;=> "#888800"
 
 ;; RGB vectors work too
 (color/blend-multiply [255 128 64] [128 255 200])
-;=> [127 127 50]
+;=> [128 128 50]
 ```
 
 **Use cases:**
@@ -75,7 +75,7 @@ darker; light areas get lighter.
 
 ;; Texture overlay
 (color/blend-overlay "#3498db" "#f0f0f0")
-;=> "#6db4e8"
+;=> "#62f3fb"
 ```
 
 **Use cases:**
@@ -120,15 +120,15 @@ Tints, shades, and tones create related colors from one base color.
 
 ;; Create a tint (lighter version)
 (color/tint base-color 0.3)
-;=> "#6fb3e5"
+;=> "#71b7e6"
 
 ;; Create a shade (darker version)
 (color/shade base-color 0.3)
-;=> "#236a91"
+;=> "#246a99"
 
 ;; Create a tone (less saturated version)
 (color/tone base-color 0.3)
-;=> "#4d98c3"
+;=> "#4b91c0"
 ```
 
 The amount parameter (0-1) controls how much white/black/gray to mix:
@@ -143,15 +143,15 @@ Use tint, shade, and tone series for design system scales:
 ```clojure
 ;; Generate 5 lighter tints
 (color/tints "#e74c3c" 5)
-;=> ["#eb6757" "#ef8272" "#f39c8d" "#f7b7a8" "#fbd2c3"]
+;=> ["#ec7063" "#f1948a" "#f5b7b1" "#fadbd8" "#ffffff"]
 
 ;; Generate 5 darker shades
 (color/shades "#e74c3c" 5)
-;=> ["#b83d30" "#892d24" "#5a1e18" "#2b0f0c" "#000000"]
+;=> ["#b93d30" "#8b2e24" "#5c1e18" "#2e0f0c" "#000000"]
 
 ;; Generate 5 less saturated tones
 (color/tones "#e74c3c" 5)
-;=> ["#dd6b5e" "#ce8980" "#bfa8a2" "#b0c6c4" "#a1e5e6"]
+;=> ["#d2564a" "#be6157" "#a96b65" "#957672" "#808080"]
 ```
 
 ### Building Design Systems
@@ -188,7 +188,7 @@ Alpha blending controls how transparent colors stack.
 ```clojure
 ;; Blend semi-transparent blue over opaque red
 (color/alpha-blend [255 0 0 1.0] [0 0 255 0.5])
-;=> [127 0 127 1.0]
+;=> [128 0 128 1.0]
 
 ;; The formula: 
 ;; a_out = a_overlay + a_base * (1 - a_overlay)
@@ -254,7 +254,7 @@ Create smooth color transitions for animations, data visualizations, and UI effe
 
 ;; Position can be any value from 0 to 1
 (color/interpolate ["#ff0000" "#0000ff"] 0.25 :rgb)
-;=> "#bf003f"  ; More red than blue
+;=> "#bf0040"  ; More red than blue
 
 (color/interpolate ["#ff0000" "#0000ff"] 0.75 :rgb)
 ;=> "#4000bf"  ; More blue than red
@@ -300,7 +300,7 @@ Different color spaces produce different results:
 ;=> "#808080"  ; Gray (RGB mixes to gray)
 
 (color/interpolate [red cyan] 0.5 :hsl)
-;=> "#00ff80"  ; Green-cyan (natural hue progression)
+;=> "#80ff00"  ; Chartreuse: hue 90°, halfway from red to cyan
 ```
 
 ### Creating Gradients
@@ -308,11 +308,11 @@ Different color spaces produce different results:
 ```clojure
 ;; Simple 2-color gradient
 (color/gradient ["#ff0000" "#0000ff"] 5 :rgb)
-;=> ["#ff0000" "#bf003f" "#80007f" "#4000bf" "#0000ff"]
+;=> ["#ff0000" "#bf0040" "#800080" "#4000bf" "#0000ff"]
 
 ;; Multi-color gradient
 (color/gradient ["#ff0000" "#00ff00" "#0000ff"] 7 :hsl)
-;=> ["#ff0000" "#aaaa00" "#55ff00" "#00ff55" "#00aaaa" "#0055ff" "#0000ff"]
+;=> ["#ff0000" "#ffaa00" "#aaff00" "#00ff00" "#00ffaa" "#00aaff" "#0000ff"]
 
 ;; Fine-grained gradient for smooth transitions
 (color/gradient ["#3498db" "#e74c3c"] 20 :rgb)
@@ -332,7 +332,7 @@ Different color spaces produce different results:
     (nth heat-map-gradient index)))
 
 (value->color 50 0 100)  ; Mid-range value
-;=> "#00ff00"  ; Green
+;=> "#00ff05"  ; Green
 ```
 
 **Animated Color Transitions:**
@@ -363,10 +363,10 @@ perceived difference in LAB color space.
 
 ;; Delta E separates these cases.
 (color/delta-e "#ff0000" "#ff0100")
-;=> 0.8  ; Imperceptible
+;=> 0.07  ; Imperceptible
 
 (color/delta-e "#00ff00" "#00ff01")
-;=> 0.4  ; Even less perceptible (green is more sensitive)
+;=> 0.08  ; Also imperceptible
 ```
 
 ### Understanding Delta E Values
@@ -388,7 +388,7 @@ perceived difference in LAB color space.
 
 ;; Custom threshold for stricter matching
 (color/perceptually-similar? "#ff0000" "#fe0000" 1.0)
-;=> false  ; Stricter than default
+;=> true   ; Delta E 0.37 is under the stricter 1.0
 ```
 
 ### LAB Color Space
@@ -398,13 +398,13 @@ Delta E uses the CIE L\*a\*b\* color space:
 ```clojure
 ;; Convert to LAB
 (color/rgb->lab [255 0 0])
-;=> [53.24 80.09 67.20]
+;=> [53.23 80.11 67.2]
 ;; L: lightness (0-100)
 ;; a: green-red axis
 ;; b: blue-yellow axis
 
 (color/rgb->lab [0 255 0])
-;=> [87.73 -86.18 83.18]
+;=> [87.74 -86.18 83.18]
 ;; Negative a = more green
 ```
 
@@ -518,33 +518,33 @@ Color temperature represents the color of light emitted by a black body at a giv
 ```clojure
 ;; Candlelight
 (color/kelvin->rgb 1800)
-;=> [255 147 41]
+;=> [255 126 0]
 
 (color/kelvin->hex 1800)
-;=> "#ff9329"
+;=> "#ff7e00"
 
 ;; Warm white
 (color/kelvin->rgb 3000)
-;=> [255 214 170]
+;=> [255 177 110]
 
 ;; Daylight
 (color/kelvin->rgb 6500)
-;=> [255 249 253]
+;=> [255 254 250]
 
 ;; Cool blue
 (color/kelvin->rgb 10000)
-;=> [201 218 255]
+;=> [202 218 255]
 ```
 
 ### Approximating Temperature from Color
 
 ```clojure
 ;; Works best for colors on the black body curve
-(color/rgb->kelvin [255 147 41])
-;=> 1856  ; Close to 1800K
+(color/rgb->kelvin (color/kelvin->rgb 1800))
+;=> 1805  ; Close to 1800K
 
 (color/rgb->kelvin [255 249 253])
-;=> 6453  ; Close to 6500K
+;=> 6452  ; Close to 6500K
 
 ;; Returns nil for non-black-body colors
 (color/rgb->kelvin [255 0 0])
@@ -597,7 +597,7 @@ The temperature functions accept values from 1000K to 40000K:
   (color/kelvin->hex (time-based-temperature hour)))
 
 (get-ambient-color 14)  ; 2 PM
-;=> "#ffffff"  ; Bright daylight color
+;=> "#ffedde"  ; Bright daylight color
 ```
 
 **Mood Lighting:**

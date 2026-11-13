@@ -46,10 +46,10 @@ Most manipulation functions preserve the input format:
 
 ```clojure
 (lighten "#ff5733" 0.2)  ; Returns hex string
-;=> "#ff8566"
+;=> "#ffac99"
 
 (lighten [255 87 51] 0.2) ; Returns RGB vector  
-;=> [255 133 102]
+;=> [255 172 153]
 ```
 
 ### Color Theory Integration
@@ -114,21 +114,21 @@ Require the namespace and call the functions:
 
 ;; Manipulate colors
 (color/lighten "#3498db" 0.2)           ; hex input
-;=> "#5dade2"
+;=> "#8ac4ea"
 
 (color/lighten "rgb(52, 152, 219)" 0.2) ; CSS string input
-;=> "#5dade2"
+;=> "#8ac4ea"
 
 ;; Generate palettes
 (color/analogous "#3498db" 3)
-;=> ["#34c6db" "#34dbae" "#3adb34"]
+;=> ["#3344db" "#7633db" "#ca33db"]
 
 ;; Check accessibility
 (color/accessible? "#3498db" "#ffffff")
 ;=> false ; Doesn't meet AA standards
 
 (color/contrast-ratio "#3498db" "#ffffff")  
-;=> 3.14 ; Needs 4.5 for AA
+;=> 3.15  ; Needs 4.5 for AA
 
 ;; Generate app-ready accessible theme tokens
 (def theme (color/accessible-theme "#3498db" {:mode :light :level :aa}))
