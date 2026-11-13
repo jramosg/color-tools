@@ -402,7 +402,7 @@ Analyze color characteristics:
 
 ### Color Distance
 
-Compare colors mathematically:
+Measure RGB distance between two colors:
 
 ```clojure
 ;; Euclidean distance in RGB space

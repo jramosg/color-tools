@@ -483,7 +483,7 @@ clojure -T:build deploy
 ## Contributing
 
 Open issues, feature requests, or pull requests on
-[GitHub](https://github.com/jon/color-tools).
+[GitHub](https://github.com/jramosg/color-tools).
 
 ## Acknowledgements
 
@@ -598,7 +598,8 @@ These projects influenced the API:
 
 **Color Spaces:**
 
-- ✅ Lab/CIE Lab color space for perceptually uniform calculations (ADDED in v1.1.0)
+- Lab/CIE Lab color space for perceptually uniform calculations (added in
+  v1.1.0)
 - LCH (Lightness, Chroma, Hue) cylindrical color space
 - OKLab/OKLCh modern perceptually uniform color spaces
 - CMYK for print applications

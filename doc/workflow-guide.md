@@ -447,8 +447,8 @@ Color temperature represents the color of light emitted by a black body at a giv
 - **3000K**: Warm white LED
 - **4000K**: Neutral white
 - **5000K**: Cool white
-- **6500K**: Daylight (slightly cool)
-- **10000K**: Clear blue sky (very cool)
+- **6500K**: Daylight (bluish white)
+- **10000K**: Clear blue sky (deep blue)
 
 ### Converting Temperature to Color
 
