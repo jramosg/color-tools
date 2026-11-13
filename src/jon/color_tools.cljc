@@ -564,44 +564,54 @@
                      rgb)]
     (+ (* 0.2126 r) (* 0.7152 g) (* 0.0722 b))))
 
-(defn contrast-ratio
-  "Calculate contrast ratio between two colors"
+(defn- raw-contrast-ratio
+  "WCAG contrast ratio between two colors, without rounding. Threshold checks
+   use this value: a ratio of 4.4999 does not meet 4.5."
   [color1 color2]
   (let [lum1 (luminance color1)
         lum2 (luminance color2)
         lighter (max lum1 lum2)
         darker (min lum1 lum2)]
-    (round (/ (+ lighter 0.05) (+ darker 0.05)) 2)))
+    (/ (+ lighter 0.05) (+ darker 0.05))))
+
+(defn contrast-ratio
+  "Calculate the WCAG contrast ratio between two colors, from 1 to 21.
+   Rounds to 2 decimal places for display. accessible? and the other
+   threshold checks compare the unrounded ratio."
+  [color1 color2]
+  (round (raw-contrast-ratio color1 color2) 2))
+
+(defn- contrast-threshold
+  "Minimum WCAG contrast ratio for a level. Defaults to AA for normal text."
+  [level]
+  (case level
+    :aaa 7
+    :aa-large 3
+    4.5))
 
 (defn accessible?
-  "Check if two colors meet WCAG AA accessibility standards"
+  "Check if two colors meet a WCAG contrast level.
+   level is :aa (4.5, the default), :aa-large (3) or :aaa (7). Compares the
+   unrounded contrast ratio, so a pair at 4.4999 fails :aa even though
+   contrast-ratio displays 4.5."
   ([color1 color2] (accessible? color1 color2 :aa))
   ([color1 color2 level]
-   (let [level (or level :aa)
-         ratio (contrast-ratio color1 color2)
-         threshold (case level
-                     :aaa 7
-                     :aa-large 3
-                     4.5)]  ; AA normal
-     (>= ratio threshold))))
+   (>= (raw-contrast-ratio color1 color2)
+       (contrast-threshold level))))
 
 (defn find-accessible-color
   "Find an accessible color by adjusting lightness"
   ([background target-color]
    (find-accessible-color background target-color :aa))
   ([background target-color level]
-   (let [level (or level :aa)
-         threshold (case level
-                     :aaa 7
-                     :aa-large 3
-                     4.5)  ; AA normal
+   (let [threshold (contrast-threshold level)
          target-color-hsl (->hsl target-color)
          try-color (fn [lightness]
                      (let [[h s _] target-color-hsl
                            new-color (if (string? target-color)
                                        (hsl->hex [h s lightness])
                                        (hsl->rgb [h s lightness]))]
-                       (when (>= (contrast-ratio background new-color)
+                       (when (>= (raw-contrast-ratio background new-color)
                                  threshold)
                          new-color)))]
      (or (try-color 0)    ; Try black first
@@ -626,20 +636,18 @@
         primary-color (if (> bg-luminance 0.35) black-color white-color)
         alternative-color (if (> bg-luminance 0.35) white-color black-color)
 
-        ;; Check accessibility (use AA-large threshold 3.0 for text contrast choice)
-        primary-accessible? (>= (contrast-ratio background-color primary-color) 3.0)
-        alternative-accessible? (>= (contrast-ratio background-color alternative-color) 3.0)
-
-        ;; Calculate contrast ratios for both options
-        primary-ratio (contrast-ratio background-color primary-color)
-        alternative-ratio (contrast-ratio background-color alternative-color)]
+        primary-ratio (raw-contrast-ratio background-color primary-color)
+        alternative-ratio (raw-contrast-ratio background-color
+                                              alternative-color)
+        ;; Use the AA-large threshold for the black/white text choice
+        threshold (contrast-threshold :aa-large)]
 
     (cond
       ;; If primary choice is accessible, use it
-      primary-accessible? primary-color
+      (>= primary-ratio threshold) primary-color
 
       ;; If primary fails but alternative is accessible, use alternative
-      alternative-accessible? alternative-color
+      (>= alternative-ratio threshold) alternative-color
 
       ;; If neither is accessible, choose the one with better contrast ratio
       :else (if (> primary-ratio alternative-ratio)
@@ -734,8 +742,8 @@
 
 (defn- better-contrast-color
   [background color1 color2]
-  (if (>= (contrast-ratio background color1)
-          (contrast-ratio background color2))
+  (if (>= (raw-contrast-ratio background color1)
+          (raw-contrast-ratio background color2))
     color1
     color2))
 
