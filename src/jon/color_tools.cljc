@@ -1378,3 +1378,75 @@
         b (- (+ (* 0.0259040371 l-root) (* 0.7827717662 m-root))
              (* 0.8086757660 s-root))]
     [l a b]))
+
+(defn- to-gamma-rgb
+  "Apply sRGB gamma encoding to a linear channel, the inverse of
+   to-linear-rgb. Extends the curve symmetrically to negative values, as CSS
+   Color 4 does, so out-of-gamut channels keep their sign."
+  [c]
+  (let [abs-c (Math/abs (double c))]
+    (if (<= abs-c 0.0031308)
+      (* 12.92 c)
+      (cond-> (- (* 1.055 (Math/pow abs-c (/ 1 2.4))) 0.055)
+        (neg? c) -))))
+
+(defn- valid-oklab?
+  [oklab]
+  (and (vector? oklab)
+       (= 3 (count oklab))
+       (every? finite? oklab)))
+
+(defn oklab->rgb
+  "Convert Oklab coordinates [l a b] to an sRGB vector [r g b] on the 0 to
+   255 scale. The inverse of rgb->oklab.
+
+   Returns unrounded floats and does not clamp. Colors outside the sRGB
+   gamut produce channels below 0 or above 255; check with in-gamut?. ->hex
+   and color round and clamp as usual.
+
+   The matrices are the exact inverses of the ones rgb->oklab uses, so
+   (oklab->rgb (rgb->oklab rgb)) returns rgb to within float error. Checks
+   the input shape with an assertion precondition."
+  [oklab]
+  {:pre [(valid-oklab? oklab)]}
+  (let [[l a b] oklab
+        l-root (+ (* 0.9999999984505198 l)
+                  (* 0.39633779217376786 a)
+                  (* 0.2158037580607588 b))
+        m-root (+ (* 1.0000000088817609 l)
+                  (* -0.10556134232365635 a)
+                  (* -0.06385417477170591 b))
+        s-root (+ (* 1.0000000546724108 l)
+                  (* -0.08948418209496575 a)
+                  (* -1.2914855378640917 b))
+        lms [(* l-root l-root l-root)
+             (* m-root m-root m-root)
+             (* s-root s-root s-root)]
+        linear-rgb (map (fn [[x y z]]
+                          (let [[lc mc sc] lms]
+                            (+ (* x lc) (* y mc) (* z sc))))
+                        [[4.076741661347994
+                          -3.3077115904081933
+                          0.2309699287294279]
+                         [-1.268438004092176
+                          2.6097574006633715
+                          -0.3413193963102196]
+                         [-0.004196086541837109
+                          -0.7034186144594496
+                          1.7076147009309448]])]
+    (mapv #(* 255.0 (to-gamma-rgb %)) linear-rgb)))
+
+(def ^:private gamut-tolerance
+  "Allowed error, on the 0 to 255 scale, before a channel counts as out of
+   gamut. The 10-digit Oklab constants put sRGB white at l = 0.99999999,
+   so [1 0 0] lands 3e-5 above 255; this tolerance keeps it in gamut."
+  1e-4)
+
+(defn in-gamut?
+  "Check whether Oklab coordinates [l a b] fall inside the sRGB gamut, so
+   that oklab->rgb returns every channel between 0 and 255. Allows a small
+   tolerance for float error, so colors converted from valid RGB stay in
+   gamut."
+  [oklab]
+  (every? #(<= (- gamut-tolerance) % (+ 255 gamut-tolerance))
+          (oklab->rgb oklab)))
