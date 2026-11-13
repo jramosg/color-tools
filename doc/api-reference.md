@@ -411,7 +411,15 @@ Calculates WCAG relative luminance from 0 to 1.
 (contrast-ratio color1 color2) => number
 ```
 
-Calculates contrast ratio from 1 to 21.
+Calculates the WCAG contrast ratio, from 1 to 21, rounded to 2 decimal
+places for display. Use `accessible?` for pass/fail checks: it compares the
+unrounded ratio, so a pair at 4.4999 fails AA even though `contrast-ratio`
+returns `4.5`.
+
+```clojure
+(contrast-ratio [0 111 251] [255 255 255]) ;=> 4.5
+(accessible? [0 111 251] [255 255 255])    ;=> false
+```
 
 ### `accessible?`
 
@@ -421,7 +429,8 @@ Calculates contrast ratio from 1 to 21.
 ```
 
 Checks whether two colors meet a WCAG threshold. `level` can be `:aa`,
-`:aa-large`, or `:aaa`; it defaults to `:aa`.
+`:aa-large`, or `:aaa`; it defaults to `:aa`. The thresholds are 4.5, 3 and
+7. The check compares the unrounded contrast ratio.
 
 ### `find-accessible-color`
 
