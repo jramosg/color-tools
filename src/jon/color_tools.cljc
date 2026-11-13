@@ -234,6 +234,18 @@
                     hex-str))]
     (str "#" (to-hex r) (to-hex g) (to-hex b))))
 
+(defn clamp-rgb
+  "Clamp each channel of an RGB vector [r g b] to the 0 to 255 range and
+   keep fractions. Use it on computed channels, such as oklab->rgb output,
+   before passing them to ->hex or color, which reject values outside that
+   range.
+
+   Clamping an out-of-gamut color changes its hue and lightness. It does
+   not find the closest in-gamut color."
+  [rgb]
+  {:pre [(vector? rgb) (= 3 (count rgb)) (every? finite? rgb)]}
+  (mapv #(clamp % 0.0 255.0) rgb))
+
 (defn hex->rgba
   "Convert hex color to RGBA vector with optional alpha"
   ([hex] (hex->rgba hex 1))
@@ -1450,3 +1462,9 @@
   [oklab]
   (every? #(<= (- gamut-tolerance) % (+ 255 gamut-tolerance))
           (oklab->rgb oklab)))
+
+(defn oklab->hex
+  "Convert Oklab coordinates [l a b] to a hex string. Clamps channels
+   outside the sRGB gamut with clamp-rgb, then rounds each to 8 bits."
+  [oklab]
+  (rgb->hex (clamp-rgb (oklab->rgb oklab))))
