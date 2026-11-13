@@ -587,13 +587,13 @@ These projects influenced the API:
 Use `rgb->oklab` with sRGB channels from `0` to `255`. You get `[l a b]`
 coordinates with lightness on a 0 to 1 scale. Use `->rgb` first for hex
 strings, CSS strings, or `Color` records. The conversion preserves full
-precision; use `round` to format coordinates for display.
+precision; use `round-coords` to format coordinates for display.
 
 ```clojure
-(->> "#336699"
-     color/->rgb
-     color/rgb->oklab
-     (mapv #(color/round % 4)))
+(-> "#336699"
+    color/->rgb
+    color/rgb->oklab
+    (color/round-coords {:decimal-places 4}))
 ;=> [0.4993 -0.033 -0.093]
 ```
 

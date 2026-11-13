@@ -750,24 +750,24 @@ Interpret the result as follows:
 - `a`: green (negative) to red (positive).
 - `b`: blue (negative) to yellow (positive).
 
-`rgb->oklab` preserves the computed floating-point values. Use the existing
-`round` helper to round coordinates for display. The `l` scale differs from
-the 0 to 100 lightness scale of `rgb->lab`.
+`rgb->oklab` preserves the computed floating-point values. Use
+[`round-coords`](#round-coords) to round coordinates for display. The `l`
+scale differs from the 0 to 100 lightness scale of `rgb->lab`.
 
 ```clojure
 (require '[jon.color-tools :as color])
 
-(mapv #(color/round % 4) (color/rgb->oklab [255 0 0]))
+(color/round-coords (color/rgb->oklab [255 0 0]) {:decimal-places 4})
 ;=> [0.628 0.2249 0.1258]
 
-(mapv #(color/round % 4) (color/rgb->oklab [128 128 128]))
+(color/round-coords (color/rgb->oklab [128 128 128]) {:decimal-places 4})
 ;=> [0.5999 0.0 0.0]
 
 ;; Normalize hex strings, CSS strings, or Color records with ->rgb.
-(->> "#336699"
-     color/->rgb
-     color/rgb->oklab
-     (mapv #(color/round % 4)))
+(-> "#336699"
+    color/->rgb
+    color/rgb->oklab
+    (color/round-coords {:decimal-places 4}))
 ;=> [0.4993 -0.033 -0.093]
 ```
 
@@ -956,3 +956,44 @@ Rounds `n` to `decimals` places. `decimals` defaults to `0`.
 ```
 
 Rounds `n` to the nearest integer.
+
+### `round-coords`
+
+```clojure
+(round-coords coords {:decimal-places n}) => [number ...]
+(round-coords coords {:significant-digits n}) => [number ...]
+```
+
+Rounds each number in a coordinate vector or list for display and returns a
+vector of doubles. Conversions such as `rgb->oklab` return full precision;
+round only the values you show or export.
+
+Pass exactly one option:
+
+- `:decimal-places`: an integer from `0` to `15`. Digits after the decimal
+  point.
+- `:significant-digits`: an integer from `1` to `17`. Digits counted from
+  the first nonzero digit, as in Color.js.
+
+```clojure
+(round-coords (rgb->oklab [255 0 0]) {:decimal-places 4})
+;=> [0.628 0.2249 0.1258]
+
+(round-coords [123.456 0.001234] {:decimal-places 2})
+;=> [123.46 0.0]
+
+(round-coords [123.456 0.001234] {:significant-digits 3})
+;=> [123.0 0.00123]
+```
+
+The function always returns doubles, even at `0` decimal places; use
+`round-int` for integers. Ties round toward positive infinity, as
+`Math/round` does: `1.25` becomes `1.3` and `-1.25` becomes `-1.2` at one
+place. Rounding works on the stored binary value, so `1.005` rounds to `1.0`
+at two places. The JVM and JavaScript give the same results.
+
+`NaN` and infinite values pass through unchanged. Values too large to have a
+fractional digit at the requested precision come back unchanged. Invalid
+options and non-numeric coordinates throw `ex-info`.
+ClojureScript has no separate integer type, so `{:decimal-places 2.0}` is
+accepted there and rejected on the JVM.
