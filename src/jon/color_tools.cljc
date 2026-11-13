@@ -1341,24 +1341,52 @@
   [kelvin]
   (color-from-rgb (kelvin->rgb kelvin)))
 
-(defn rgb->kelvin
-  "Approximate the color temperature in Kelvin from RGB.
-   This is an approximation and works best for colors close to the Planckian locus.
-   Returns nil if the color is too far from the black body curve."
+(defn- rgb->xy
+  "CIE 1931 xy chromaticity of an sRGB vector, or nil for black."
   [rgb]
-  (let [[r g b] (map #(/ % 255.0) rgb)
-        ;; Use McCamy's formula for CCT approximation
-        x (/ (+ (* -0.14282 r) (* 1.54924 g) (* -0.95641 b))
-             (+ (* -0.32466 r) (* 1.57837 g) (* -0.73191 b)))
-        y (/ (+ (* -1.1063 r) (* 2.3622 g) (* -0.2559 b))
-             (+ (* -0.32466 r) (* 1.57837 g) (* -0.73191 b)))
-        n (/ (- x 0.3320) (- 0.1858 y))
-        cct (+ (* -449 (Math/pow n 3))
-               (* 3525 (Math/pow n 2))
-               (* -6823.3 n)
-               5520.33)]
-    (when (and (>= cct 1000) (<= cct 40000))
-      (round cct 0))))
+  (let [[r g b] (map #(to-linear-rgb (/ % 255.0)) rgb)
+        x (+ (* 0.4124 r) (* 0.3576 g) (* 0.1805 b))
+        y (+ (* 0.2126 r) (* 0.7152 g) (* 0.0722 b))
+        z (+ (* 0.0193 r) (* 0.1192 g) (* 0.9505 b))
+        sum (+ x y z)]
+    (when (pos? sum)
+      [(/ x sum) (/ y sum)])))
+
+(defn- planckian-uv
+  "CIE 1960 uv of a black body at `kelvin`, using Krystek's 1985
+   approximation, which holds from 1000 K to 15000 K."
+  [kelvin]
+  (let [t kelvin
+        t2 (* t t)]
+    [(/ (+ 0.860117757 (* 1.54118254e-4 t) (* 1.28641212e-7 t2))
+        (+ 1 (* 8.42420235e-4 t) (* 7.08145163e-7 t2)))
+     (/ (+ 0.317398726 (* 4.22806245e-5 t) (* 4.20481691e-8 t2))
+        (+ 1 (* -2.89741816e-5 t) (* 1.61456053e-7 t2)))]))
+
+(def ^:private max-duv
+  "Distance from the black-body curve, in CIE 1960 uv, beyond which a
+   correlated color temperature is meaningless."
+  0.05)
+
+(defn rgb->kelvin
+  "Approximate the correlated color temperature of an sRGB color in Kelvin.
+
+   Converts to CIE 1931 xy chromaticity and applies McCamy's formula, which
+   is accurate to a few tens of kelvin from about 2000 K to 12500 K. Returns
+   nil for black, for colors more than 0.05 from the black-body curve in CIE
+   1960 uv (Duv), and for results outside 1000 K to 40000 K. Saturated
+   colors such as pure red have no meaningful temperature."
+  [rgb]
+  (when-let [[x y] (rgb->xy rgb)]
+    (let [n (/ (- x 0.3320) (- 0.1858 y))
+          cct (+ (* 449 n n n) (* 3525 n n) (* 6823.3 n) 5520.33)
+          denom (+ (* -2 x) (* 12 y) 3)
+          [u v] [(/ (* 4 x) denom) (/ (* 6 y) denom)]
+          [u-t v-t] (planckian-uv (clamp cct 1000 15000))
+          duv (Math/sqrt (+ (* (- u u-t) (- u u-t))
+                            (* (- v v-t) (- v v-t))))]
+      (when (and (<= duv max-duv) (<= 1000 cct 40000))
+        (round cct 0)))))
 
 ;; =============================================================================
 ;; Oklab

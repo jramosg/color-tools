@@ -1196,7 +1196,7 @@
           estimated-k (sut/rgb->kelvin daylight)]
       (is (number? estimated-k))
       ;; Mid-range temperatures should be more accurate
-      (is (< (Math/abs (- estimated-k 6500)) 2000)))
+      (is (< (Math/abs (- estimated-k 6500)) 325)))
 
     ;; Test that very saturated colors may return nil or a value
     (let [pure-red [255 0 0]
@@ -1523,3 +1523,25 @@
             (partition 2 1 (map sut/kelvin->rgb (range 1000 40001 500)))]
       (is (>= r1 r2))
       (is (<= b1 b2)))))
+
+(deftest rgb->kelvin-test
+  (testing "sRGB white and grays are D65"
+    (doseq [rgb [[255 255 255] [128 128 128] [10 10 10]]]
+      (is (= 6504 (sut/rgb->kelvin rgb)) (pr-str rgb))))
+
+  (testing "Return nil for black and for colors far from the black body curve"
+    (doseq [rgb [[0 0 0] [255 0 0] [0 255 0] [0 0 255] [0 255 255]
+                 [255 0 255] [128 0 128]]]
+      (is (nil? (sut/rgb->kelvin rgb)) (pr-str rgb))))
+
+  (testing "Keep colors within 0.05 of the curve, as CIE does"
+    ;; sRGB yellow sits 0.040 from the curve in CIE 1960 uv.
+    (is (= 3909 (sut/rgb->kelvin [255 255 0]))))
+
+  (testing "Round trip through kelvin->rgb within 5%"
+    ;; kelvin->rgb is Helland's approximation and McCamy's formula is an
+    ;; approximation too; 1800 K to 10000 K stays within 5%.
+    (doseq [kelvin [1800 2000 2700 3000 4000 5000 6500 8000 10000]
+            :let [estimate (sut/rgb->kelvin (sut/kelvin->rgb kelvin))]]
+      (is (< (Math/abs (- estimate kelvin)) (* 0.05 kelvin))
+          (pr-str [kelvin estimate])))))
