@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. This change
   `[l a b]` coordinates at full precision, with lightness on a 0 to 1 scale
 
 ### Changed
+- Bump Clojure from 1.12.1 to 1.12.6
 - Improved the Accessible Theme Generator demo layout for clearer token,
   contrast, and color scale previews
 - Expanded cljdoc documentation for accessible theme generation, CSS variable
