@@ -14,6 +14,7 @@ updates:
     schedule:
       interval: weekly
     ignore:
-      # Stay on the Java LTS; move to the next one (29) by hand.
+      # Skip non-LTS Java images so Dependabot only opens a PR for the
+      # next LTS (29). Once on 29, change the range to ">= 30, < 33".
       - dependency-name: clojure
-        update-types: ["version-update:semver-major"]
+        versions: [">= 26, < 29"]
