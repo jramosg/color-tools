@@ -53,12 +53,13 @@ else
   failures=$((failures + 1))
 fi
 
-# A reader that stops early must not crash the writer.
-out="$("${cli[@]}" gradient red blue --steps 50000 2>&1 | head -1)"
-if [ "$out" = '#ff0000' ]; then
+# A reader that stops early must not crash the writer. The crash shows
+# up on stderr, after head has already printed its line.
+err="$({ "${cli[@]}" gradient red blue --steps 50000 | head -1 >/dev/null; } 2>&1)"
+if [ -z "$err" ]; then
   echo 'ok   closed pipe'
 else
-  echo "FAIL closed pipe: $out"
+  echo "FAIL closed pipe: $(echo "$err" | head -3)"
   failures=$((failures + 1))
 fi
 
