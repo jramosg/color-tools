@@ -93,7 +93,7 @@
     :parse (one-of "--metric" [:rgb :delta-e])
     :doc "rgb (default) or delta-e"}
    {:id :threshold :long "--threshold" :arg "N"
-    :parse #(parse/parse-number "--threshold" %)
+    :parse #(parse/parse-number "--threshold" 0 %)
     :doc "Threshold"}
    {:id :as :long "--as" :arg "FORMAT"
     :parse (one-of "--as" input-formats)
@@ -206,7 +206,8 @@
 (defn- top-help []
   (str program " " version
        " - convert, adjust and check colors from the terminal\n\n"
-       "Usage: " program " <command> [arguments] [options]\n\n"
+       "Usage: " program " <command> [arguments] [options]\n"
+       "       " program " <color>...    same as '" program " info'\n\n"
        (str/join
         (for [[group title] commands/groups]
           (str title ":\n"
@@ -216,7 +217,8 @@
                "\n")))
        "Options:\n" global-option-help "\n"
        "Formats (--to):\n" (wrap (map name out/color-formats) ", " "  ")
-       "  Without --to, colors print as hex, or as rgba() when translucent."
+       "  Without --to, colors print as hex, or as rgba() when translucent.\n"
+       "  hex8 is hex with an alpha channel, such as #3498db80."
        "\n\n"
        "Colors:\n"
        (str/join (map #(str "  " % "\n") parse/color-forms))
@@ -299,7 +301,10 @@
             (nil? spec)
             (throw (parse/usage-error
                     (str "unknown option " flag)
-                    (did-you-mean flag (keys option-by-flag))))
+                    (when (str/starts-with? flag "--")
+                      (did-you-mean flag
+                                    (filter #(str/starts-with? % "--")
+                                            (keys option-by-flag))))))
 
             (and (nil? (:arg spec)) inline)
             (throw (parse/usage-error (str flag " takes no value")))
@@ -499,7 +504,7 @@
              (not (out/css-color-formats (:to opts :hex)))
              (throw (parse/usage-error
                      (str "--to " (name (:to opts)) " is not a CSS color;"
-                          " use hex, rgb, rgba, hsl, oklab or oklch")))
+                          " use hex, hex8, rgb, rgba, hsl, oklab or oklch")))
 
              :else (out/css resolved (:selector opts ":root")))
       (out/text resolved (ansi-mode opts process)))))
@@ -521,6 +526,13 @@
      :out (if (:quiet opts) "" (render command value opts process))
      :err (str/join (map #(str program ": warning: " % "\n") @warnings))}))
 
+(defn- color-word?
+  "True when `word` can stand where a command goes: a color, or - for
+   colors on stdin."
+  [word]
+  (or (= "-" word)
+      (nil? (:error (parse/try-color word)))))
+
 (defn- dispatch [argv process]
   (let [{:keys [opts args]} (parse-argv argv)
         [word & more] args]
@@ -531,11 +543,18 @@
       (or (nil? word) (and (= "help" word) (empty? more)))
       {:exit exit-ok :out (top-help) :err ""}
 
+      (= ["help" "help"] [word (first more)])
+      {:exit exit-ok :out (top-help) :err ""}
+
       (= "help" word)
       {:exit exit-ok :out (command-help (find-command (first more))) :err ""}
 
       (:help opts)
       {:exit exit-ok :out (command-help (find-command word)) :err ""}
+
+      ;; A color where a command goes is shorthand for info.
+      (and (not (command-by-name word)) (color-word? word))
+      (run-command (command-by-name "info") (vec args) opts process)
 
       :else
       (run-command (find-command word) (vec more) opts process))))

@@ -97,6 +97,7 @@ Every command accepts the same notations:
 | Notation | Examples |
 | --- | --- |
 | Hex | `'#3498db'`, `3498db`, `'#fff'` |
+| Hex with alpha | `'#3498db80'`, `'#f008'` |
 | Name | `navy`, `teal`; see `color-tools names` |
 | RGB | `'rgb(52,152,219)'`, `'rgb(52 152 219)'`, `52,152,219` |
 | RGB with alpha | `'rgba(52,152,219,0.5)'`, `'rgb(52 152 219 / 50%)'` |
@@ -134,8 +135,8 @@ color-tools: warning: oklch(0.7 0.4 150) is outside sRGB; clamped to #00d600
 
 ### Color formats: `--to`
 
-Any command that prints colors takes `--to` (or `-t`) with `hex`, `rgb`,
-`rgba`, `hsl`, `hsv`, `lab`, `oklab`, `oklch`, `name` or `kelvin`.
+Any command that prints colors takes `--to` (or `-t`) with `hex`, `hex8`,
+`rgb`, `rgba`, `hsl`, `hsv`, `lab`, `oklab`, `oklch`, `name` or `kelvin`.
 
 ```console
 $ color-tools convert '#3498db' --to hsl
@@ -148,11 +149,14 @@ oklch(0.8168 0.2008 129.584)
 ```
 
 Without `--to`, colors print as hex. A translucent color prints as `rgba()`
-so its alpha isn't lost; `--to hex` drops the alpha on purpose.
+so its alpha isn't lost. `--to hex8` keeps it in hex form and `--to hex`
+drops it on purpose.
 
 ```console
 $ color-tools alpha '#3498db' 0.5
 rgba(52, 152, 219, 0.5)
+$ color-tools alpha '#3498db' 0.5 --to hex8
+#3498db80
 $ color-tools alpha '#3498db' 0.5 --to hex
 #3498db
 ```
@@ -262,7 +266,8 @@ fi
 
 ### Inspect and convert
 
-`info` shows everything about a color.
+`info` shows everything about a color. A color on its own is shorthand for
+it: `color-tools '#3498db'`.
 
 ```console
 $ color-tools info '#3498db'
@@ -602,8 +607,8 @@ $ color-tools theme '#3498db' --mode dark --format css --prefix brand --selector
   prefix that starts with `--` is used exactly as given. The default is
   `--ct-`.
 - `--selector` sets the selector of the rule. The default is `:root`.
-- `--to` takes the formats CSS understands: `hex`, `rgb`, `rgba`, `hsl`,
-  `oklab` and `oklch`.
+- `--to` takes the formats CSS understands: `hex`, `hex8`, `rgb`, `rgba`,
+  `hsl`, `oklab` and `oklch`.
 - `--vars` prints the same properties as text, JSON or EDN.
 
 A light and a dark theme in one file:
