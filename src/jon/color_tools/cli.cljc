@@ -76,7 +76,25 @@
    {:id :at :long "--at" :arg "POSITION" :multi? true
     :parse (fn [s]
              (mapv #(parse/parse-fraction "--at" %) (str/split s #",")))
-    :doc "Position from 0 to 1 (default 0.5); repeat or separate by commas"}
+    :doc "Position from 0 to 1 (default 0.5); repeatable"}
+   {:id :level :long "--level" :short "-l" :arg "LEVEL"
+    :parse (one-of "--level" [:aa :aa-large :aaa])
+    :doc "WCAG level: aa (4.5:1), aa-large (3:1) or aaa (7:1)"}
+   {:id :on :long "--on" :arg "BACKGROUND"
+    :parse (:parse commands/color-param)
+    :doc "The background color"}
+   {:id :prefix :long "--prefix" :arg "PREFIX"
+    :doc "Custom property prefix (default --ct-)"}
+   {:id :selector :long "--selector" :arg "SELECTOR"
+    :doc "Selector of the CSS rule (default :root)"}
+   {:id :vars :long "--vars"
+    :doc "Name tokens as CSS custom properties"}
+   {:id :metric :long "--metric" :arg "METRIC"
+    :parse (one-of "--metric" [:rgb :delta-e])
+    :doc "rgb (default) or delta-e"}
+   {:id :threshold :long "--threshold" :arg "N"
+    :parse #(parse/parse-number "--threshold" %)
+    :doc "Threshold"}
    {:id :as :long "--as" :arg "FORMAT"
     :parse (one-of "--as" input-formats)
     :doc "Require the input to be in this format"}])
@@ -465,11 +483,18 @@
     (case fmt
       :json (out/json resolved)
       :edn (out/edn resolved)
-      :css (if (:css? command)
-             (out/css resolved (:selector opts ":root"))
+      :css (cond
+             (not (:css? command))
              (throw (parse/usage-error
                      (str "--format css is not available for '"
-                          (:name command) "'"))))
+                          (:name command) "'")))
+
+             (not (out/css-color-formats (:to opts :hex)))
+             (throw (parse/usage-error
+                     (str "--to " (name (:to opts)) " is not a CSS color;"
+                          " use hex, rgb, rgba, hsl, oklab or oklch")))
+
+             :else (out/css resolved (:selector opts ":root")))
       (out/text resolved (ansi-mode opts process)))))
 
 ;; =============================================================================
