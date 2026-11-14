@@ -13,3 +13,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Stay on the Java LTS; move to the next one (29) by hand.
+      - dependency-name: clojure
+        update-types: ["version-update:semver-major"]
