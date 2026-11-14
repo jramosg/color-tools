@@ -1,5 +1,6 @@
-# Use the official Clojure image based on OpenJDK
-FROM clojure:tools-deps
+# Official Clojure image, pinned so releases build the same way; Java 21
+# matches CI. Dependabot proposes updates to this tag.
+FROM clojure:temurin-21-tools-deps-1.12.6.1673-bookworm
 
 # Set working directory
 WORKDIR /app
