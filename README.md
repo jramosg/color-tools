@@ -580,7 +580,7 @@ These projects influenced the API:
 
 ;; Convert to LAB color space
 (color/rgb->lab [255 0 0])
-;=> [53.23 80.11 67.2]
+;=> [53.24 80.09 67.2]
 ```
 
 ### Oklab Conversion
