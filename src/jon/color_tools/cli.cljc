@@ -22,19 +22,10 @@
 ;; Options
 ;; =============================================================================
 
-(defn- names-of [values]
-  (str/join ", " (map name values)))
-
 (defn- one-of
   "A parser for an option that takes one of `values`."
   [flag values]
-  (fn [s]
-    (let [value (keyword (str/lower-case s))]
-      (if (some #{value} values)
-        value
-        (throw (parse/usage-error
-                (str flag " must be one of " (names-of values) "; got "
-                     (pr-str s))))))))
+  #(parse/parse-choice flag values %))
 
 (def ^:private input-formats
   [:hex :name :rgb :rgba :hsl :hsv :oklab :oklch :kelvin])
@@ -62,6 +53,14 @@
     :doc "Print nothing on stdout; use the exit code"}
    {:id :help :long "--help" :short "-h" :doc "Show help"}
    {:id :version :long "--version" :short "-V" :doc "Show the version"}
+   {:id :ratio :long "--ratio" :short "-r" :arg "RATIO"
+    :parse #(parse/parse-fraction "--ratio" %)
+    :doc "Share of the second color, from 0 to 1 (default 0.5)"}
+   {:id :mode :long "--mode" :short "-m" :arg "MODE"
+    :doc "Mode"}
+   {:id :count :long "--count" :short "-n" :arg "N"
+    :parse #(parse/parse-integer "--count" 1 nil %)
+    :doc "How many colors to generate"}
    {:id :as :long "--as" :arg "FORMAT"
     :parse (one-of "--as" input-formats)
     :doc "Require the input to be in this format"}])
