@@ -17,8 +17,18 @@
           (map (fn [k] [k (unchecked-get env k)]))
           (js/Object.keys env))))
 
+(defn- ignore-closed-pipe!
+  "Exit quietly when the reader of `stream` goes away, as in
+   `color-tools names | head -1`. Node otherwise crashes with EPIPE."
+  [stream]
+  (js-invoke stream "on" "error"
+             (fn [error]
+               (when-not (= "EPIPE" (unchecked-get error "code"))
+                 (throw error)))))
+
 (defn -main [& args]
   (let [stdout (unchecked-get process "stdout")
+        _ (ignore-closed-pipe! stdout)
         {:keys [exit out err]}
         (cli/run (vec args) {:stdin read-stdin
                              :tty? (boolean (unchecked-get stdout "isTTY"))
