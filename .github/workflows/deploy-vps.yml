@@ -14,11 +14,15 @@ jobs:
   build-and-deploy:
     name: Build and Deploy to VPS
     runs-on: ubuntu-latest
+    # Put [skip deploy] in the commit message (or the PR title, for a
+    # squash merge) to leave the demo as it is; manual runs always deploy.
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'master')
+       github.event.workflow_run.head_branch == 'master' &&
+       !contains(github.event.workflow_run.head_commit.message,
+                 '[skip deploy]'))
     permissions:
       contents: read
 
