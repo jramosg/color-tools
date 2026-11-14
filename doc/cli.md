@@ -319,7 +319,7 @@ rgb(0, 0, 128)
 $ color-tools convert 6500k
 #fffefa
 $ color-tools convert '#ffffff' --to kelvin
-6504K
+6503K
 ```
 
 `--to kelvin` prints `none` for colors with no meaningful temperature, such

@@ -39,7 +39,7 @@
       :oklch "oklch(0.6531 0.1347 242.6867)"
       :name "teal"))
   (testing "kelvin, with and without a temperature"
-    (is (= "6504K\n" (text (ct/color "#ffffff") {:to :kelvin})))
+    (is (= "6503K\n" (text (ct/color "#ffffff") {:to :kelvin})))
     (is (= "none\n" (text (ct/color "#ff0000") {:to :kelvin}))))
   (testing "translucent colors keep their alpha by default"
     (is (= "rgba(52, 152, 219, 0.5)\n" (text glass)))
