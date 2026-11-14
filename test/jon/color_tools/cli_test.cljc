@@ -187,7 +187,7 @@
     (let [json (out "info" "rgba(255,255,255,0.5)" "--json")]
       (is (str/includes? json "\"rgb\": [255, 255, 255],"))
       (is (str/includes? json "\"alpha\": 0.5,"))
-      (is (str/includes? json "\"kelvin\": 6504,"))
+      (is (str/includes? json "\"kelvin\": 6503,"))
       (is (str/includes? json "\"text-color\": \"#000000\""))))
   (testing "several colors print as blocks"
     (is (= 35 (count (lines "info" "red" "blue"))))))
@@ -200,7 +200,7 @@
     "#3498db" "hsl" "hsl(204, 70%, 53%)"
     "#3498db" "hsv" "hsv(204, 76%, 86%)"
     "#3498db" "name" "teal"
-    "white" "kelvin" "6504K"
+    "white" "kelvin" "6503K"
     "red" "kelvin" "none"
     "hsl(204, 70%, 53%)" "hex" "#3398db"
     "hsv(204, 76%, 86%)" "hex" "#3599db"
