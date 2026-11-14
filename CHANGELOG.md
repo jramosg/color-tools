@@ -2,6 +2,17 @@
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## Unreleased
+### Fixed
+- The demo converter rejected `rgba()` without an alpha, such as
+  `rgba(52, 152, 219)`. CSS treats `rgba()` as an alias of `rgb()`, so it now
+  reads it as RGBA with an alpha of 1.
+- The demo converter showed "Detected RGB" for invalid input that names
+  another format, such as `hsl(400, 50%, 50%)`, with a color made from its
+  numbers. Input that starts with a format name now gets only that format's
+  parser.
+- The demo converter said "No valid color yet" for input that will never be
+  valid. Empty input now says "Paste a color to convert" and anything else
+  that fails to parse says "Not a valid color".
 
 ## [1.3.0] - 2026-11-13
 ### Added
