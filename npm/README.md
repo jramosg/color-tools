@@ -3,12 +3,16 @@
 Convert, adjust and check colors from the terminal.
 
 ```bash
-npx color-tools contrast '#3498db' '#ffffff' --level aa
-npx color-tools convert '#3498db' --to oklch
-npx color-tools palette '#3498db' --type triadic
-npx color-tools gradient '#ff0000' '#0000ff' --steps 10 --space hsl
-npx color-tools theme '#3498db' --mode dark --format css > theme.css
+npm install --global @jramosg/color-tools
+
+color-tools contrast '#3498db' '#ffffff' --level aa
+color-tools convert '#3498db' --to oklch
+color-tools palette '#3498db' --type triadic
+color-tools gradient '#ff0000' '#0000ff' --steps 10 --space hsl
+color-tools theme '#3498db' --mode both --format css > theme.css
 ```
+
+Or run it without installing: `npx @jramosg/color-tools help`.
 
 One file, no dependencies. Text output for people, `--json` for scripts,
 and exit codes for CI: `0` success, `1` a check failed, `2` invalid input.

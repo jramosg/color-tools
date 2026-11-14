@@ -28,12 +28,15 @@ have; the commands and output are the same on all of them.
 ### Node.js
 
 ```bash
-npm install --global color-tools
+npm install --global @jramosg/color-tools
+color-tools contrast '#3498db' '#ffffff'
+
 # or, without installing
-npx color-tools contrast '#3498db' '#ffffff'
+npx @jramosg/color-tools contrast '#3498db' '#ffffff'
 ```
 
-One file with no dependencies. It starts in about 30 ms.
+The package is scoped, but the command it installs is plain `color-tools`.
+It is one file with no dependencies and starts in about 30 ms.
 
 ### Babashka
 
@@ -724,8 +727,8 @@ jobs:
       - uses: actions/setup-node@v4
       - name: Check text contrast
         run: |
-          npx color-tools contrast '#1f2937' '#ffffff' --level aaa
-          npx color-tools contrast '#3498db' '#0b1620' --level aa
+          npx @jramosg/color-tools contrast '#1f2937' '#ffffff' --level aaa
+          npx @jramosg/color-tools contrast '#3498db' '#0b1620' --level aa
 ```
 
 Check every color of a palette file against one background. The job fails if
