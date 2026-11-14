@@ -510,6 +510,51 @@ clojure -T:build install
 clojure -T:build deploy
 ```
 
+### Publishing to npm
+
+The CLI is published manually as `@jramosg/color-tools`. You need the
+Clojure CLI, Java, Node.js 18 or newer, npm, and an npm account with
+publishing access to the `jramosg` organization.
+
+Check that the version in `npm/package.json` matches `build.clj` and the
+`version` definition in `src/jon/color_tools/cli.cljc`. For later releases,
+update all three together. Each published package version must be unique.
+
+From the repository root, build and smoke-test the CLI:
+
+```bash
+clojure -M:npm
+test/cli-smoke.sh node npm/color-tools.js
+```
+
+The generated `npm/color-tools.js` is ignored by Git; rebuild it for every
+release.
+
+Enter the package directory, check your npm login, and preview the package:
+
+```bash
+cd npm
+npm whoami
+npm pack --dry-run
+```
+
+Run `npm login` if needed. Confirm the preview includes `color-tools.js`,
+then publish:
+
+```bash
+npm publish --access public
+```
+
+Verify the published version and run the package from the registry:
+
+```bash
+npm view @jramosg/color-tools version
+npx --yes @jramosg/color-tools help
+```
+
+See the [npm publishing documentation](https://docs.npmjs.com/cli/v11/commands/npm-publish/)
+for authentication and publishing options.
+
 ## Supported Platforms
 
 - **Clojure (JVM)**: Supports the full API
