@@ -15,11 +15,17 @@
 (defn usage-error? [e]
   (= ::usage (:type (ex-data e))))
 
+(def color-forms
+  "The accepted color notations, as lines of help text."
+  ["'#3498db', 3498db, '#fff' or a name such as navy"
+   "'rgb(52,152,219)', 'rgba(52,152,219,0.5)' or 52,152,219"
+   "'hsl(204,70%,53%)' or 'hsv(204,76%,86%)'"
+   "'oklab(0.65 -0.06 -0.11)' or 'oklch(0.65 0.13 243)'"
+   "a temperature such as 6500k"])
+
 (def color-hint
-  (str "Accepted colors: '#3498db', 3498db, '#fff', a name such as navy,\n"
-       "'rgb(52,152,219)', 'rgba(52,152,219,0.5)', 52,152,219,\n"
-       "'hsl(204,70%,53%)', 'hsv(204,76%,86%)', 'oklab(0.65 -0.06 -0.11)',\n"
-       "'oklch(0.65 0.13 243)' or a temperature such as 6500k.\n"
+  (str "Accepted colors:\n"
+       (str/join (map #(str "  " % "\n") color-forms))
        "Quote colors: # and () mean something to the shell."))
 
 ;; =============================================================================
