@@ -53,6 +53,15 @@ else
   failures=$((failures + 1))
 fi
 
+# A reader that stops early must not crash the writer.
+out="$("${cli[@]}" gradient red blue --steps 50000 2>&1 | head -1)"
+if [ "$out" = '#ff0000' ]; then
+  echo 'ok   closed pipe'
+else
+  echo "FAIL closed pipe: $out"
+  failures=$((failures + 1))
+fi
+
 err="$("${cli[@]}" convert nope 2>&1 >/dev/null)"
 case "$err" in
   'color-tools: invalid color "nope": not a color'*) echo 'ok   stderr' ;;
