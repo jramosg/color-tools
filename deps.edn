@@ -3,6 +3,14 @@
  :aliases
  {;; Run the CLI: clojure -M:cli convert '#3498db' --to hsl
   :cli {:main-opts ["-m" "jon.color-tools.main"]}
+  ;; Compile the CLI to one Node.js file, npm/color-tools.js: clojure -M:npm
+  :npm
+  {:extra-deps {org.clojure/clojurescript {:mvn/version "1.12.145"}}
+   :main-opts ["-m" "cljs.main" "--target" "node"
+               "--optimizations" "advanced"
+               "--output-dir" "target/npm"
+               "--output-to" "npm/color-tools.js"
+               "--compile" "jon.color-tools.node"]}
   :test
   {:extra-paths ["test"]
    :extra-deps {org.clojure/test.check {:mvn/version "1.1.3"}

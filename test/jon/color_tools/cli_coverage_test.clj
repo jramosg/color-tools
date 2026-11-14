@@ -24,7 +24,11 @@
 (deftest version-test
   (is (= (second (re-find #"\(def version \"([^\"]+)\"\)" (slurp "build.clj")))
          cli/version)
-      "cli/version must match the version in build.clj"))
+      "cli/version must match the version in build.clj")
+  (is (= (second (re-find #"\"version\": \"([^\"]+)\""
+                          (slurp "npm/package.json")))
+         cli/version)
+      "npm/package.json must have the same version as cli/version"))
 
 (defn- command-of
   "The commands that cover library function `sym`, as markdown."
