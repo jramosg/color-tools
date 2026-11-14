@@ -9,36 +9,44 @@ on:
     types:
       - completed
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Deploy to Clojars
     runs-on: ubuntu-latest
     # Only proceed for:
     # - manual dispatch (always deploy when manually triggered)
-    # - or when Checks workflow completed successfully on master and commit message contains '[deploy]'
+    # - or when Checks passed on a push to master of this repository
+    #   (not a fork PR whose branch is also named master) and the commit
+    #   message carries the release marker
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name ==
+         github.repository &&
        github.event.workflow_run.head_branch == 'master' &&
        contains(github.event.workflow_run.head_commit.message, '[deploy]'))
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Prepare java
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: 'zulu'
           java-version: '21'
 
       - name: Install clojure tools
-        uses: DeLaGuardo/setup-clojure@13.7.0
+        uses: DeLaGuardo/setup-clojure@6d46099eae24853c33c0482f2bb54edf4f1a4c74 # 13.7.0
         with:
           cli: latest
 
       - name: Cache clojure dependencies
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.m2/repository
@@ -49,7 +57,7 @@ jobs:
           restore-keys: cljdeps-
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Build Docker image
         run: |
