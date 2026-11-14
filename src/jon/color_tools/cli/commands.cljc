@@ -23,7 +23,8 @@
 (def groups
   [[:inspect "Inspect and convert"]
    [:adjust "Adjust"]
-   [:mix "Mix and blend"]])
+   [:mix "Mix and blend"]
+   [:generate "Palettes and gradients"]])
 
 ;; =============================================================================
 ;; Arguments
@@ -298,7 +299,7 @@
     :summary "Mix two colors"
     :doc (str "--ratio is the share of the second color: 0 gives the first\n"
               "color, 1 the second, 0.5 an even mix.")
-    :params [color-param {:key :other :label "COLOR" :parse (:parse color-param)}]
+    :params [color-param (assoc color-param :key :other)]
     :opts [:ratio]
     :examples ["mix '#ff0000' '#0000ff'"
                "mix '#ff0000' '#0000ff' --ratio 0.25"]
@@ -312,8 +313,8 @@
     :doc (str "multiply darkens, screen lightens and overlay does both,\n"
               "depending on the base. alpha composites a translucent\n"
               "overlay onto the base and keeps the resulting alpha.")
-    :params [{:key :base :label "BASE" :parse (:parse color-param)}
-             {:key :overlay :label "OVERLAY" :parse (:parse color-param)}]
+    :params [(assoc color-param :key :base :label "BASE")
+             (assoc color-param :key :overlay :label "OVERLAY")]
     :opts [[:mode "multiply (default), screen, overlay or alpha"]]
     :examples ["blend '#ff0000' '#0000ff' --mode screen"
                "blend '#ffffff' 'rgba(255,0,0,0.5)' --mode alpha"]
@@ -331,5 +332,121 @@
                    "Generate a series of shades toward black")
    (series-command "tones" ct/tones "Generate a series of tones toward gray")])
 
+;; =============================================================================
+;; Palettes and gradients
+;; =============================================================================
+
+(def ^:private harmonies
+  [:complementary :triadic :tetradic :analogous :split-complementary
+   :monochromatic])
+
+(def palette-types
+  (conj harmonies :random))
+
+(defn- palette-of [type color {:keys [count angle]}]
+  (when (and (= :monochromatic type) (some-> count (< 2)))
+    (throw (parse/usage-error
+            "--count must be at least 2 for a monochromatic palette")))
+  (mapv ct/color
+        (ct/generate-palette type color (cond-> {}
+                                          count (assoc :count count)
+                                          angle (assoc :angle angle)))))
+
+(defn- palette [{:keys [color]} {:keys [type] :as opts}]
+  (cond
+    (= :random type) (palette-of :random nil opts)
+
+    (nil? color)
+    (throw (parse/usage-error
+            "missing COLOR"
+            "Only --type random works without a color."))
+
+    type (palette-of type color opts)
+
+    :else (apply array-map
+                 (mapcat (fn [harmony]
+                           [harmony (palette-of harmony color opts)])
+                         harmonies))))
+
+(defn- random-colors [_ {:keys [count]}]
+  (let [random #(ct/color (ct/random-color))]
+    (if count
+      (vec (repeatedly count random))
+      (random))))
+
+(defn- interpolate [{:keys [colors]} {:keys [at space]}]
+  (let [results (mapv #(ct/color (ct/interpolate colors % space))
+                      (or at [0.5]))]
+    (if (next results)
+      results
+      (first results))))
+
+(def ^:private generate-commands
+  [{:name "palette"
+    :group :generate
+    :summary "Generate a color harmony from a base color"
+    :doc (str "Without --type, prints every harmony. Types: complementary,\n"
+              "triadic, tetradic, analogous, split-complementary,\n"
+              "monochromatic and random. --count applies to analogous (3),\n"
+              "monochromatic (5) and random (5); --angle to analogous and\n"
+              "split-complementary. The base color is not in the result.")
+    :params [(assoc color-param :optional? true)]
+    :opts [:type :count :angle]
+    :examples ["palette '#3498db'"
+               "palette '#3498db' --type triadic"
+               "palette '#3498db' --type analogous --count 5 --angle 15"
+               "palette --type random --count 8 --json"]
+    :api '[generate-palette complementary triadic tetradic analogous
+           monochromatic split-complementary]
+    :run palette}
+
+   {:name "random"
+    :group :generate
+    :summary "Generate random colors"
+    :doc "Prints one color, or a list with --count."
+    :opts [:count]
+    :examples ["random" "random --count 5 --to hsl"]
+    :api '[random-color]
+    :run random-colors}
+
+   {:name "gradient"
+    :group :generate
+    :summary "Generate evenly spaced steps between two or more colors"
+    :doc (str "Takes two or more colors as stops. hsl and hsv take the\n"
+              "shortest way around the hue circle.")
+    :params [(variadic (assoc color-param :key :colors) 2)]
+    :opts [:steps :space]
+    :examples ["gradient '#ff0000' '#0000ff' --steps 10 --space hsl"
+               "gradient red yellow green --steps 7 --json"]
+    :api '[gradient]
+    :run (fn [{:keys [colors]} {:keys [steps space]}]
+           (mapv ct/color (ct/gradient colors (or steps 5) space)))}
+
+   {:name "interpolate"
+    :group :generate
+    :summary "Pick the color at a position between two or more colors"
+    :doc (str "Position 0 is the first color and 1 the last. Several\n"
+              "positions give a list.")
+    :params [(variadic (assoc color-param :key :colors) 2)]
+    :opts [:at :space]
+    :examples ["interpolate '#ff0000' '#0000ff' --at 0.25"
+               "interpolate red yellow green --at 0.1,0.5,0.9 --space hsl"]
+    :api '[interpolate]
+    :run interpolate}
+
+   {:name "kelvin"
+    :group :generate
+    :summary "Convert a color temperature in kelvin to a color"
+    :doc (str "Accepts 1000 to 40000, with or without a trailing k. For\n"
+              "the reverse, use 'convert COLOR --to kelvin'.")
+    :params [(variadic {:key :kelvin :label "KELVIN"
+                        :parse #(parse/parse-kelvin "KELVIN" %)}
+                       1)]
+    :each? true
+    :examples ["kelvin 6500" "kelvin 2700 4000 6500 --to rgb"]
+    :api '[kelvin->color kelvin->rgb kelvin->hex]
+    :run (fn [{:keys [kelvin]} _] (ct/kelvin->color kelvin))}])
+
 (def commands
-  (vec (concat inspect-commands adjust-commands mix-commands)))
+  (vec (concat inspect-commands adjust-commands mix-commands
+               generate-commands)))

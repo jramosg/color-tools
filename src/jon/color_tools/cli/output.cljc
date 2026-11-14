@@ -33,6 +33,12 @@
 (defn- plain-map? [x]
   (and (map? x) (not (record? x))))
 
+(defn- ordered-map
+  "Apply `f` to each entry of `m` and keep the entries in order, however
+   many there are."
+  [f m]
+  (apply array-map (mapcat f m)))
+
 ;; =============================================================================
 ;; Numbers
 ;; =============================================================================
@@ -149,8 +155,7 @@
                  (ct/color? x) (cell x to true round-fn)
                  (instance? Shown x) (cell (:color x) (:fmt x) (:swatch? x)
                                            round-fn)
-                 (plain-map? x) (apply array-map
-                                       (mapcat (fn [[k v]] [k (walk v)]) x))
+                 (plain-map? x) (ordered-map (fn [[k v]] [k (walk v)]) x)
                  (sequential? x) (mapv walk x)
                  (number? x) (round-fn x)
                  :else x))]
@@ -232,9 +237,8 @@
   (let [walk (fn walk [x]
                (cond
                  (instance? Cell x) (:value x)
-                 (plain-map? x) (apply array-map
-                                       (mapcat (fn [[k v]] [(key-fn k) (walk v)])
-                                               x))
+                 (plain-map? x) (ordered-map (fn [[k v]] [(key-fn k) (walk v)])
+                                             x)
                  (sequential? x) (mapv walk x)
                  (keyword? x) (keyword-fn x)
                  :else x))]

@@ -61,6 +61,22 @@
    {:id :count :long "--count" :short "-n" :arg "N"
     :parse #(parse/parse-integer "--count" 1 nil %)
     :doc "How many colors to generate"}
+   {:id :type :long "--type" :arg "TYPE"
+    :parse (one-of "--type" commands/palette-types)
+    :doc "Palette type"}
+   {:id :angle :long "--angle" :arg "DEGREES"
+    :parse #(parse/parse-number "--angle" %)
+    :doc "Hue step in degrees (default 30)"}
+   {:id :steps :long "--steps" :arg "N"
+    :parse #(parse/parse-integer "--steps" 2 nil %)
+    :doc "How many colors in the gradient, at least 2 (default 5)"}
+   {:id :space :long "--space" :arg "SPACE"
+    :parse (one-of "--space" [:rgb :hsl :hsv])
+    :doc "Interpolate in rgb (default), hsl or hsv"}
+   {:id :at :long "--at" :arg "POSITION" :multi? true
+    :parse (fn [s]
+             (mapv #(parse/parse-fraction "--at" %) (str/split s #",")))
+    :doc "Position from 0 to 1 (default 0.5); repeat or separate by commas"}
    {:id :as :long "--as" :arg "FORMAT"
     :parse (one-of "--as" input-formats)
     :doc "Require the input to be in this format"}])
@@ -123,9 +139,10 @@
 
 (defn- usage-line [command]
   (str "Usage: " program " " (:name command)
-       (str/join (map (fn [{:keys [label rest? optional?]}]
+       (str/join (map (fn [{:keys [label rest? optional? min]}]
                         (cond
-                          rest? (str " " label "...")
+                          rest? (str (str/join (repeat min (str " " label)))
+                                     "...")
                           optional? (str " [" label "]")
                           :else (str " " label)))
                       (:params command)))
