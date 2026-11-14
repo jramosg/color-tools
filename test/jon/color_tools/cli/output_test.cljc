@@ -29,6 +29,7 @@
     (are [fmt expected] (= (str expected "\n") (text blue {:to fmt}))
       nil "#3498db"
       :hex "#3498db"
+      :hex8 "#3498dbff"
       :rgb "rgb(52, 152, 219)"
       :rgba "rgba(52, 152, 219, 1)"
       :hsl "hsl(204, 70%, 53%)"
@@ -42,7 +43,9 @@
     (is (= "none\n" (text (ct/color "#ff0000") {:to :kelvin}))))
   (testing "translucent colors keep their alpha by default"
     (is (= "rgba(52, 152, 219, 0.5)\n" (text glass)))
-    (is (= "#3498db\n" (text glass {:to :hex}))))
+    (is (= "#3498db\n" (text glass {:to :hex})))
+    (is (= "#3498db80\n" (text glass {:to :hex8})))
+    (is (= "#00000000\n" (text (ct/color 0 0 0 0) {:to :hex8}))))
   (testing "rounding options"
     (is (= "oklch(0.65 0.13 242.69)\n"
            (text blue {:to :oklch :precision 2})))

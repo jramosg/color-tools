@@ -10,11 +10,11 @@
    [jon.color-tools :as ct]))
 
 (def color-formats
-  [:hex :rgb :rgba :hsl :hsv :lab :oklab :oklch :name :kelvin])
+  [:hex :hex8 :rgb :rgba :hsl :hsv :lab :oklab :oklch :name :kelvin])
 
 (def css-color-formats
   "Formats whose text form is a valid CSS color."
-  #{:hex :rgb :rgba :hsl :oklab :oklch})
+  #{:hex :hex8 :rgb :rgba :hsl :oklab :oklch})
 
 (def default-text-places
   "Decimal places for fractional numbers in text output."
@@ -99,6 +99,10 @@
   (let [rgb (ct/->rgb color)]
     (case fmt
       :hex (ct/->hex color)
+      ;; rgb->hex formats the alpha byte as it does a channel.
+      :hex8 (str (ct/->hex color)
+                 (subs (ct/rgb->hex [0 0 (ct/round-int (* 255 (:a color)))])
+                       5))
       :rgb rgb
       :rgba (ct/->rgba color)
       :hsl (ct/->hsl color)
@@ -117,7 +121,7 @@
                    (cons (format-number h)
                          (map #(str (format-number %) "%") more)))]
     (case fmt
-      (:hex :name :css-rgba) value
+      (:hex :hex8 :name :css-rgba) value
       :rgb (css-function "rgb" ", " (numbers value))
       :rgba (css-function "rgba" ", " (numbers value))
       :hsl (css-function "hsl" ", " (percents value))

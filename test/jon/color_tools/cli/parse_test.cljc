@@ -20,6 +20,18 @@
       "rgb(52,152,219)" [:rgb [52 152 219 1.0]]
       "RGB( 52 152 219 )" [:rgb [52 152 219 1.0]]
       "rgba(52, 152, 219, 0.5)" [:rgba [52 152 219 0.5]]))
+  (testing "hex with an alpha channel"
+    (are [input expected] (= expected (parsed input))
+      "#3498dbff" [:hex [52 152 219 1.0]]
+      "#3498DB00" [:hex [52 152 219 0.0]]
+      "#f00f" [:hex [255 0 0 1.0]])
+    (is (= [:hex [52 152 219]]
+           (update (parsed "#3498db80") 1 pop)))
+    (is (< 0.5019 (peek (second (parsed "#3498db80"))) 0.502))
+    (is (< 0.5333 (peek (second (parsed "#f008"))) 0.5334))
+    (testing "needs the #, so plain numbers are not colors"
+      (is (= "not a color" (:error (parse/try-color "3498db80"))))
+      (is (= "not a color" (:error (parse/try-color "6500"))))))
   (testing "CSS forms the library does not parse"
     (are [input expected] (= expected (parsed input))
       "rgb(52 152 219 / 50%)" [:rgba [52 152 219 0.5]]
@@ -84,7 +96,9 @@
   (testing "numbers"
     (is (= -30.0 (parse/parse-number "DEGREES" "-30")))
     (is (usage-error? #(parse/parse-number "DEGREES" "NaN")))
-    (is (usage-error? #(parse/parse-number "DEGREES" "1e999"))))
+    (is (usage-error? #(parse/parse-number "DEGREES" "1e999")))
+    (is (= 0.0 (parse/parse-number "N" 0 "0")))
+    (is (usage-error? #(parse/parse-number "N" 0 "-1"))))
   (testing "integers"
     (is (= 5 (parse/parse-integer "COUNT" 1 nil "5")))
     (is (usage-error? #(parse/parse-integer "COUNT" 1 nil "0")))

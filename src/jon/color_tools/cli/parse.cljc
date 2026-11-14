@@ -17,7 +17,7 @@
 
 (def color-forms
   "The accepted color notations, as lines of help text."
-  ["'#3498db', 3498db, '#fff' or a name such as navy"
+  ["'#3498db', 3498db, '#fff', '#3498db80' or a name such as navy"
    "'rgb(52,152,219)', 'rgba(52,152,219,0.5)' or 52,152,219"
    "'hsl(204,70%,53%)' or 'hsv(204,76%,86%)'"
    "'oklab(0.65 -0.06 -0.11)' or 'oklch(0.65 0.13 243)'"
@@ -46,10 +46,20 @@
       n)))
 
 (defn parse-number
-  "Parse `s` as a finite number. `label` names the value in the error."
-  [label s]
-  (or (finite-number (str/trim s))
-      (throw (usage-error (str label " must be a number, got " (pr-str s))))))
+  "Parse `s` as a finite number, of at least `low` when given. `label`
+   names the value in the error."
+  ([label s] (parse-number label nil s))
+  ([label low s]
+   (let [n (finite-number (str/trim s))]
+     (cond
+       (nil? n)
+       (throw (usage-error (str label " must be a number, got " (pr-str s))))
+
+       (and low (< n low))
+       (throw (usage-error
+               (str label " must be at least " low ", got " (pr-str s))))
+
+       :else n))))
 
 (defn parse-choice
   "Parse one of `choices`, a sequence of keywords, ignoring case."
@@ -229,6 +239,19 @@
     (when-let [rgba (ct/parse-css-color-components s)]
       {:format :rgba :color (ct/color-from-rgba rgba)})))
 
+(defn- alpha-hex-color
+  "CSS hex with an alpha channel: #rgba or #rrggbbaa. The # is required,
+   so that 4 and 8 digit numbers are not read as colors."
+  [s]
+  (when-let [[_ digits] (re-matches #"^#([0-9a-fA-F]{8}|[0-9a-fA-F]{4})$" s)]
+    (let [short? (= 4 (count digits))
+          rgb-length (if short? 3 6)
+          alpha (subs digits rgb-length)
+          alpha-byte (ct/parse-int (cond->> alpha short? (str alpha)) 16)]
+      {:format :hex
+       :color (ct/with-alpha (ct/color-from-hex (subs digits 0 rgb-length))
+                (/ alpha-byte 255.0))})))
+
 (defn- kelvin-color [s]
   (when-let [[_ n] (re-matches #"(?i)(\d+(?:\.\d+)?)\s*k" s)]
     (let [kelvin (parse-double n)]
@@ -250,6 +273,7 @@
   [input]
   (let [s (str/trim input)]
     (assoc (or (library-color s)
+               (alpha-hex-color s)
                (kelvin-color s)
                (function-color s)
                (bare-color s)

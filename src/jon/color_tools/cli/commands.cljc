@@ -133,7 +133,8 @@
     :api '[color ->color ->Color map->Color color? color-from-hex
            color-from-rgb color-from-rgba color-from-hsl color-from-hsv
            ->hex ->rgb ->rgba ->hsl ->hsv ->name rgb->lab rgb->oklab
-           rgb->oklch rgb->kelvin hex->rgb rgb->hex hex->rgba rgba->hex rgb->hsl hsl->rgb
+           rgb->oklch rgb->kelvin hex->rgb rgb->hex hex->rgba rgba->hex
+           rgb->hsl hsl->rgb
            hex->hsl hsl->hex rgb->hsv hsv->rgb parse-css-rgb parse-css-rgba
            parse-css-color-components normalize-css-color-string
            normalize-hex name->hex oklab->rgb oklab->hex oklab->oklch
@@ -589,7 +590,7 @@
     :doc (str "Prints backgrounds, surfaces, brand colors, the text color\n"
               "that meets --level on each, and a 50 to 900 scale.\n"
               "--format css prints custom properties ready to paste; with\n"
-              "it, --to takes hex, rgb, rgba, hsl, oklab or oklch.\n"
+              "it, --to takes hex, hex8, rgb, rgba, hsl, oklab or oklch.\n"
               "--prefix brand gives --brand-primary; a prefix that starts\n"
               "with -- is used as given.")
     :css? true

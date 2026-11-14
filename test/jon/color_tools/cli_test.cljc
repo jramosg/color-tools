@@ -60,10 +60,12 @@
     ["convert"] "missing COLOR\nUsage: color-tools convert COLOR..."
     ["convert" "nope"] "invalid color \"nope\": not a color\nAccepted colors:"
     ["names" "extra"] "unexpected argument \"extra\""
-    ["convert" "#fff" "--bogus"] "unknown option --bogus"
+    ["convert" "#fff" "--bogus"] "unknown option --bogus\n"
+    ["convert" "#fff" "-x"] "unknown option -x\n"
+    ["similar" "red" "red" "--threshold" "-1"] "--threshold must be at least 0"
     ["convert" "#fff" "--josn"] "unknown option --josn\nDid you mean --json?"
     ["convert" "#fff" "--to"] "--to needs a value: --to FORMAT"
-    ["convert" "#fff" "--to" "cmyk"] "--to must be one of hex, rgb"
+    ["convert" "#fff" "--to" "cmyk"] "--to must be one of hex, hex8, rgb"
     ["convert" "#fff" "--json=yes"] "--json takes no value"
     ["convert" "#fff" "--as" "hex"] "--as is not an option of 'convert'"
     ["convert" "#fff" "--precision" "x"] "--precision must be a whole number"
@@ -72,6 +74,19 @@
     ["convert" "#fff" "--json" "--edn"] "use only one of --format, --json"
     ["convert" "#fff" "-p" "2" "--significant" "2"]
     "use --precision or --significant, not both"))
+
+(deftest color-shorthand-test
+  (testing "a color where a command goes means info"
+    (is (= (out "info" "#3498db") (out "#3498db")))
+    (is (= (out "info" "navy" "rgb(52,152,219)" "--json")
+           (out "navy" "rgb(52,152,219)" "--json")))
+    (is (= (out {:stdin "#fff\n"} "info" "-") (out {:stdin "#fff\n"} "-"))))
+  (testing "a command name wins over a color"
+    (is (= "red\n" (out "name" "red"))))
+  (testing "anything else is still an unknown command"
+    (is (= 2 (:exit (run "nope" "#fff")))))
+  (testing "help help is the top-level help"
+    (is (= (out "help") (out "help" "help")))))
 
 (deftest option-syntax-test
   (is (= "hsl(0, 0%, 100%)\n" (out "convert" "#fff" "--to" "hsl")))
@@ -189,7 +204,11 @@
   (testing "translucent colors keep their alpha unless told otherwise"
     (is (= ["rgba(52, 152, 219, 0.5)"]
            (lines "convert" "rgba(52,152,219,0.5)")))
-    (is (= ["#3498db"] (lines "convert" "rgba(52,152,219,0.5)" "-t" "hex"))))
+    (is (= ["#3498db"] (lines "convert" "rgba(52,152,219,0.5)" "-t" "hex")))
+    (is (= ["#3498db80"] (lines "convert" "#3498db80" "--to" "hex8")))
+    (is (= ["rgba(52, 152, 219, 0.502)"] (lines "convert" "#3498db80")))
+    (is (= "\"#3498db80\"\n"
+           (out "alpha" "#3498db" "0.5" "--to" "hex8" "--json"))))
   (testing "colors outside sRGB are clamped with a warning"
     (is (= {:exit 0
             :out "#00d600\n"
