@@ -296,8 +296,38 @@
 (defn json [tree]
   (str (json-lines (plain tree name name) "") "\n"))
 
+(defn- spaces [n]
+  (apply str (repeat n " ")))
+
+(defn- edn-lines
+  "Pretty-print EDN the way Clojure code is laid out: one map entry per
+   line with values aligned under each other, nested collections indented
+   to their opening bracket, and vectors of scalars on one line. `column`
+   is where `x` starts."
+  [x column]
+  (let [inner (inc column)
+        break (str "\n" (spaces inner))]
+    (cond
+      (and (map? x) (seq x))
+      (str "{"
+           (str/join break
+                     (map (fn [[k v]]
+                            (let [k (pr-str k)]
+                              (str k " "
+                                   (edn-lines v (+ inner (count k) 1)))))
+                          x))
+           "}")
+
+      (and (sequential? x) (some coll? x))
+      (str "[" (str/join break (map #(edn-lines % inner) x)) "]")
+
+      (sequential? x)
+      (str "[" (str/join " " (map pr-str x)) "]")
+
+      :else (pr-str x))))
+
 (defn edn [tree]
-  (str (pr-str (plain tree identity identity)) "\n"))
+  (str (edn-lines (plain tree identity identity) 0) "\n"))
 
 ;; =============================================================================
 ;; CSS

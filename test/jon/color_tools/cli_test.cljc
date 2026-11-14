@@ -452,11 +452,18 @@
                                   "contrast" "-" "#fff" "--level" "aa"
                                   "--edn")]
       (is (= 1 exit))
-      (is (= (str "[{:ratio " #?(:clj "21.0" :cljs "21")
-                  ", :aa true, :aa-large true, :aaa true,"
-                  " :level :aa, :pass true}"
-                  " {:ratio 3.15, :aa false, :aa-large true, :aaa false,"
-                  " :level :aa, :pass false}]\n")
+      (is (= (str "[{:ratio " #?(:clj "21.0" :cljs "21") "\n"
+                  "  :aa true\n"
+                  "  :aa-large true\n"
+                  "  :aaa true\n"
+                  "  :level :aa\n"
+                  "  :pass true}\n"
+                  " {:ratio 3.15\n"
+                  "  :aa false\n"
+                  "  :aa-large true\n"
+                  "  :aaa false\n"
+                  "  :level :aa\n"
+                  "  :pass false}]\n")
              out))))
   (is (fails-with? 2 "--level must be one of aa, aa-large, aaa"
                    "contrast" "#000" "#fff" "--level" "a")))

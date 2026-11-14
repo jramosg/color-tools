@@ -13,8 +13,8 @@ All notable changes to this project will be documented in this file. This change
   - Reads hex, names, `rgb()`, `rgba()`, `hsl()`, `hsv()`, `oklab()`,
     `oklch()`, bare channels and temperatures such as `6500k`; `-` reads
     colors from stdin
-  - Prints text with terminal swatches, JSON, EDN, or CSS custom properties
-    for themes; `--to` picks the color format
+  - Prints text with terminal swatches, pretty-printed JSON and EDN, or CSS
+    custom properties for themes; `--to` picks the color format
   - Exits 0 on success, 1 when a check such as `contrast --level aa` fails
     and 2 on invalid input, for use in scripts and CI
   - Every public function has a command; a test keeps the

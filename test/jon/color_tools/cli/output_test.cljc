@@ -115,10 +115,30 @@
     (is (= "\"a\\\"b\\\\c\\n\\u0001\"\n" (out/json "a\"b\\c\n\u0001")))))
 
 (deftest edn-test
-  (is (= "{:mode :light, :primary \"#3498db\", :hsl [204 70 53]}\n"
-         (out/edn (out/resolve (array-map :mode :light :primary blue
-                                          :hsl (out/shown blue :hsl))
-                               {:format :edn})))))
+  (testing "scalars and vectors of scalars stay on one line"
+    (is (= "\"#3498db\"\n" (out/edn (out/resolve blue {:format :edn}))))
+    (is (= "[204 70 53]\n"
+           (out/edn (out/resolve blue {:format :edn :to :hsl})))))
+  (testing "maps print one entry per line, nested ones aligned"
+    (is (= (str "{:mode :light\n"
+                " :primary \"#3498db\"\n"
+                " :hsl [204 70 53]\n"
+                " :kelvin nil\n"
+                " :scale {:50 \"#ffffff\"\n"
+                "         :500 \"#3498db\"}}\n")
+           (out/edn (out/resolve
+                     (array-map :mode :light :primary blue
+                                :hsl (out/shown blue :hsl) :kelvin nil
+                                :scale (array-map :50 (ct/color "#fff")
+                                                  :500 blue))
+                     {:format :edn})))))
+  (testing "vectors of collections print one item per line"
+    (is (= "[{:a 1\n  :b 2}\n {:a 3}]\n"
+           (out/edn [(array-map :a 1 :b 2) {:a 3}])))
+    (is (= "[[1 2]\n [3]]\n" (out/edn [[1 2] [3]]))))
+  (testing "empty collections"
+    (is (= "{}\n" (out/edn {})))
+    (is (= "[]\n" (out/edn [])))))
 
 (deftest css-test
   (is (= ":root {\n  --ct-primary: #3498db;\n  --ct-accent: oklch(1 0 0);\n}\n"
