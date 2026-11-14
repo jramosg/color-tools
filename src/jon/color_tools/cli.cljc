@@ -7,6 +7,7 @@
   (:require
    [clojure.string :as str]
    [jon.color-tools.cli.commands :as commands]
+   [jon.color-tools.cli.completions :as completions]
    [jon.color-tools.cli.output :as out]
    [jon.color-tools.cli.parse :as parse]))
 
@@ -22,20 +23,15 @@
 ;; Options
 ;; =============================================================================
 
-(defn- one-of
-  "A parser for an option that takes one of `values`."
-  [flag values]
-  #(parse/parse-choice flag values %))
-
 (def ^:private input-formats
   [:hex :name :rgb :rgba :hsl :hsv :oklab :oklch :kelvin])
 
-(def ^:private option-specs
+(def ^:private option-table
   [{:id :to :long "--to" :short "-t" :arg "FORMAT"
-    :parse (one-of "--to" out/color-formats)
+    :choices out/color-formats
     :doc "Print colors in this format; see Formats"}
    {:id :format :long "--format" :short "-f" :arg "FORMAT"
-    :parse (one-of "--format" [:text :json :edn :css])
+    :choices [:text :json :edn :css]
     :doc "Output as text (default), json or edn"}
    {:id :json :long "--json" :doc "Same as --format json"}
    {:id :edn :long "--edn" :doc "Same as --format edn"}
@@ -46,7 +42,7 @@
     :parse #(parse/parse-integer "--significant" 1 17 %)
     :doc "Round fractional numbers to N significant digits"}
    {:id :color :long "--color" :arg "WHEN"
-    :parse (one-of "--color" [:auto :always :never])
+    :choices [:auto :always :never]
     :doc "Show color swatches: auto (default), always or never"}
    {:id :no-color :long "--no-color" :doc "Same as --color never"}
    {:id :quiet :long "--quiet" :short "-q"
@@ -57,12 +53,13 @@
     :parse #(parse/parse-fraction "--ratio" %)
     :doc "Share of the second color, from 0 to 1 (default 0.5)"}
    {:id :mode :long "--mode" :short "-m" :arg "MODE"
+    :complete [:light :dark :both :multiply :screen :overlay :alpha]
     :doc "Mode"}
    {:id :count :long "--count" :short "-n" :arg "N"
     :parse #(parse/parse-integer "--count" 1 nil %)
     :doc "How many colors to generate"}
    {:id :type :long "--type" :arg "TYPE"
-    :parse (one-of "--type" commands/palette-types)
+    :choices commands/palette-types
     :doc "Palette type"}
    {:id :angle :long "--angle" :arg "DEGREES"
     :parse #(parse/parse-number "--angle" %)
@@ -71,14 +68,14 @@
     :parse #(parse/parse-integer "--steps" 2 nil %)
     :doc "How many colors in the gradient, at least 2 (default 5)"}
    {:id :space :long "--space" :arg "SPACE"
-    :parse (one-of "--space" [:rgb :hsl :hsv])
+    :choices [:rgb :hsl :hsv]
     :doc "Interpolate in rgb (default), hsl or hsv"}
    {:id :at :long "--at" :arg "POSITION" :multi? true
     :parse (fn [s]
              (mapv #(parse/parse-fraction "--at" %) (str/split s #",")))
     :doc "Position from 0 to 1 (default 0.5); repeatable"}
    {:id :level :long "--level" :short "-l" :arg "LEVEL"
-    :parse (one-of "--level" [:aa :aa-large :aaa])
+    :choices [:aa :aa-large :aaa]
     :doc "aa (4.5:1, default), aa-large (3:1) or aaa (7:1)"}
    {:id :on :long "--on" :arg "BACKGROUND"
     :parse (:parse commands/color-param)
@@ -92,14 +89,21 @@
    {:id :vars :long "--vars"
     :doc "Name tokens as CSS custom properties"}
    {:id :metric :long "--metric" :arg "METRIC"
-    :parse (one-of "--metric" [:rgb :delta-e])
+    :choices [:rgb :delta-e]
     :doc "rgb (default) or delta-e"}
    {:id :threshold :long "--threshold" :arg "N"
     :parse #(parse/parse-number "--threshold" 0 %)
     :doc "Threshold"}
    {:id :as :long "--as" :arg "FORMAT"
-    :parse (one-of "--as" input-formats)
+    :choices input-formats
     :doc "Require the input to be in this format"}])
+
+(def ^:private option-specs
+  "The option table, with a parser for each option that has :choices."
+  (mapv (fn [{:keys [long choices] :as spec}]
+          (cond-> spec
+            choices (assoc :parse #(parse/parse-choice long choices %))))
+        option-table))
 
 (def ^:private global-options
   [:to :format :json :edn :precision :significant :color :no-color :quiet
@@ -233,7 +237,9 @@
                  ["2" "invalid input or usage"]])
        "\n"
        "Run '" program " help <command>' for arguments, options and"
-       " examples.\n"))
+       " examples.\n"
+       "Run '" program " completions bash|zsh|fish' for a shell completion"
+       " script.\n"))
 
 (defn- command-help [command]
   (let [own (command-options command)]
@@ -533,6 +539,31 @@
      :out (if (:quiet opts) "" (render command value opts process))
      :err (str/join (map #(str program ": warning: " % "\n") @warnings))}))
 
+(defn- completion-script
+  "The completion script for the shell named by `args`."
+  [args]
+  (when (not= 1 (count args))
+    (throw (parse/usage-error
+            (if (empty? args)
+              "missing SHELL"
+              (str "unexpected argument " (pr-str (second args))))
+            (str "Usage: " program " completions bash|zsh|fish"))))
+  (completions/script
+   (parse/parse-choice "SHELL" completions/shells (first args))
+   {:commands (concat commands/commands
+                      [{:name "help" :summary "Show help"}
+                       {:name "completions"
+                        :summary "Print a shell completion script"}])
+    :options (map #(cond-> % (:complete %) (assoc :choices (:complete %)))
+                  option-specs)
+    :first-arguments (into {"help" (map :name commands/commands)
+                            "completions" completions/shells}
+                           (keep (fn [{:keys [name params]}]
+                                   (when-let [choices (:choices
+                                                       (first params))]
+                                     [name choices])))
+                           commands/commands)}))
+
 (defn- color-word?
   "True when `word` can stand where a command goes: a color, or - for
    colors on stdin."
@@ -555,6 +586,9 @@
 
       (= "help" word)
       {:exit exit-ok :out (command-help (find-command (first more))) :err ""}
+
+      (= "completions" word)
+      {:exit exit-ok :out (completion-script more) :err ""}
 
       (:help opts)
       {:exit exit-ok :out (command-help (find-command word)) :err ""}

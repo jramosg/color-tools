@@ -46,3 +46,31 @@
   (testing "--version"
     (is (= {:exit 0 :out (str "color-tools " cli/version "\n") :err ""}
            (color-tools nil "--version")))))
+
+(defn- bash-complete
+  "What the bash completion script offers for a command line. The last
+   word is the one being completed."
+  [script & words]
+  (let [quoted (str/join " " (map #(str "'" % "'") words))]
+    (-> (shell/sh "bash" "-c"
+                  (str script "\n"
+                       "COMP_WORDS=(" quoted ")\n"
+                       "COMP_CWORD=$((${#COMP_WORDS[@]} - 1))\n"
+                       "_color_tools\n"
+                       "echo \"${COMPREPLY[*]}\"\n"))
+        :out
+        str/trim)))
+
+(deftest bash-completion-test
+  (let [script (:out (cli/run ["completions" "bash"] {}))
+        complete (partial bash-complete script "color-tools")]
+    (is (= "convert contrast" (complete "con")))
+    (is (= "oklab oklch" (complete "convert" "--to" "ok")))
+    (is (= "aa aa-large aaa" (complete "contrast" "-l" "")))
+    (is (= "warm cool light dark vibrant muted" (complete "is" "")))
+    (is (= "--mode --metric" (complete "theme" "--m")))
+    (is (= "grayscale gradient" (complete "help" "gra")))
+    (is (= "bash zsh fish" (complete "completions" "")))
+    (testing "nothing after an option that takes free text, or for colors"
+      (is (= "" (complete "convert" "--precision" "")))
+      (is (= "" (complete "convert" ""))))))

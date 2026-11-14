@@ -664,3 +664,25 @@
       (is (str/includes? help "Examples:"))
       (doseq [line (str/split-lines help)]
         (is (<= (count line) 80) line)))))
+
+(deftest completions-test
+  (testing "each shell gets a script that knows every command and option"
+    (doseq [shell ["bash" "zsh" "fish"]
+            :let [script (out "completions" shell)]]
+      (testing shell
+        (doseq [command (map :name commands/commands)]
+          (is (str/includes? script command)))
+        (doseq [word ["help" "completions" "to" "dark-selector" "oklch"
+                      "split-complementary" "aa-large" "delta-e" "vibrant"]]
+          (is (str/includes? script word) word)))))
+  (testing "the scripts say which shell they are for"
+    (is (str/starts-with? (out "completions" "bash") "# bash completion"))
+    (is (str/starts-with? (out "completions" "zsh") "#compdef color-tools"))
+    (is (str/starts-with? (out "completions" "fish") "# fish completion")))
+  (testing "errors"
+    (is (fails-with? 2 "missing SHELL\nUsage: color-tools completions"
+                     "completions"))
+    (is (fails-with? 2 "SHELL must be one of bash, zsh, fish"
+                     "completions" "powershell"))
+    (is (fails-with? 2 "unexpected argument \"zsh\""
+                     "completions" "bash" "zsh"))))
