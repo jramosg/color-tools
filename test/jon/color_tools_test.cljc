@@ -500,7 +500,7 @@
 
   (testing "A dark muted surface darkens until AAA text can be read on it"
     ;; Before the fix this muted was #67672d, where white text reaches
-    ;; only 6.45:1.
+    ;; only 5.91:1.
     (let [theme (sut/accessible-theme "#ffff00" {:mode :dark :level :aaa})]
       (is (= "#575726" (:muted theme)))
       (is (sut/accessible? (:muted theme) (:on-muted theme) :aaa))
