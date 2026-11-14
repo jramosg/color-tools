@@ -295,7 +295,7 @@ hex          #3498db
 rgb          rgb(52, 152, 219)
 hsl          hsl(204, 70%, 53%)
 hsv          hsv(204, 76%, 86%)
-lab          lab(60.1597 -6.0866 -42.2363)
+lab          lab(60.157 -6.096 -42.2295)
 oklab        oklab(0.6531 -0.0618 -0.1197)
 oklch        oklch(0.6531 0.1347 242.6867)
 alpha        1
@@ -556,8 +556,8 @@ $ color-tools luminance '#3498db'
 ```
 
 `theme` generates UI tokens from one brand color: backgrounds, surfaces,
-brand colors, a text color that meets `--level` on each, and a 50 to 900
-scale. `--mode` is `light`, `dark` or `both`.
+brand colors, a text color for each, and a 50 to 900 scale. `--mode` is
+`light`, `dark` or `both`.
 
 ```console
 $ color-tools theme '#3498db'
@@ -588,6 +588,17 @@ scale
   700  #246a99
   800  #1d5478
   900  #153d58
+```
+
+Text always meets `--level` on the background and the surfaces. The brand
+color stays as you gave it, and on a mid-tone color no text reaches `aaa`
+(7:1): black is too dark and white too light. The theme then uses whichever
+has more contrast and a warning on stderr names the pair:
+
+```console
+$ color-tools theme '#3498db' --level aaa --quiet
+color-tools: warning: on-primary has 6.66:1 on primary #3498db; no text color reaches aaa (7:1) on it
+color-tools: warning: on-accent has 6.65:1 on accent #db7633; no text color reaches aaa (7:1) on it
 ```
 
 `--format css` prints custom properties, ready for a stylesheet:
@@ -673,7 +684,7 @@ difference, which is closer to what the eye sees. Under 1 is invisible,
 $ color-tools distance '#3498db' '#2980b9'
 43.0465
 $ color-tools distance '#3498db' '#2980b9' --metric delta-e
-10.3273
+10.3267
 ```
 
 `similar` is the same measurement as a check. The default `--threshold` is
@@ -687,7 +698,7 @@ threshold  50
 similar    true
 $ color-tools similar '#3498db' '#2980b9' --metric delta-e
 metric     delta-e
-distance   10.3273
+distance   10.3267
 threshold  2.3
 similar    false
 ```

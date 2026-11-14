@@ -553,7 +553,8 @@
     {:exit (if passed? exit-ok exit-check-failed)
      :out (let [text (render command value opts process)]
             (if (:quiet opts) "" text))
-     :err (str/join (map #(str program ": warning: " % "\n") @warnings))}))
+     :err (str/join (map #(str program ": warning: " % "\n")
+                         (distinct @warnings)))}))
 
 (defn- completion-script
   "The completion script for the shell named by `args`."
