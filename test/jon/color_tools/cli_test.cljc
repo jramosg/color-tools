@@ -68,7 +68,10 @@
     ["convert" "#fff" "--as" "hex"] "--as is not an option of 'convert'"
     ["convert" "#fff" "--precision" "x"] "--precision must be a whole number"
     ["convert" "#fff" "--format" "css"] "--format css is not available"
-    ["convert" "-" "-"] "only one argument can be - (stdin)"))
+    ["convert" "-" "-"] "only one argument can be - (stdin)"
+    ["convert" "#fff" "--json" "--edn"] "use only one of --format, --json"
+    ["convert" "#fff" "-p" "2" "--significant" "2"]
+    "use --precision or --significant, not both"))
 
 (deftest option-syntax-test
   (is (= "hsl(0, 0%, 100%)\n" (out "convert" "#fff" "--to" "hsl")))

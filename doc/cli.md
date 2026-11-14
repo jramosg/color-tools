@@ -117,6 +117,10 @@ color-tools info "$BRAND_COLOR"     # double quotes around a variable
 color-tools info 3498db             # hex without the # needs no quotes
 ```
 
+Every color is held as 8-bit sRGB with an alpha, as in the library's `Color`
+record. Converting `oklch()` input back to `oklch` therefore gives the
+coordinates of the nearest 8-bit color, not the digits you typed.
+
 Oklab and OKLCh can describe colors a screen cannot show. Those are clamped
 into sRGB with a warning on stderr; `color-tools gamut` tells you beforehand.
 

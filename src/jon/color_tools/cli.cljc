@@ -322,8 +322,15 @@
         (recur more opts (conj positional token))))))
 
 (defn- check-options
-  "Reject options the command does not take."
+  "Reject options the command does not take, and pairs that contradict
+   each other."
   [command opts]
+  (when (< 1 (count (filter opts [:format :json :edn])))
+    (throw (parse/usage-error
+            "use only one of --format, --json and --edn")))
+  (when (and (:precision opts) (:significant opts))
+    (throw (parse/usage-error
+            "use --precision or --significant, not both")))
   (let [allowed (into (set global-options)
                       (map :id)
                       (command-options command))]
