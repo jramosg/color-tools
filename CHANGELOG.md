@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file. This change
   formats, adjust, mix and blend colors, generate palettes, gradients and
   accessible themes, and check WCAG contrast without writing Clojure. See the
   [CLI guide](doc/cli.md).
-  - Runs on Node.js (`npx color-tools`), Babashka
+  - Runs on Node.js (`npx @jramosg/color-tools`), Babashka
     (`bbin install io.github.jramosg/color-tools`) and the JVM
     (`clojure -M -m jon.color-tools.main`)
   - Reads hex, names, `rgb()`, `rgba()`, `hsl()`, `hsv()`, `oklab()`,
