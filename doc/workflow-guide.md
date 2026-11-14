@@ -541,10 +541,10 @@ Color temperature represents the color of light emitted by a black body at a giv
 ```clojure
 ;; Works best for colors on the black body curve
 (color/rgb->kelvin (color/kelvin->rgb 1800))
-;=> 1805  ; Close to 1800K
+;=> 1806  ; Close to 1800K
 
 (color/rgb->kelvin [255 249 253])
-;=> 6452  ; Close to 6500K
+;=> 6451  ; Close to 6500K
 
 ;; Returns nil for non-black-body colors
 (color/rgb->kelvin [255 0 0])

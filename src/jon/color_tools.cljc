@@ -1345,17 +1345,9 @@
   (color-from-rgb (kelvin->rgb kelvin)))
 
 (defn- rgb->xy
-  "CIE 1931 xy chromaticity of an sRGB vector, or nil for black.
-
-   Keeps the 4-digit matrix of IEC 61966-2-1 on purpose. McCamy's formula,
-   which rgb->kelvin applies to this result, is only good to tens of
-   kelvin, and with these digits sRGB white comes out at 6504 K, the
-   nominal temperature of D65. The full matrix gives 6503 K."
+  "CIE 1931 xy chromaticity of an sRGB vector, or nil for black."
   [rgb]
-  (let [[r g b] (map #(to-linear-rgb (/ % 255.0)) rgb)
-        x (+ (* 0.4124 r) (* 0.3576 g) (* 0.1805 b))
-        y (+ (* 0.2126 r) (* 0.7152 g) (* 0.0722 b))
-        z (+ (* 0.0193 r) (* 0.1192 g) (* 0.9505 b))
+  (let [[x y z] (rgb->xyz rgb)
         sum (+ x y z)]
     (when (pos? sum)
       [(/ x sum) (/ y sum)])))

@@ -46,7 +46,8 @@ All notable changes to this project will be documented in this file. This change
   instead of the reference `[53.241 80.092 67.203]`. It now uses the full
   matrix and matches reference values to 0.001. `delta-e` and
   `perceptually-similar?` build on it, so their results shift by a similar
-  amount.
+  amount. `rgb->kelvin` uses the same matrix and can differ by 1 K: sRGB
+  white is now 6503 K instead of 6504 K.
 
 ## [1.3.0] - 2026-11-13
 ### Added
