@@ -179,6 +179,11 @@ $ color-tools contrast '#3498db' '#ffffff' --json
 }
 $ color-tools tints '#3498db' --count 3 --edn
 ["#78bae7" "#bbddf3" "#ffffff"]
+$ color-tools similar '#3498db' '#3499dc' --edn
+{:metric :rgb
+ :distance 1.4142135623730951
+ :threshold 50
+ :similar true}
 ```
 
 The shape is stable: a command given one color prints one value, and a
