@@ -538,7 +538,7 @@ $ color-tools luminance '#3498db'
 
 `theme` generates UI tokens from one brand color: backgrounds, surfaces,
 brand colors, a text color that meets `--level` on each, and a 50 to 900
-scale. `--mode` is `light` or `dark`.
+scale. `--mode` is `light`, `dark` or `both`.
 
 ```console
 $ color-tools theme '#3498db'
@@ -611,13 +611,37 @@ $ color-tools theme '#3498db' --mode dark --format css --prefix brand --selector
   `hsl`, `oklab` and `oklch`.
 - `--vars` prints the same properties as text, JSON or EDN.
 
-A light and a dark theme in one file:
+`--mode both` generates the light and the dark theme together. As CSS, the
+dark rule goes in a `prefers-color-scheme` media query, so the page follows
+the reader's system setting:
 
 ```bash
-color-tools theme '#3498db' --format css > theme.css
-color-tools theme '#3498db' --mode dark --format css \
-  --selector '[data-theme=dark]' >> theme.css
+color-tools theme '#3498db' --mode both --format css > theme.css
 ```
+
+```css
+:root {
+  --ct-background: #f7fbfe;
+  /* ... */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ct-background: #06121a;
+    /* ... */
+  }
+}
+```
+
+If your site toggles themes with a class or an attribute, name it with
+`--dark-selector` and the dark rule uses that instead of the media query:
+
+```bash
+color-tools theme '#3498db' --mode both --format css \
+  --dark-selector '[data-theme=dark]' > theme.css
+```
+
+As text, JSON or EDN, `--mode both` gives a map with `light` and `dark`.
 
 ### Analyze and compare
 

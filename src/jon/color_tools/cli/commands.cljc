@@ -522,18 +522,34 @@
             (mapcat #(css-var {:scale (select-keys (:scale theme) [%])})
                     scale-steps)))))
 
-(defn- theme [{:keys [color]} {:keys [mode level prefix vars format]}]
-  (let [mode (parse/parse-choice "--mode" [:light :dark] (or mode "light"))
+(defn- theme-tokens-map
+  "The theme as token names, in a fixed order."
+  [theme]
+  (let [colors (fn [m ks] (mapcat (fn [k] [k (ct/color (m k))]) ks))]
+    (apply array-map
+           (concat [:mode (:mode theme) :level (:level theme)]
+                   (colors theme theme-tokens)
+                   [:scale (apply array-map
+                                  (colors (:scale theme) scale-steps))]))))
+
+(defn- theme
+  "One theme, or with --mode both a map of the :light and the :dark one."
+  [{:keys [color]} {:keys [mode level prefix vars format dark-selector]}]
+  (let [mode (parse/parse-choice "--mode" [:light :dark :both]
+                                 (or mode "light"))
+        _ (when (and dark-selector (not= :both mode))
+            (throw (parse/usage-error
+                    "--dark-selector needs --mode both")))
         prefix (some-> prefix css-prefix)
-        theme (ct/accessible-theme color {:mode mode :level (or level :aa)})
-        colors (fn [m ks] (mapcat (fn [k] [k (ct/color (m k))]) ks))]
-    (if (or vars (= :css format))
-      (theme-vars theme prefix)
-      (apply array-map
-             (concat [:mode mode :level (:level theme)]
-                     (colors theme theme-tokens)
-                     [:scale (apply array-map
-                                    (colors (:scale theme) scale-steps))])))))
+        build (fn [mode]
+                (let [theme (ct/accessible-theme
+                             color {:mode mode :level (or level :aa)})]
+                  (if (or vars (= :css format))
+                    (theme-vars theme prefix)
+                    (theme-tokens-map theme))))]
+    (if (= :both mode)
+      (array-map :light (build :light) :dark (build :dark))
+      (build mode))))
 
 (def ^:private accessibility-commands
   [{:name "contrast"
@@ -545,7 +561,7 @@
               "the background first.")
     :params [(assoc color-param :label "TEXT")
              (assoc color-param :key :background :label "BACKGROUND")]
-    :opts [:level]
+    :opts [[:level "Fail below aa (4.5:1), aa-large (3:1) or aaa (7:1)"]]
     :examples ["contrast '#3498db' '#ffffff'"
                "contrast '#3498db' '#ffffff' --level aa"
                "contrast - '#ffffff' --level aa --json < palette.txt"]
@@ -592,16 +608,22 @@
               "--format css prints custom properties ready to paste; with\n"
               "it, --to takes hex, hex8, rgb, rgba, hsl, oklab or oklch.\n"
               "--prefix brand gives --brand-primary; a prefix that starts\n"
-              "with -- is used as given.")
+              "with -- is used as given.\n"
+              "--mode both gives the light and the dark theme together. As\n"
+              "CSS, the dark one goes in a prefers-color-scheme media\n"
+              "query, or under --dark-selector when you toggle themes\n"
+              "with a class or attribute.")
     :css? true
     :params [color-param]
-    :opts [[:mode "light (default) or dark"] :level :prefix :selector :vars
+    :opts [[:mode "light (default), dark or both"] :level :prefix :selector
+           :dark-selector :vars
            [:format "text (default), json, edn or css"]]
     :examples ["theme '#3498db'"
                "theme '#3498db' --mode dark --level aaa --json"
                "theme '#3498db' --format css > theme.css"
                "theme '#3498db' --format css --prefix brand --to oklch"
-               "theme '#3498db' --mode dark --format css --selector .dark"]
+               "theme '#3498db' --mode both --format css > theme.css"
+               "theme '#3498db' --mode both --format css --dark-selector .dark"]
     :api '[accessible-theme theme->css-vars]
     :run theme}])
 

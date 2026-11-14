@@ -563,8 +563,33 @@
                                  "--level" "aaa")))))
     (is (str/includes? (out "theme" "#3498db" "-m" "dark" "--json")
                        "\"mode\": \"dark\""))
-    (is (fails-with? 2 "--mode must be one of light, dark"
+    (is (fails-with? 2 "--mode must be one of light, dark, both"
                      "theme" "#fff" "--mode" "sepia")))
+  (testing "--mode both gives the light and the dark theme"
+    (let [light (lines "theme" "#3498db" "--format" "css")
+          dark (lines "theme" "#3498db" "--mode" "dark" "--format" "css")
+          indented (map #(str "  " %) dark)]
+      (testing "as CSS, dark goes in a media query"
+        (is (= (concat light
+                       ["" "@media (prefers-color-scheme: dark) {"]
+                       indented
+                       ["}"])
+               (lines "theme" "#3498db" "--mode" "both" "--format" "css"))))
+      (testing "or under --dark-selector"
+        (is (= (concat light [""] (cons ".dark {" (rest dark)))
+               (lines "theme" "#3498db" "--mode" "both" "--format" "css"
+                      "--dark-selector" ".dark")))))
+    (testing "as data, a map of the two themes"
+      (let [json (out "theme" "#3498db" "--mode" "both" "--json")]
+        (is (str/includes? json "\"light\": {\n    \"mode\": \"light\","))
+        (is (str/includes? json "\"dark\": {\n    \"mode\": \"dark\",")))
+      (is (= ["light" "  mode           light"]
+             (take 2 (lines "theme" "#3498db" "--mode" "both"))))
+      (is (str/includes? (out "theme" "#3498db" "--mode" "both" "--vars"
+                              "--edn")
+                         ":dark {\"--ct-background\" \"#06121a\"")))
+    (is (fails-with? 2 "--dark-selector needs --mode both"
+                     "theme" "#fff" "--dark-selector" ".dark")))
   (testing "--prefix and --selector"
     (let [css (lines "theme" "#3498db" "--format" "css" "--prefix" "brand"
                      "--selector" "[data-theme=dark]")]
