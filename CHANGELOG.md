@@ -13,6 +13,13 @@ All notable changes to this project will be documented in this file. This change
 - The demo converter said "No valid color yet" for input that will never be
   valid. Empty input now says "Paste a color to convert" and anything else
   that fails to parse says "Not a valid color".
+- `accessible-theme` could return a dark `:muted` surface on which no text
+  color meets `:aaa`, so `:on-muted` missed the level it promises. `:muted`
+  now darkens until the level is reachable: `#ffff00` in dark mode at
+  `:aaa` gets `#575726` instead of `#67672d`. Other themes are unchanged.
+- The documentation of `accessible-theme` said every `:on-*` token meets the
+  requested level. On `:primary`, `:secondary` and `:accent` that can't hold
+  at `:aaa` for mid-tone colors, and the documentation now says so.
 
 ## [1.3.0] - 2026-11-13
 ### Added
