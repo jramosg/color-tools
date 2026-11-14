@@ -21,7 +21,9 @@
   (instance? Verdict x))
 
 (def groups
-  [[:inspect "Inspect and convert"]])
+  [[:inspect "Inspect and convert"]
+   [:adjust "Adjust"]
+   [:mix "Mix and blend"]])
 
 ;; =============================================================================
 ;; Arguments
@@ -181,5 +183,153 @@
     :api '[in-gamut?]
     :run gamut}])
 
+;; =============================================================================
+;; Adjust
+;; =============================================================================
+
+(def ^:private amount-param
+  {:key :amount :label "AMOUNT"
+   :parse #(parse/parse-fraction "AMOUNT" %)})
+
+(def ^:private amount-doc
+  "AMOUNT is a fraction from 0 to 1, or a percentage such as 20%.")
+
+(defn- keep-alpha
+  "Carry the alpha of `source` over to `result`. The library's adjustments
+   work on the RGB channels and return an opaque color."
+  [result source]
+  (ct/with-alpha (ct/color result) (:a source)))
+
+(defn- adjust-command
+  "A command that changes one color by an amount with library function `f`."
+  [group command-name f summary]
+  {:name command-name
+   :group group
+   :summary summary
+   :doc amount-doc
+   :params [color-param amount-param]
+   :examples [(str command-name " '#3498db' 0.2")
+              (str command-name " - 20% < colors.txt")]
+   :api [(symbol command-name)]
+   :run (fn [{:keys [color amount]} _]
+          (keep-alpha (f color amount) color))})
+
+(def ^:private adjust-commands
+  [(adjust-command :adjust "lighten" ct/lighten
+                   "Lighten a color by raising its HSL lightness")
+   (adjust-command :adjust "darken" ct/darken
+                   "Darken a color by lowering its HSL lightness")
+   (adjust-command :adjust "saturate" ct/saturate
+                   "Make a color more saturated")
+   (adjust-command :adjust "desaturate" ct/desaturate
+                   "Make a color less saturated")
+
+   {:name "rotate"
+    :aliases ["adjust-hue"]
+    :group :adjust
+    :summary "Rotate the hue of a color by degrees"
+    :doc "DEGREES may be negative. The hue wraps around 360."
+    :params [color-param
+             {:key :degrees :label "DEGREES"
+              :parse #(parse/parse-number "DEGREES" %)}]
+    :examples ["rotate '#3498db' 180" "rotate '#3498db' -30 --to hsl"]
+    :api '[adjust-hue]
+    :run (fn [{:keys [color degrees]} _]
+           (keep-alpha (ct/adjust-hue color degrees) color))}
+
+   {:name "invert"
+    :group :adjust
+    :summary "Invert a color"
+    :params [(variadic color-param 1)]
+    :each? true
+    :examples ["invert '#3498db'"]
+    :api '[invert]
+    :run (fn [{:keys [color]} _] (keep-alpha (ct/invert color) color))}
+
+   {:name "grayscale"
+    :aliases ["greyscale"]
+    :group :adjust
+    :summary "Convert a color to gray of the same brightness"
+    :params [(variadic color-param 1)]
+    :each? true
+    :examples ["grayscale '#3498db'"]
+    :api '[grayscale]
+    :run (fn [{:keys [color]} _] (keep-alpha (ct/grayscale color) color))}
+
+   {:name "alpha"
+    :group :adjust
+    :summary "Set the alpha channel of a color"
+    :doc "ALPHA is a fraction from 0 to 1, or a percentage such as 50%."
+    :params [color-param
+             {:key :alpha :label "ALPHA"
+              :parse #(parse/parse-fraction "ALPHA" %)}]
+    :examples ["alpha '#3498db' 0.5" "alpha '#3498db' 50% --to rgba --json"]
+    :api '[with-alpha]
+    :run (fn [{:keys [color alpha]} _] (ct/with-alpha color alpha))}])
+
+;; =============================================================================
+;; Mix and blend
+;; =============================================================================
+
+(def ^:private blend-modes
+  {:multiply ct/blend-multiply
+   :screen ct/blend-screen
+   :overlay ct/blend-overlay
+   :alpha ct/alpha-blend})
+
+(defn- series-command
+  "A command that generates --count variations of a color with `f`."
+  [command-name f summary]
+  {:name command-name
+   :group :mix
+   :summary summary
+   :doc "Generates 5 colors unless --count says otherwise."
+   :params [color-param]
+   :opts [:count]
+   :examples [(str command-name " '#3498db'")
+              (str command-name " '#3498db' --count 9 --json")]
+   :api [(symbol command-name)]
+   :run (fn [{:keys [color]} {:keys [count]}]
+          (mapv ct/color (f color count)))})
+
+(def ^:private mix-commands
+  [{:name "mix"
+    :group :mix
+    :summary "Mix two colors"
+    :doc (str "--ratio is the share of the second color: 0 gives the first\n"
+              "color, 1 the second, 0.5 an even mix.")
+    :params [color-param {:key :other :label "COLOR" :parse (:parse color-param)}]
+    :opts [:ratio]
+    :examples ["mix '#ff0000' '#0000ff'"
+               "mix '#ff0000' '#0000ff' --ratio 0.25"]
+    :api '[mix]
+    :run (fn [{:keys [color other]} {:keys [ratio]}]
+           (ct/mix color other ratio))}
+
+   {:name "blend"
+    :group :mix
+    :summary "Blend an overlay onto a base color"
+    :doc (str "multiply darkens, screen lightens and overlay does both,\n"
+              "depending on the base. alpha composites a translucent\n"
+              "overlay onto the base and keeps the resulting alpha.")
+    :params [{:key :base :label "BASE" :parse (:parse color-param)}
+             {:key :overlay :label "OVERLAY" :parse (:parse color-param)}]
+    :opts [[:mode "multiply (default), screen, overlay or alpha"]]
+    :examples ["blend '#ff0000' '#0000ff' --mode screen"
+               "blend '#ffffff' 'rgba(255,0,0,0.5)' --mode alpha"]
+    :api '[blend-multiply blend-screen blend-overlay alpha-blend]
+    :run (fn [{:keys [base overlay]} {:keys [mode]}]
+           (let [mode (parse/parse-choice "--mode" (keys blend-modes)
+                                          (or mode "multiply"))]
+             ((blend-modes mode) base overlay)))}
+
+   (adjust-command :mix "tint" ct/tint "Mix a color with white")
+   (adjust-command :mix "shade" ct/shade "Mix a color with black")
+   (adjust-command :mix "tone" ct/tone "Mix a color with gray")
+   (series-command "tints" ct/tints "Generate a series of tints toward white")
+   (series-command "shades" ct/shades
+                   "Generate a series of shades toward black")
+   (series-command "tones" ct/tones "Generate a series of tones toward gray")])
+
 (def commands
-  inspect-commands)
+  (vec (concat inspect-commands adjust-commands mix-commands)))

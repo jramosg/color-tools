@@ -51,6 +51,16 @@
   (or (finite-number (str/trim s))
       (throw (usage-error (str label " must be a number, got " (pr-str s))))))
 
+(defn parse-choice
+  "Parse one of `choices`, a sequence of keywords, ignoring case."
+  [label choices s]
+  (let [choice (keyword (str/lower-case (str/trim s)))]
+    (if (some #{choice} choices)
+      choice
+      (throw (usage-error
+              (str label " must be one of " (str/join ", " (map name choices))
+                   "; got " (pr-str s)))))))
+
 (defn parse-fraction
   "Parse a fraction from 0 to 1. Also accepts a percentage such as 20%."
   [label s]

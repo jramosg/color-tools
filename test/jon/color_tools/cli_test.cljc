@@ -2,6 +2,7 @@
   (:require
    [clojure.string :as str]
    [clojure.test :refer [are deftest is testing]]
+   [jon.color-tools :as ct]
    [jon.color-tools.cli :as cli]))
 
 (defn- run
@@ -234,3 +235,80 @@
             "rgb       -154.0082 213.8568 -83.3699"
             "clamped   #00d600"]
            (str/split-lines out)))))
+
+(deftest adjust-test
+  (testing "results match the library"
+    (are [args expected] (= [expected] (apply lines args))
+      ["lighten" "#3498db" "0.2"] (ct/lighten "#3498db" 0.2)
+      ["darken" "#3498db" "20%"] (ct/darken "#3498db" 0.2)
+      ["saturate" "#3498db" "0.2"] (ct/saturate "#3498db" 0.2)
+      ["desaturate" "#3498db" "0.2"] (ct/desaturate "#3498db" 0.2)
+      ["rotate" "#3498db" "-30"] (ct/adjust-hue "#3498db" -30)
+      ["adjust-hue" "#3498db" "180"] (ct/adjust-hue "#3498db" 180)
+      ["invert" "#3498db"] (ct/invert "#3498db")
+      ["grayscale" "#3498db"] (ct/grayscale "#3498db")
+      ["greyscale" "#3498db"] (ct/grayscale "#3498db")))
+  (testing "known values"
+    (is (= ["#8ac4ea"] (lines "lighten" "#3498db" "0.2")))
+    (is (= ["#db7633"] (lines "rotate" "#3498db" "180")))
+    (is (= ["#828282" "#4c4c4c"] (lines "grayscale" "#3498db" "red"))))
+  (testing "alpha"
+    (is (= ["rgba(52, 152, 219, 0.5)"] (lines "alpha" "#3498db" "0.5")))
+    (is (= "[52, 152, 219, 0.5]\n"
+           (out "alpha" "#3498db" "50%" "--to" "rgba" "--json")))
+    (is (= ["#3498db"] (lines "alpha" "rgba(52,152,219,0.5)" "1"))))
+  (testing "adjustments keep the alpha of the input"
+    (is (= ["rgba(138, 196, 234, 0.5)"]
+           (lines "lighten" "rgba(52,152,219,0.5)" "0.2")))
+    (is (= ["rgba(203, 103, 36, 0.5)"]
+           (lines "invert" "rgba(52,152,219,0.5)"))))
+  (testing "a fixed argument of - runs the command once per line"
+    (is (= "[\"#ff6666\", \"#6666ff\"]\n"
+           (out {:stdin "#f00\n#00f\n"} "lighten" "-" "0.2" "--json"))))
+  (testing "argument errors"
+    (are [args message]
+         (let [{:keys [exit err]} (apply run args)]
+           (and (= 2 exit)
+                (str/starts-with? err (str "color-tools: " message))))
+      ["lighten" "#fff"] "missing AMOUNT\nUsage: color-tools lighten COLOR"
+      ["lighten" "#fff" "2"] "AMOUNT must be from 0 to 1, or 0% to 100%"
+      ["lighten" "#fff" "0.1" "0.2"] "unexpected argument \"0.2\""
+      ["rotate" "#fff" "far"] "DEGREES must be a number, got \"far\""
+      ["alpha" "#fff" "1.5"] "ALPHA must be from 0 to 1")))
+
+(deftest mix-test
+  (testing "mix"
+    (is (= ["#800080"] (lines "mix" "#ff0000" "#0000ff")))
+    (is (= ["#bf0040"] (lines "mix" "#ff0000" "#0000ff" "--ratio" "0.25")))
+    (is (= ["#ff0000"] (lines "mix" "#ff0000" "#0000ff" "-r" "0%"))))
+  (testing "blend modes match the library"
+    (are [mode expected]
+         (= [expected] (lines "blend" "#ff8040" "#4080ff" "--mode" mode))
+      "multiply" (ct/blend-multiply "#ff8040" "#4080ff")
+      "screen" (ct/blend-screen "#ff8040" "#4080ff")
+      "overlay" (ct/blend-overlay "#ff8040" "#4080ff"))
+    (is (= (lines "blend" "#ff8040" "#4080ff" "--mode" "multiply")
+           (lines "blend" "#ff8040" "#4080ff"))
+        "multiply is the default"))
+  (testing "alpha compositing keeps the resulting alpha"
+    (is (= ["#ff8080"]
+           (lines "blend" "#ffffff" "rgba(255,0,0,0.5)" "-m" "alpha")))
+    (is (= ["rgba(170, 0, 85, 0.75)"]
+           (lines "blend" "rgba(0,0,255,0.5)" "rgba(255,0,0,0.5)" "-m"
+                  "alpha"))))
+  (testing "unknown mode"
+    (let [{:keys [exit err]} (run "blend" "#fff" "#000" "--mode" "nope")]
+      (is (= 2 exit))
+      (is (str/includes? err "--mode must be one of multiply, screen"))))
+  (testing "tint, shade and tone"
+    (is (= ["#9acced"] (lines "tint" "#3498db" "0.5")))
+    (is (= ["#1a4c6e"] (lines "shade" "#3498db" "0.5")))
+    (is (= ["#5a8cae"] (lines "tone" "#3498db" "50%"))))
+  (testing "series"
+    (is (= (ct/tints "#3498db") (lines "tints" "#3498db")))
+    (is (= (ct/shades "#3498db" 3) (lines "shades" "#3498db" "-n" "3")))
+    (is (= "[\"#5a8cae\", \"#808080\"]\n"
+           (out "tones" "#3498db" "--count" "2" "--json")))
+    (is (= ["#ff8080 #ffffff" "#8080ff #ffffff"]
+           (lines {:stdin "#f00\n#00f\n"} "tints" "-" "-n" "2")))
+    (is (= 2 (:exit (run "tints" "#fff" "--count" "0"))))))
