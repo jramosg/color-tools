@@ -713,3 +713,12 @@
 (def commands
   (vec (concat inspect-commands adjust-commands mix-commands
                generate-commands accessibility-commands compare-commands)))
+
+(def helpers
+  "Public library functions with no command of their own, and why. With
+   the :api of each command, this accounts for every public var of
+   jon.color-tools; a test fails when a new one is added without a home."
+  {'clamp "Number helper; commands validate ranges instead of clamping"
+   'parse-int "String helper used inside the library's own parsers"
+   'round "Number helper; --precision and --significant round output"
+   'round-int "Number helper; channels are whole numbers in every output"})
