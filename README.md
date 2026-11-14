@@ -70,6 +70,8 @@ npx http-server demo/public -p 8000
 - **Accessibility**: WCAG-compliant contrast checking and accessible color finding
 - **Color Analysis**: Brightness, warmth, and vibrancy checks
 - **Cross-platform**: Works in both Clojure (JVM) and ClojureScript (browser/Node.js)
+- **Command line**: [`color-tools`](doc/cli.md) runs every feature from a
+  terminal, a script or CI
 
 ## Installation
 
@@ -139,6 +141,24 @@ Or for Leiningen, add to your `project.clj`:
 (color/theme->css-vars theme)
 ;=> {"--ct-primary" "#3498db", "--ct-on-primary" "#000000", ...}
 ```
+
+## Command Line
+
+The whole library is also a command, `color-tools`, for terminals, shell
+scripts and CI. It needs no Clojure code and runs on Node.js, Babashka or
+the JVM.
+
+```bash
+color-tools contrast '#3498db' '#ffffff' --level aa   # exits 1: 3.15:1
+color-tools convert '#3498db' --to oklch
+color-tools palette '#3498db' --type triadic
+color-tools gradient '#ff0000' '#0000ff' --steps 10 --space hsl
+color-tools theme '#3498db' --mode dark --format css > theme.css
+```
+
+It prints text with color swatches on a terminal, JSON or EDN for scripts,
+and reads colors from stdin. See the [CLI guide](doc/cli.md) for
+installation, every command and CI recipes.
 
 ## Usage Examples
 
@@ -437,6 +457,8 @@ The parser accepts common CSS color string formats:
 Key namespaces:
 
 - `jon.color-tools` - Main API with all color manipulation functions
+- `jon.color-tools.cli` - The command-line interface; see the
+  [CLI guide](doc/cli.md)
 
 ## Development
 
@@ -453,6 +475,9 @@ clojure -M:test-cljs
 ```
 
 The ClojureScript run needs Node.js on your `PATH`.
+
+Run the CLI from the checkout with `bin/color-tools`, or
+`clojure -M:cli`. `clojure -M:npm` compiles it to `npm/color-tools.js`.
 
 ### Code Quality
 

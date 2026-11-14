@@ -5,5 +5,6 @@
   ["Changelog" {:file "CHANGELOG.md"}]
   ["Introduction" {:file "doc/intro.md"}]
   ["Tutorial" {:file "doc/tutorial.md"}]
+  ["Command-Line Interface" {:file "doc/cli.md"}]
   ["API Reference" {:file "doc/api-reference.md"}]
   ["Workflow Guide" {:file "doc/workflow-guide.md"}]]}

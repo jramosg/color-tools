@@ -2,6 +2,23 @@
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- `color-tools`, a command-line interface to the whole library: convert
+  formats, adjust, mix and blend colors, generate palettes, gradients and
+  accessible themes, and check WCAG contrast without writing Clojure. See the
+  [CLI guide](doc/cli.md).
+  - Runs on Node.js (`npx color-tools`), Babashka
+    (`bbin install io.github.jramosg/color-tools`) and the JVM
+    (`clojure -M -m jon.color-tools.main`)
+  - Reads hex, names, `rgb()`, `rgba()`, `hsl()`, `hsv()`, `oklab()`,
+    `oklch()`, bare channels and temperatures such as `6500k`; `-` reads
+    colors from stdin
+  - Prints text with terminal swatches, JSON, EDN, or CSS custom properties
+    for themes; `--to` picks the color format
+  - Exits 0 on success, 1 when a check such as `contrast --level aa` fails
+    and 2 on invalid input, for use in scripts and CI
+  - Every public function has a command; a test keeps the
+    [coverage table](doc/cli.md#library-coverage) current
 ### Fixed
 - The demo converter rejected `rgba()` without an alpha, such as
   `rgba(52, 152, 219)`. CSS treats `rgba()` as an alias of `rgb()`, so it now
