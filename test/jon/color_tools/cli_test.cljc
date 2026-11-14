@@ -312,3 +312,98 @@
     (is (= ["#ff8080 #ffffff" "#8080ff #ffffff"]
            (lines {:stdin "#f00\n#00f\n"} "tints" "-" "-n" "2")))
     (is (= 2 (:exit (run "tints" "#fff" "--count" "0"))))))
+
+(deftest palette-test
+  (testing "each type matches the library"
+    (are [type expected]
+         (= expected (lines "palette" "#3498db" "--type" type))
+      "complementary" [(ct/complementary "#3498db")]
+      "triadic" (ct/triadic "#3498db")
+      "tetradic" (ct/tetradic "#3498db")
+      "analogous" (ct/analogous "#3498db")
+      "split-complementary" (ct/split-complementary "#3498db")
+      "monochromatic" (ct/monochromatic "#3498db")))
+  (testing "--count and --angle"
+    (is (= (ct/analogous "#3498db" 5 15)
+           (lines "palette" "#3498db" "--type" "analogous" "--count" "5"
+                  "--angle" "15")))
+    (is (= (ct/split-complementary "#3498db" 45)
+           (lines "palette" "#3498db" "--type" "split-complementary"
+                  "--angle" "45")))
+    (is (= (ct/monochromatic "#3498db" 3)
+           (lines "palette" "#3498db" "--type" "monochromatic" "-n" "3"))))
+  (testing "without --type, every harmony"
+    (is (= ["complementary        #db7633"
+            "triadic              #db3398 #98db33"
+            "tetradic             #ca33db #db7633 #44db33"
+            "analogous            #3344db #7633db #ca33db"
+            "split-complementary  #33a9db #6633db"
+            "monochromatic        #003d66 #066aad #1096ef #5db4ee #a6d4f2"]
+           (lines "palette" "#3498db")))
+    (is (str/includes? (out "palette" "#3498db" "--json")
+                       "\"triadic\": [\"#db3398\", \"#98db33\"],")))
+  (testing "random needs no color"
+    (let [colors (lines "palette" "--type" "random" "--count" "8")]
+      (is (= 8 (count colors)))
+      (is (every? ct/valid-hex? colors))))
+  (testing "errors"
+    (are [args message]
+         (let [{:keys [exit err]} (apply run args)]
+           (and (= 2 exit)
+                (str/starts-with? err (str "color-tools: " message))))
+      ["palette"] "missing COLOR\nOnly --type random works without a color."
+      ["palette" "#fff" "--type" "nope"] "--type must be one of complementary"
+      ["palette" "#fff" "--type" "monochromatic" "-n" "1"]
+      "--count must be at least 2 for a monochromatic palette")))
+
+(deftest random-test
+  (is (ct/valid-hex? (str/trim (out "random"))))
+  (is (= 5 (count (lines "random" "--count" "5"))))
+  (is (re-matches #"hsl\(\d+, \d+%, \d+%\)\n" (out "random" "--to" "hsl"))))
+
+(deftest gradient-test
+  (is (= (ct/gradient ["#ff0000" "#0000ff"] 5)
+         (lines "gradient" "#ff0000" "#0000ff")))
+  (is (= ["#ff0000" "#ff0080" "#ff00ff" "#8000ff" "#0000ff"]
+         (lines "gradient" "#ff0000" "#0000ff" "--steps" "5" "--space"
+                "hsl")))
+  (is (= (ct/gradient ["#ff0000" "#0000ff"] 4 :hsv)
+         (lines "gradient" "#ff0000" "#0000ff" "--steps" "4" "--space"
+                "hsv")))
+  (testing "more than two stops, from the command line or stdin"
+    (is (= "[\"#ff0000\", \"#ffff00\", \"#008000\"]\n"
+           (out "gradient" "red" "yellow" "green" "--steps" "3" "--json")))
+    (is (= ["#ff0000" "#ffff00" "#008000"]
+           (lines {:stdin "red\nyellow\ngreen\n"} "gradient" "-" "--steps"
+                  "3"))))
+  (testing "errors"
+    (are [args message]
+         (let [{:keys [exit err]} (apply run args)]
+           (and (= 2 exit)
+                (str/starts-with? err (str "color-tools: " message))))
+      ["gradient" "red"]
+      (str "expected at least 2 COLOR arguments\n"
+           "Usage: color-tools gradient COLOR COLOR...")
+      ["gradient" "red" "blue" "--steps" "1"]
+      "--steps must be a whole number of at least 2"
+      ["gradient" "red" "blue" "--space" "lab"]
+      "--space must be one of rgb, hsl, hsv")))
+
+(deftest interpolate-test
+  (is (= ["#800080"] (lines "interpolate" "#ff0000" "#0000ff")))
+  (is (= ["#bf0040"] (lines "interpolate" "#ff0000" "#0000ff" "--at" "0.25")))
+  (is (= ["#ff0000"] (lines "interpolate" "#ff0000" "#0000ff" "--at" "0")))
+  (is (= ["#0000ff"] (lines "interpolate" "#ff0000" "#0000ff" "--at" "100%")))
+  (testing "several positions give a list"
+    (is (= ["#ff3300" "#ffff00" "#008000"]
+           (lines "interpolate" "red" "yellow" "green" "--at" "0.1,0.5"
+                  "--at" "1" "--space" "hsl"))))
+  (is (= 2 (:exit (run "interpolate" "red" "blue" "--at" "2")))))
+
+(deftest kelvin-test
+  (is (= [(ct/kelvin->hex 6500)] (lines "kelvin" "6500")))
+  (is (= ["rgb(255, 167, 87)" "rgb(255, 206, 166)"]
+         (lines "kelvin" "2700" "4000k" "--to" "rgb")))
+  (let [{:keys [exit err]} (run "kelvin" "500")]
+    (is (= 2 exit))
+    (is (str/includes? err "KELVIN must be from 1000 to 40000 kelvin"))))
