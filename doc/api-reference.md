@@ -572,6 +572,12 @@ Returned tokens:
 - `:scale` with `:50` through `:900`
 - `:mode` and `:level`
 
+`:on-background`, `:on-surface` and `:on-muted` always meet the requested
+level. `:on-primary`, `:on-secondary` and `:on-accent` meet `:aa` and
+`:aa-large` for every color. At `:aaa` they fall short on a mid-tone brand
+color, on which no text color reaches 7:1; they are then black or white,
+whichever has more contrast.
+
 ```clojure
 (def theme (accessible-theme "#3498db" {:mode :light :level :aa}))
 

@@ -484,6 +484,56 @@
       (is (sut/accessible? (:surface theme) (:on-surface theme) :aaa))
       (is (sut/accessible? (:primary theme) (:on-primary theme) :aaa))))
 
+  (testing "Text on generated surfaces meets every level in both modes"
+    (doseq [level [:aa-large :aa :aaa]
+            mode [:light :dark]
+            r (range 0 256 51)
+            g (range 0 256 51)
+            b (range 0 256 51)
+            :let [theme (sut/accessible-theme [r g b]
+                                              {:mode mode :level level})]
+            [surface text] [[:background :on-background]
+                            [:surface :on-surface]
+                            [:muted :on-muted]]]
+      (is (sut/accessible? (surface theme) (text theme) level)
+          (pr-str [r g b] mode level surface))))
+
+  (testing "A dark muted surface darkens until AAA text can be read on it"
+    ;; Before the fix this muted was #67672d, where white text reaches
+    ;; only 5.91:1.
+    (let [theme (sut/accessible-theme "#ffff00" {:mode :dark :level :aaa})]
+      (is (= "#575726" (:muted theme)))
+      (is (sut/accessible? (:muted theme) (:on-muted theme) :aaa))
+      (is (> (sut/luminance (:muted theme))
+             (sut/luminance (:surface theme)))
+          "muted stays lighter than surface")))
+
+  (testing "The muted surface is unchanged when the level was reachable"
+    (is (= "#67672d"
+           (:muted (sut/accessible-theme "#ffff00" {:mode :dark}))))
+    (is (= "#394f5f"
+           (:muted (sut/accessible-theme "#3498db"
+                                         {:mode :dark :level :aaa})))))
+
+  (testing "Text on brand tokens meets AA for every color"
+    (doseq [mode [:light :dark]
+            r (range 0 256 51)
+            g (range 0 256 51)
+            b (range 0 256 51)
+            :let [theme (sut/accessible-theme [r g b] {:mode mode})]
+            [brand text] [[:primary :on-primary]
+                          [:secondary :on-secondary]
+                          [:accent :on-accent]]]
+      (is (sut/accessible? (brand theme) (text theme) :aa)
+          (pr-str [r g b] mode brand))))
+
+  (testing "No text color reaches AAA on a mid-tone brand color"
+    (let [theme (sut/accessible-theme "#3498db" {:level :aaa})]
+      (is (= "#000000" (:on-primary theme))
+          "black, which has more contrast than white")
+      (is (not (sut/accessible? (:primary theme) (:on-primary theme)
+                                :aaa)))))
+
   (testing "CSS custom properties can be exported with a custom prefix"
     (let [theme (sut/accessible-theme "#3498db")
           css-vars (sut/theme->css-vars theme {:prefix "--brand-"})]

@@ -852,6 +852,29 @@
     (or (some-> (find-accessible-color background preferred-color level) ->hex)
         (better-contrast-color background "#000000" "#ffffff"))))
 
+(defn- best-text-contrast
+  "The highest contrast any text color can have on `background`: that of
+   black or of white, whichever is greater."
+  [background]
+  (max (raw-contrast-ratio background "#000000")
+       (raw-contrast-ratio background "#ffffff")))
+
+(defn- readable-surface
+  "Move a generated surface toward `toward`, in small steps, until some
+   text color can meet `level` on it. Returns the surface unchanged when
+   one already can.
+
+   Backgrounds with a relative luminance between about 0.1 and 0.3 are too
+   dark for black text and too light for white text to reach 7:1, so no
+   text color meets AAA on them."
+  [surface toward level]
+  (let [threshold (contrast-threshold level)]
+    (loop [surface (->hex surface)
+           steps 0]
+      (if (or (>= (best-text-contrast surface) threshold) (= steps 24))
+        surface
+        (recur (mix surface toward 0.08) (inc steps))))))
+
 (defn- theme-scale
   [base-color]
   (let [steps [[:50 tint 0.95] [:100 tint 0.9] [:200 tint 0.75]
@@ -872,8 +895,18 @@
   - `:mode`  `:light` or `:dark` (default `:light`)
   - `:level` `:aa`, `:aa-large`, or `:aaa` (default `:aa`)
 
-  Returns a map of hex color tokens for app UIs, including foreground tokens
-  that meet the requested contrast level against their paired backgrounds."
+  Returns a map of hex color tokens for app UIs. Each `:on-*` token is a
+  foreground color for the token it is named after.
+
+  `:on-background`, `:on-surface` and `:on-muted` always meet the requested
+  level: those surfaces are generated, and are chosen so that they can.
+
+  `:primary` is the brand color as given, and `:secondary` and `:accent`
+  are hue rotations of it. Their `:on-*` tokens meet `:aa` and `:aa-large`
+  for every color. No text color reaches `:aaa` (7:1) on a mid-tone
+  background, one with a relative luminance between about 0.1 and 0.3; for
+  those the `:on-*` token is black or white, whichever has more contrast.
+  Check a pair with `accessible?` when you need the guarantee."
   ([base-color] (accessible-theme base-color {}))
   ([base-color options]
    (let [{:keys [mode level]
@@ -882,8 +915,11 @@
          base (->hex base-color)
          background (if light? (tint base 0.96) (shade base 0.88))
          surface (if light? (tint base 0.9) (shade base 0.78))
-         muted (if light? (tone (tint base 0.82) 0.45)
-                   (tone (shade base 0.65) 0.35))
+         muted (readable-surface (if light?
+                                   (tone (tint base 0.82) 0.45)
+                                   (tone (shade base 0.65) 0.35))
+                                 (if light? "#ffffff" "#000000")
+                                 level)
          primary base
          secondary (->hex (adjust-hue base 35))
          accent (->hex (complementary base))
