@@ -112,7 +112,12 @@
            (out "convert" "#3498db" "--to" "oklch" "--significant" "3"
                 "--json"))))
   (testing "--quiet prints nothing"
-    (is (= "" (out "convert" "fff" "--quiet")))))
+    (is (= "" (out "convert" "fff" "--quiet"))))
+  (testing "--quiet does not hide a bad combination of output options"
+    (is (= (run "convert" "fff" "--format" "css")
+           (run "convert" "fff" "--format" "css" "--quiet")))
+    (is (= 2 (:exit (run "theme" "fff" "--format" "css" "--to" "hsv"
+                         "--quiet"))))))
 
 (deftest swatch-test
   (let [swatch? #(str/includes? (:out %) "\u001b[48;")]
@@ -432,9 +437,13 @@
     (is (str/includes? err "KELVIN must be from 1000 to 40000 kelvin"))))
 
 (defn- fails-with?
-  "True when the CLI exits with `code` and stderr starts with `message`."
-  [code message & args]
-  (let [{:keys [exit err]} (apply run args)]
+  "True when the CLI exits with `code` and stderr starts with `message`.
+   A map as the first argument is the process, as for `run`."
+  [& args]
+  (let [[process [code message & args]] (if (map? (first args))
+                                          [(first args) (rest args)]
+                                          [{} args])
+        {:keys [exit err]} (apply run process args)]
     (and (= code exit)
          (str/starts-with? err (str "color-tools: " message)))))
 
@@ -590,6 +599,15 @@
                          ":dark {\"--ct-background\" \"#06121a\"")))
     (is (fails-with? 2 "--dark-selector needs --mode both"
                      "theme" "#fff" "--dark-selector" ".dark")))
+  (testing "CSS for a color read from stdin"
+    (is (= (out "theme" "#3498db" "--format" "css")
+           (out {:stdin "#3498db\n"} "theme" "-" "--format" "css")))
+    (is (= (out "theme" "#3498db" "--mode" "both" "--format" "css")
+           (out {:stdin "#3498db\n"} "theme" "-" "--mode" "both" "--format"
+                "css")))
+    (is (fails-with? {:stdin "#3498db\n#e74c3c\n"} 2
+                     "--format css takes one color; got 2"
+                     "theme" "-" "--format" "css")))
   (testing "--prefix and --selector"
     (let [css (lines "theme" "#3498db" "--format" "css" "--prefix" "brand"
                      "--selector" "[data-theme=dark]")]

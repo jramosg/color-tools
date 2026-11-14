@@ -497,6 +497,18 @@
         :truecolor
         :256))))
 
+(defn- single-theme
+  "The one theme to print as CSS. Themes for colors read from stdin come
+   as a list: one is fine, several would be rules that overwrite each
+   other."
+  [resolved]
+  (cond
+    (not (sequential? resolved)) resolved
+    (= 1 (count resolved)) (first resolved)
+    :else (throw (parse/usage-error
+                  (str "--format css takes one color; got "
+                       (count resolved))))))
+
 (defn- render [command value opts process]
   (let [fmt (output-format opts)
         resolved (out/resolve value (assoc opts :format fmt))]
@@ -514,12 +526,13 @@
                      (str "--to " (name (:to opts)) " is not a CSS color;"
                           " use hex, hex8, rgb, rgba, hsl, oklab or oklch")))
 
-             (:dark resolved)
-             (out/css-light-dark (:light resolved) (:dark resolved)
-                                 (:selector opts ":root")
-                                 (:dark-selector opts))
-
-             :else (out/css resolved (:selector opts ":root")))
+             :else
+             (let [theme (single-theme resolved)
+                   selector (:selector opts ":root")]
+               (if (:dark theme)
+                 (out/css-light-dark (:light theme) (:dark theme) selector
+                                     (:dark-selector opts))
+                 (out/css theme selector))))
       (out/text resolved (ansi-mode opts process)))))
 
 ;; =============================================================================
@@ -535,8 +548,11 @@
         [value passed?] (unwrap (if (= :per-line stdin)
                                   results
                                   (first results)))]
+    ;; Render even when --quiet discards the text, so that a bad
+    ;; combination of output options is an error either way.
     {:exit (if passed? exit-ok exit-check-failed)
-     :out (if (:quiet opts) "" (render command value opts process))
+     :out (let [text (render command value opts process)]
+            (if (:quiet opts) "" text))
      :err (str/join (map #(str program ": warning: " % "\n") @warnings))}))
 
 (defn- completion-script
