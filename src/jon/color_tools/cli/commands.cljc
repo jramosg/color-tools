@@ -132,7 +132,8 @@
                "convert - --to hex < colors.txt"]
     :api '[color ->color ->Color map->Color color? color-from-hex
            color-from-rgb color-from-rgba color-from-hsl color-from-hsv
-           ->rgba hex->rgb rgb->hex hex->rgba rgba->hex rgb->hsl hsl->rgb
+           ->hex ->rgb ->rgba ->hsl ->hsv ->name rgb->lab rgb->oklab
+           rgb->oklch rgb->kelvin hex->rgb rgb->hex hex->rgba rgba->hex rgb->hsl hsl->rgb
            hex->hsl hsl->hex rgb->hsv hsv->rgb parse-css-rgb parse-css-rgba
            parse-css-color-components normalize-css-color-string
            normalize-hex name->hex oklab->rgb oklab->hex oklab->oklch

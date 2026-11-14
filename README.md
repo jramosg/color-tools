@@ -19,6 +19,8 @@ checker, and color harmonies.
 - Check WCAG contrast, find accessible colors and generate theme tokens.
 - Compare colors with RGB distance or CIE76 Delta E.
 - Convert color temperatures between Kelvin and RGB.
+- Run color operations from a terminal or script with the
+  [`color-tools` CLI](doc/cli.md).
 
 Run the same API on Clojure (JVM), ClojureScript (browser or Node.js),
 or Babashka.
@@ -120,6 +122,24 @@ Or for Leiningen, add to your `project.clj`:
 (color/theme->css-vars theme)
 ;=> {"--ct-primary" "#3498db", "--ct-on-primary" "#000000", ...}
 ```
+
+## Command Line
+
+The whole library is also a command, `color-tools`, for terminals, shell
+scripts and CI. It needs no Clojure code and runs on Node.js, Babashka or
+the JVM.
+
+```bash
+color-tools contrast '#3498db' '#ffffff' --level aa   # exits 1: 3.15:1
+color-tools convert '#3498db' --to oklch
+color-tools palette '#3498db' --type triadic
+color-tools gradient '#ff0000' '#0000ff' --steps 10 --space hsl
+color-tools theme '#3498db' --mode dark --format css > theme.css
+```
+
+It prints text with color swatches on a terminal, JSON or EDN for scripts,
+and reads colors from stdin. See the [CLI guide](doc/cli.md) for
+installation, every command and CI recipes.
 
 ## Usage Examples
 
@@ -559,6 +579,8 @@ for axis definitions, gamut handling, and input requirements.
 Key namespaces:
 
 - `jon.color-tools` - Main API with all color manipulation functions
+- `jon.color-tools.cli` - The command-line interface; see the
+  [CLI guide](doc/cli.md)
 
 ## Development
 

@@ -14,6 +14,22 @@ All notable changes to this project will be documented in this file. This change
   an `Oklab` record too
   ([#7](https://github.com/jramosg/color-tools/issues/7)).
 
+- `color-tools`, a command-line interface to the whole library: convert
+  formats, adjust, mix and blend colors, generate palettes, gradients and
+  accessible themes, and check WCAG contrast without writing Clojure. See the
+  [CLI guide](doc/cli.md).
+  - Runs on Node.js (`npx color-tools`), Babashka
+    (`bbin install io.github.jramosg/color-tools`) and the JVM
+    (`clojure -M -m jon.color-tools.main`)
+  - Reads hex, names, `rgb()`, `rgba()`, `hsl()`, `hsv()`, `oklab()`,
+    `oklch()`, bare channels and temperatures such as `6500k`; `-` reads
+    colors from stdin
+  - Prints text with terminal swatches, JSON, EDN, or CSS custom properties
+    for themes; `--to` picks the color format
+  - Exits 0 on success, 1 when a check such as `contrast --level aa` fails
+    and 2 on invalid input, for use in scripts and CI
+  - Every public function has a command; a test keeps the
+    [coverage table](doc/cli.md#library-coverage) current
 ### Fixed
 - `mix` preserves fractional RGB channels at a ratio of 0 or 1 before
   output rounding ([#156](https://github.com/jramosg/color-tools/issues/156)).
