@@ -393,37 +393,37 @@
   (when-let [{:keys [coords alpha]} (oklab-input input true)]
     (oklab-result (color/oklch->oklab coords) alpha "OKLCH")))
 
+(def ^:private prefixed-parsers
+  "Parsers for input that starts with a CSS function name. rgba comes before
+  rgb so that the longer prefix wins."
+  [["rgba" parse-as-rgba]
+   ["rgb" parse-as-rgb]
+   ["hsl" parse-as-hsl]
+   ["hsv" parse-as-hsv]
+   ["oklab" parse-as-oklab]
+   ["oklch" parse-as-oklch]])
+
+(defn- parse-auto
+  "Detect the format of input. Input that starts with a known function name
+  gets that parser's result or nil, never the RGB fallback."
+  [input]
+  (let [lower (str/lower-case input)]
+    (if-let [parse-fn (some (fn [[prefix parse-fn]]
+                              (when (str/starts-with? lower prefix)
+                                parse-fn))
+                            prefixed-parsers)]
+      (parse-fn input)
+      (or (parse-as-hex input)
+          (parse-as-rgb input)))))
+
 (defn- parse-color-input [input format]
   (let [trimmed (str/trim input)
-        lower (str/lower-case trimmed)
-        parse-by-format {"hex" parse-as-hex
-                         "rgb" parse-as-rgb
-                         "rgba" parse-as-rgba
-                         "hsl" parse-as-hsl
-                         "hsv" parse-as-hsv
-                         "oklab" parse-as-oklab
-                         "oklch" parse-as-oklch}]
+        parse-by-format (into {"hex" parse-as-hex} prefixed-parsers)]
     (try
-      (cond
-        (not= "auto" format)
+      (if (= "auto" format)
+        (parse-auto trimmed)
         (when-let [parse-fn (get parse-by-format format)]
-          (parse-fn trimmed))
-
-        ;; Don't let an invalid oklab() or oklch() fall back to RGB parsing.
-        (str/starts-with? lower "oklab") (parse-as-oklab trimmed)
-        (str/starts-with? lower "oklch") (parse-as-oklch trimmed)
-
-        :else
-        (or (parse-as-hex trimmed)
-            (when (str/starts-with? lower "rgba")
-              (parse-as-rgba trimmed))
-            (when (str/starts-with? lower "rgb")
-              (parse-as-rgb trimmed))
-            (when (str/starts-with? lower "hsl")
-              (parse-as-hsl trimmed))
-            (when (str/starts-with? lower "hsv")
-              (parse-as-hsv trimmed))
-            (parse-as-rgb trimmed)))
+          (parse-fn trimmed)))
       (catch :default _
         nil))))
 
