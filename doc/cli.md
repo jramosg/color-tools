@@ -81,6 +81,22 @@ color-tools contrast --help # the same
 color-tools --version
 ```
 
+### Shell completion
+
+`color-tools completions` prints a script that completes commands, options
+and their values, such as the formats of `--to`.
+
+```bash
+# bash: add to ~/.bashrc
+source <(color-tools completions bash)
+
+# zsh: add to ~/.zshrc, after compinit
+source <(color-tools completions zsh)
+
+# fish
+color-tools completions fish > ~/.config/fish/completions/color-tools.fish
+```
+
 A mistyped command or option suggests the closest match:
 
 ```console

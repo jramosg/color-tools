@@ -705,6 +705,7 @@
               "saturation above --threshold (default 60); muted is the\n"
               "opposite.")
     :params [{:key :predicate :label "PROPERTY"
+              :choices (keys predicates)
               :parse #(parse/parse-choice "PROPERTY" (keys predicates) %)}
              (variadic color-param 1)]
     :each? true
