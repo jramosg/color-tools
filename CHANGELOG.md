@@ -13,6 +13,12 @@ All notable changes to this project will be documented in this file. This change
 - The demo converter said "No valid color yet" for input that will never be
   valid. Empty input now says "Paste a color to convert" and anything else
   that fails to parse says "Not a valid color".
+- `rgb->lab` converted with the sRGB matrix rounded to 4 digits, which put
+  Lab values off by up to 0.02: red came out as `[53.233 80.109 67.220]`
+  instead of the reference `[53.241 80.092 67.203]`. It now uses the full
+  matrix and matches reference values to 0.001. `delta-e` and
+  `perceptually-similar?` build on it, so their results shift by a similar
+  amount.
 
 ## [1.3.0] - 2026-11-13
 ### Added
