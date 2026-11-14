@@ -532,6 +532,27 @@
                    [:scale (apply array-map
                                   (colors (:scale theme) scale-steps))]))))
 
+(def ^:private level-ratios
+  {:aa-large "3:1" :aa "4.5:1" :aaa "7:1"})
+
+(defn- warn-below-level
+  "Warn about each text token of `theme` that misses the requested level.
+   It happens at aaa on mid-tone brand colors, where no text color has
+   enough contrast."
+  [theme]
+  (let [level (:level theme)]
+    (doseq [background [:background :surface :muted :primary :secondary
+                        :accent]
+            :let [text (keyword (str "on-" (name background)))]
+            :when (not (ct/accessible? (theme background) (theme text)
+                                       level))]
+      (*warn* (str (name text) " has "
+                   (out/format-number
+                    (ct/contrast-ratio (theme background) (theme text)))
+                   ":1 on " (name background) " " (theme background)
+                   "; no text color reaches " (name level) " ("
+                   (level-ratios level) ") on it")))))
+
 (defn- theme
   "One theme, or with --mode both a map of the :light and the :dark one."
   [{:keys [color]} {:keys [mode level prefix vars format dark-selector]}]
@@ -544,6 +565,7 @@
         build (fn [mode]
                 (let [theme (ct/accessible-theme
                              color {:mode mode :level (or level :aa)})]
+                  (warn-below-level theme)
                   (if (or vars (= :css format))
                     (theme-vars theme prefix)
                     (theme-tokens-map theme))))]
@@ -603,8 +625,10 @@
    {:name "theme"
     :group :accessibility
     :summary "Generate accessible UI tokens from one brand color"
-    :doc (str "Prints backgrounds, surfaces, brand colors, the text color\n"
-              "that meets --level on each, and a 50 to 900 scale.\n"
+    :doc (str "Prints backgrounds, surfaces, brand colors, a text color\n"
+              "for each, and a 50 to 900 scale. Text meets --level on the\n"
+              "backgrounds and surfaces. On a mid-tone brand color no text\n"
+              "reaches aaa; a warning names each pair that falls short.\n"
               "--format css prints custom properties ready to paste; with\n"
               "it, --to takes hex, hex8, rgb, rgba, hsl, oklab or oklch.\n"
               "--prefix brand gives --brand-primary; a prefix that starts\n"

@@ -170,7 +170,7 @@
           "rgb          rgb(52, 152, 219)"
           "hsl          hsl(204, 70%, 53%)"
           "hsv          hsv(204, 76%, 86%)"
-          "lab          lab(60.1597 -6.0866 -42.2363)"
+          "lab          lab(60.157 -6.096 -42.2295)"
           "oklab        oklab(0.6531 -0.0618 -0.1197)"
           "oklch        oklch(0.6531 0.1347 242.6867)"
           "alpha        1"
@@ -568,8 +568,8 @@
     (is (= (:on-primary (ct/accessible-theme "#3498db"
                                              {:mode :dark :level :aaa}))
            (second (re-find #"on-primary\s+(\S+)"
-                            (out "theme" "#3498db" "--mode" "dark"
-                                 "--level" "aaa")))))
+                            (:out (run "theme" "#3498db" "--mode" "dark"
+                                       "--level" "aaa"))))))
     (is (str/includes? (out "theme" "#3498db" "-m" "dark" "--json")
                        "\"mode\": \"dark\""))
     (is (fails-with? 2 "--mode must be one of light, dark, both"
@@ -599,6 +599,23 @@
                          ":dark {\"--ct-background\" \"#06121a\"")))
     (is (fails-with? 2 "--dark-selector needs --mode both"
                      "theme" "#fff" "--dark-selector" ".dark")))
+  (testing "a text token that misses the level gets a warning"
+    (is (= {:exit 0
+            :out ""
+            :err (str "color-tools: warning: on-primary has 6.66:1 on"
+                      " primary #3498db; no text color reaches aaa (7:1) on"
+                      " it\n"
+                      "color-tools: warning: on-accent has 6.65:1 on accent"
+                      " #db7633; no text color reaches aaa (7:1) on it\n")}
+           (run "theme" "#3498db" "--level" "aaa" "--quiet")))
+    (testing "once, not once per mode"
+      (is (= (:err (run "theme" "#3498db" "--level" "aaa"))
+             (:err (run "theme" "#3498db" "--level" "aaa" "--mode"
+                        "both")))))
+    (testing "none when every pair meets the level"
+      (is (= "" (:err (run "theme" "#3498db"))))
+      (is (= "" (:err (run "theme" "#ffff00" "--mode" "dark" "--level"
+                           "aaa"))))))
   (testing "CSS for a color read from stdin"
     (is (= (out "theme" "#3498db" "--format" "css")
            (out {:stdin "#3498db\n"} "theme" "-" "--format" "css")))
