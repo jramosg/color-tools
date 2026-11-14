@@ -115,16 +115,47 @@
 ;; Colors
 ;; =============================================================================
 
+(def ^:private components-re
+  "Three numbers and an optional alpha. Numbers are separated by commas or
+   spaces; the alpha may also follow a slash, as in CSS."
+  (let [component (str "(" number-pattern "(?:%|deg|°)?)")
+        separator "(?:\\s*,\\s*|\\s+)"
+        alpha-separator "(?:\\s*[,/]\\s*|\\s+)"]
+    (re-pattern (str "^" component separator component separator component
+                     "(?:" alpha-separator component ")?$"))))
+
 (defn- components
-  "Split the inside of rgb(...) and friends into numbers with their units.
-   Returns nil unless every part is a number."
+  "Split the inside of rgb(...) and friends into numbers with their units:
+   three, or four with an alpha. Returns nil for anything else, including
+   stray separators and numbers too large to represent."
   [body]
-  (let [parts (remove str/blank? (str/split (str/trim body) #"[\s,/]+"))
-        parsed (map #(when-let [[_ n unit] (re-matches component-re %)]
-                       {:n (parse-double n) :unit unit})
-                    parts)]
-    (when (and (seq parsed) (every? some? parsed))
-      (vec parsed))))
+  (when-let [[_ & parts] (re-matches components-re (str/trim body))]
+    (let [parsed (for [part parts :when part]
+                   (let [[_ n unit] (re-matches component-re part)]
+                     {:n (parse-double n) :unit unit}))]
+      (when-not (some #(infinite? (:n %)) parsed)
+        (vec parsed)))))
+
+(def ^:private plain #{nil "%"})
+(def ^:private angle #{nil "deg" "°"})
+
+(def ^:private units
+  "The units each component of a notation accepts. An alpha, when there is
+   one, is a plain number or a percentage."
+  {:rgb [plain plain plain]
+   :hsl [angle plain plain]
+   :hsv [angle plain plain]
+   :oklab [plain plain plain]
+   :oklch [plain plain angle]})
+
+(defn- unit-error
+  "A message when a component of `comps` has a unit `fmt` does not take,
+   such as degrees in rgb()."
+  [fmt comps]
+  (some (fn [[{:keys [unit]} allowed]]
+          (when-not (contains? allowed unit)
+            (str unit " is not a unit for this part of " (name fmt) "()")))
+        (map vector comps (conj (units fmt) plain))))
 
 (defn- scaled
   "The number in a component. A percentage counts against `full`."
@@ -186,40 +217,47 @@
      :color (apply-alpha (ct/color (ct/oklab->hex oklab)) alpha)}
     {:error "alpha must be from 0 to 1"}))
 
+(def ^:private function-formats
+  {"rgb" :rgb "rgba" :rgb
+   "hsl" :hsl "hsla" :hsl
+   "hsv" :hsv "hsb" :hsv
+   "oklab" :oklab
+   "oklch" :oklch})
+
 (defn- function-color
   "Parse functional notation such as hsl(204, 70%, 53%)."
   [s]
   (when-let [[_ fn-name body] (re-matches #"(?i)([a-z]+)\s*\((.*)\)" s)]
     (let [comps (components body)
-          n (count comps)
-          fn-name (str/lower-case fn-name)]
+          fn-name (str/lower-case fn-name)
+          fmt (function-formats fn-name)]
       (cond
-        (not (#{"rgb" "rgba" "hsl" "hsla" "hsv" "hsb" "oklab" "oklch"}
-              fn-name))
+        (nil? fmt)
         {:error (str "unknown color function " fn-name "()")}
 
-        (not (<= 3 n 4))
+        (nil? comps)
         {:error (str fn-name "() takes 3 numbers and an optional alpha")}
 
+        (unit-error fmt comps)
+        {:error (unit-error fmt comps)}
+
         :else
-        (case fn-name
-          ("rgb" "rgba") (rgb-color comps)
-          ("hsl" "hsla") (hue-color :hsl ct/valid-hsl? ct/color-from-hsl
-                                    comps)
-          ("hsv" "hsb") (hue-color :hsv ct/valid-hsv? ct/color-from-hsv
-                                   comps)
-          "oklab" (let [[l a b alpha] comps]
-                    (oklab-color :oklab
-                                 [(scaled l 1) (scaled a 0.4) (scaled b 0.4)]
-                                 (alpha-of alpha)))
-          "oklch" (let [[l c h alpha] comps
-                        chroma (scaled c 0.4)]
-                    (if (neg? chroma)
-                      {:error "oklch chroma must not be negative"}
-                      (oklab-color :oklch
-                                   (ct/oklch->oklab
-                                    [(scaled l 1) chroma (:n h)])
-                                   (alpha-of alpha)))))))))
+        (case fmt
+          :rgb (rgb-color comps)
+          :hsl (hue-color :hsl ct/valid-hsl? ct/color-from-hsl comps)
+          :hsv (hue-color :hsv ct/valid-hsv? ct/color-from-hsv comps)
+          :oklab (let [[l a b alpha] comps]
+                   (oklab-color :oklab
+                                [(scaled l 1) (scaled a 0.4) (scaled b 0.4)]
+                                (alpha-of alpha)))
+          :oklch (let [[l c h alpha] comps
+                       chroma (scaled c 0.4)]
+                   (if (neg? chroma)
+                     {:error "oklch chroma must not be negative"}
+                     (oklab-color :oklch
+                                  (ct/oklch->oklab
+                                   [(scaled l 1) chroma (:n h)])
+                                  (alpha-of alpha)))))))))
 
 (defn- library-color
   "Colors the library parses itself: hex, names and plain CSS rgb()/rgba()."
@@ -262,8 +300,9 @@
 (defn- bare-color
   "Bare channels such as 52,152,219 or 52,152,219,0.5."
   [s]
-  (let [comps (components s)]
-    (when (<= 3 (count comps) 4)
+  (when-let [comps (components s)]
+    (if-let [error (unit-error :rgb comps)]
+      {:error error}
       (rgb-color comps))))
 
 (defn try-color

@@ -43,7 +43,10 @@
       "hsl(204deg 70% 53% / 0.25)" [:hsl [51 152 219 0.25]]
       "hsl(-30, 50%, 50%)" [:hsl [191 64 128 1.0]]
       "hsv(204, 76%, 86%)" [:hsv [53 153 219 1.0]]
-      "hsb(204, 76, 86)" [:hsv [53 153 219 1.0]]))
+      "hsb(204, 76, 86)" [:hsv [53 153 219 1.0]]
+      "rgb( 52 , 152,219 )" [:rgb [52 152 219 1.0]]
+      "rgb(52, 152, 219, 50%)" [:rgba [52 152 219 0.5]]
+      "hsl(204° 70% 53%)" [:hsl [51 152 219 1.0]]))
   (testing "Oklab and OKLCh"
     (let [{:keys [format in-gamut? color]}
           (parse/try-color "oklab(0.65 -0.06 -0.11)")]
@@ -68,6 +71,18 @@
       "hsl(204,170%,53%)" "hsl saturation and lightness must be from 0 to 100"
       "hsv(204,76%,186%)" "hsv saturation and value must be from 0 to 100"
       "oklch(0.7 -0.1 150)" "oklch chroma must not be negative"
+      "rgb(10deg,20deg,30deg)" "deg is not a unit for this part of rgb()"
+      "hsl(10%, 20%, 30%)" "% is not a unit for this part of hsl()"
+      "oklab(0.5 10deg 0)" "deg is not a unit for this part of oklab()"
+      "rgb(1,2,3,50deg)" "deg is not a unit for this part of rgb()"
+      "52,152,219deg" "deg is not a unit for this part of rgb()"
+      "rgb(1e999,0,0)" "rgb() takes 3 numbers and an optional alpha"
+      "rgb(1//2,,3)" "rgb() takes 3 numbers and an optional alpha"
+      "rgb(52,152,219,)" "rgb() takes 3 numbers and an optional alpha"
+      "rgb(1,2,3,4,5)" "rgb() takes 3 numbers and an optional alpha"
+      "rgb(1/2/3)" "rgb() takes 3 numbers and an optional alpha"
+      "1e999,0,0" "not a color"
+      "1,,2,3" "not a color"
       "cmyk(0,0,0,1)" "unknown color function cmyk()"
       "rgb(1,2)" "rgb() takes 3 numbers and an optional alpha"
       "500k" "kelvin must be from 1000 to 40000")))
