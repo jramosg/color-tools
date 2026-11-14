@@ -328,9 +328,11 @@
 (defn- parse-as-rgba [input]
   (let [rgba (if (color/valid-css-rgba? input)
                (color/parse-css-rgba input)
+               ;; rgba() is an alias of rgb() in CSS, so alpha is optional.
                (let [tokens (numeric-tokens input)]
-                 (when (= 4 (count tokens))
-                   (conj (rounded-rgb (take 3 tokens)) (nth tokens 3)))))
+                 (when (#{3 4} (count tokens))
+                   (conj (rounded-rgb (take 3 tokens))
+                         (nth tokens 3 1)))))
         rgb (vec (take 3 rgba))
         alpha (nth rgba 3 nil)]
     (when (and (rgb-vector? rgb) (alpha? alpha))
