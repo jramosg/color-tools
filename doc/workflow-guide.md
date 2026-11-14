@@ -398,13 +398,13 @@ Delta E uses the CIE L\*a\*b\* color space:
 ```clojure
 ;; Convert to LAB
 (color/rgb->lab [255 0 0])
-;=> [53.23 80.11 67.2]
+;=> [53.24 80.09 67.2]
 ;; L: lightness (0-100)
 ;; a: green-red axis
 ;; b: blue-yellow axis
 
 (color/rgb->lab [0 255 0])
-;=> [87.74 -86.18 83.18]
+;=> [87.73 -86.18 83.18]
 ;; Negative a = more green
 ```
 
