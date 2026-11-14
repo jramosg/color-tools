@@ -79,7 +79,7 @@
     :doc "Position from 0 to 1 (default 0.5); repeatable"}
    {:id :level :long "--level" :short "-l" :arg "LEVEL"
     :parse (one-of "--level" [:aa :aa-large :aaa])
-    :doc "WCAG level: aa (4.5:1), aa-large (3:1) or aaa (7:1)"}
+    :doc "aa (4.5:1, default), aa-large (3:1) or aaa (7:1)"}
    {:id :on :long "--on" :arg "BACKGROUND"
     :parse (:parse commands/color-param)
     :doc "The background color"}
@@ -87,6 +87,8 @@
     :doc "Custom property prefix (default --ct-)"}
    {:id :selector :long "--selector" :arg "SELECTOR"
     :doc "Selector of the CSS rule (default :root)"}
+   {:id :dark-selector :long "--dark-selector" :arg "SELECTOR"
+    :doc "With --mode both: selector of the dark rule"}
    {:id :vars :long "--vars"
     :doc "Name tokens as CSS custom properties"}
    {:id :metric :long "--metric" :arg "METRIC"
@@ -505,6 +507,11 @@
              (throw (parse/usage-error
                      (str "--to " (name (:to opts)) " is not a CSS color;"
                           " use hex, hex8, rgb, rgba, hsl, oklab or oklch")))
+
+             (:dark resolved)
+             (out/css-light-dark (:light resolved) (:dark resolved)
+                                 (:selector opts ":root")
+                                 (:dark-selector opts))
 
              :else (out/css resolved (:selector opts ":root")))
       (out/text resolved (ansi-mode opts process)))))

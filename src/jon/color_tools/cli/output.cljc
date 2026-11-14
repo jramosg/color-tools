@@ -337,6 +337,24 @@
 ;; CSS
 ;; =============================================================================
 
+(defn- indent [text]
+  (str/join (map #(str "  " % "\n") (str/split-lines text))))
+
+(declare css)
+
+(defn css-light-dark
+  "Render a light and a dark map of custom properties as one stylesheet.
+   The dark rule uses `dark-selector` when given. Otherwise it applies
+   when the reader's system asks for a dark color scheme."
+  [light dark selector dark-selector]
+  (str (css light selector)
+       "\n"
+       (if dark-selector
+         (css dark dark-selector)
+         (str "@media (prefers-color-scheme: dark) {\n"
+              (indent (css dark selector))
+              "}\n"))))
+
 (defn css
   "Render a map of custom property names to resolved colors as a CSS rule."
   [vars selector]

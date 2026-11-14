@@ -15,6 +15,8 @@ All notable changes to this project will be documented in this file. This change
     colors from stdin
   - Prints text with terminal swatches, pretty-printed JSON and EDN, or CSS
     custom properties for themes; `--to` picks the color format
+  - `theme --mode both --format css` writes a light theme and a dark one
+    that follows `prefers-color-scheme`, or a selector of your choice
   - Exits 0 on success, 1 when a check such as `contrast --level aa` fails
     and 2 on invalid input, for use in scripts and CI
   - Every public function has a command; a test keeps the
