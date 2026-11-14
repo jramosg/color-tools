@@ -33,3 +33,5 @@ demo/public/js/
 demo/node_modules/
 demo/.cpcache/
 demo/.shadow-cljs/
+
+npm/color-tools.js

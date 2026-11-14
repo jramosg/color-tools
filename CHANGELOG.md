@@ -2,6 +2,26 @@
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- `color-tools`, a command-line interface to the whole library: convert
+  formats, adjust, mix and blend colors, generate palettes, gradients and
+  accessible themes, and check WCAG contrast without writing Clojure. See the
+  [CLI guide](doc/cli.md).
+  - Runs on Node.js (`npx @jramosg/color-tools`), Babashka
+    (`bbin install io.github.jramosg/color-tools`) and the JVM
+    (`clojure -M -m jon.color-tools.main`)
+  - Reads hex, names, `rgb()`, `rgba()`, `hsl()`, `hsv()`, `oklab()`,
+    `oklch()`, bare channels and temperatures such as `6500k`; `-` reads
+    colors from stdin
+  - Prints text with terminal swatches, pretty-printed JSON and EDN, or CSS
+    custom properties for themes; `--to` picks the color format
+  - `theme --mode both --format css` writes a light theme and a dark one
+    that follows `prefers-color-scheme`, or a selector of your choice
+  - `color-tools completions bash|zsh|fish` prints a shell completion script
+  - Exits 0 on success, 1 when a check such as `contrast --level aa` fails
+    and 2 on invalid input, for use in scripts and CI
+  - Every public function has a command; a test keeps the
+    [coverage table](doc/cli.md#library-coverage) current
 ### Fixed
 - The demo converter rejected `rgba()` without an alpha, such as
   `rgba(52, 152, 219)`. CSS treats `rgba()` as an alias of `rgb()`, so it now
@@ -13,6 +33,19 @@ All notable changes to this project will be documented in this file. This change
 - The demo converter said "No valid color yet" for input that will never be
   valid. Empty input now says "Paste a color to convert" and anything else
   that fails to parse says "Not a valid color".
+- `accessible-theme` could return a dark `:muted` surface on which no text
+  color meets `:aaa`, so `:on-muted` missed the level it promises. `:muted`
+  now darkens until the level is reachable: `#ffff00` in dark mode at
+  `:aaa` gets `#575726` instead of `#67672d`. Other themes are unchanged.
+- The documentation of `accessible-theme` said every `:on-*` token meets the
+  requested level. On `:primary`, `:secondary` and `:accent` that can't hold
+  at `:aaa` for mid-tone colors, and the documentation now says so.
+- `rgb->lab` converted with the sRGB matrix rounded to 4 digits, which put
+  Lab values off by up to 0.02: red came out as `[53.233 80.109 67.220]`
+  instead of the reference `[53.241 80.092 67.203]`. It now uses the full
+  matrix and matches reference values to 0.001. `delta-e` and
+  `perceptually-similar?` build on it, so their results shift by a similar
+  amount.
 
 ## [1.3.0] - 2026-11-13
 ### Added

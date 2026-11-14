@@ -398,13 +398,13 @@ Delta E uses the CIE L\*a\*b\* color space:
 ```clojure
 ;; Convert to LAB
 (color/rgb->lab [255 0 0])
-;=> [53.23 80.11 67.2]
+;=> [53.24 80.09 67.2]
 ;; L: lightness (0-100)
 ;; a: green-red axis
 ;; b: blue-yellow axis
 
 (color/rgb->lab [0 255 0])
-;=> [87.74 -86.18 83.18]
+;=> [87.73 -86.18 83.18]
 ;; Negative a = more green
 ```
 
@@ -636,8 +636,10 @@ numeric scale.
 ;    :focus-ring "#6d1fc7"}
 ```
 
-The `:on-*` tokens are foreground colors selected to meet the requested WCAG
-level against their matching background token.
+The `:on-*` tokens are foreground colors for their matching background
+token. On the generated surfaces (`:background`, `:surface`, `:muted`) they
+always meet the requested WCAG level. On the brand tokens (`:primary`,
+`:secondary`, `:accent`) they meet `:aa` and `:aa-large` for every color.
 
 ```clojure
 (color/accessible? (:primary theme) (:on-primary theme) (:level theme))
@@ -651,6 +653,25 @@ level against their matching background token.
 
 Use `:mode :dark` to derive dark surfaces from the same brand color. Use
 `:level :aaa` when normal body text needs the stricter AAA threshold.
+
+No text color reaches AAA (7:1) on a mid-tone background: black is too dark
+and white too light when the relative luminance is between about 0.1 and
+0.3. The brand color stays as you gave it, so for such a color `:on-primary`
+is black or white, whichever has more contrast, and falls short of AAA. Check
+the pair when you need the guarantee:
+
+```clojure
+(def strict (color/accessible-theme "#3498db" {:level :aaa}))
+
+(color/accessible? (:surface strict) (:on-surface strict) :aaa)
+;=> true
+
+(color/accessible? (:primary strict) (:on-primary strict) :aaa)
+;=> false
+
+(color/contrast-ratio (:primary strict) (:on-primary strict))
+;=> 6.66
+```
 
 ```clojure
 (def dark-theme

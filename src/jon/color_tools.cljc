@@ -852,6 +852,29 @@
     (or (some-> (find-accessible-color background preferred-color level) ->hex)
         (better-contrast-color background "#000000" "#ffffff"))))
 
+(defn- best-text-contrast
+  "The highest contrast any text color can have on `background`: that of
+   black or of white, whichever is greater."
+  [background]
+  (max (raw-contrast-ratio background "#000000")
+       (raw-contrast-ratio background "#ffffff")))
+
+(defn- readable-surface
+  "Move a generated surface toward `toward`, in small steps, until some
+   text color can meet `level` on it. Returns the surface unchanged when
+   one already can.
+
+   Backgrounds with a relative luminance between about 0.1 and 0.3 are too
+   dark for black text and too light for white text to reach 7:1, so no
+   text color meets AAA on them."
+  [surface toward level]
+  (let [threshold (contrast-threshold level)]
+    (loop [surface (->hex surface)
+           steps 0]
+      (if (or (>= (best-text-contrast surface) threshold) (= steps 24))
+        surface
+        (recur (mix surface toward 0.08) (inc steps))))))
+
 (defn- theme-scale
   [base-color]
   (let [steps [[:50 tint 0.95] [:100 tint 0.9] [:200 tint 0.75]
@@ -872,8 +895,18 @@
   - `:mode`  `:light` or `:dark` (default `:light`)
   - `:level` `:aa`, `:aa-large`, or `:aaa` (default `:aa`)
 
-  Returns a map of hex color tokens for app UIs, including foreground tokens
-  that meet the requested contrast level against their paired backgrounds."
+  Returns a map of hex color tokens for app UIs. Each `:on-*` token is a
+  foreground color for the token it is named after.
+
+  `:on-background`, `:on-surface` and `:on-muted` always meet the requested
+  level: those surfaces are generated, and are chosen so that they can.
+
+  `:primary` is the brand color as given, and `:secondary` and `:accent`
+  are hue rotations of it. Their `:on-*` tokens meet `:aa` and `:aa-large`
+  for every color. No text color reaches `:aaa` (7:1) on a mid-tone
+  background, one with a relative luminance between about 0.1 and 0.3; for
+  those the `:on-*` token is black or white, whichever has more contrast.
+  Check a pair with `accessible?` when you need the guarantee."
   ([base-color] (accessible-theme base-color {}))
   ([base-color options]
    (let [{:keys [mode level]
@@ -882,8 +915,11 @@
          base (->hex base-color)
          background (if light? (tint base 0.96) (shade base 0.88))
          surface (if light? (tint base 0.9) (shade base 0.78))
-         muted (if light? (tone (tint base 0.82) 0.45)
-                   (tone (shade base 0.65) 0.35))
+         muted (readable-surface (if light?
+                                   (tone (tint base 0.82) 0.45)
+                                   (tone (shade base 0.65) 0.35))
+                                 (if light? "#ffffff" "#000000")
+                                 level)
          primary base
          secondary (->hex (adjust-hue base 35))
          accent (->hex (complementary base))
@@ -1254,20 +1290,25 @@
     (/ c 12.92)
     (Math/pow (/ (+ c 0.055) 1.055) 2.4)))
 
-(defn rgb->lab
-  "Convert RGB to LAB color space (CIE L*a*b*)"
+(defn- rgb->xyz
+  "CIE 1931 XYZ of an sRGB vector, with the Y of white at 1. The matrix
+   follows from the sRGB primaries and the D65 white point; its rows sum
+   to that white, [0.95047 1.0 1.08883]. The 4-digit matrix printed in
+   IEC 61966-2-1 puts Lab values off by up to 0.02."
   [rgb]
-  (let [[r g b] (map #(/ % 255.0) rgb)
-        ;; Convert to linear RGB
-        [r-lin g-lin b-lin] (map to-linear-rgb [r g b])
-        ;; Convert to XYZ
-        x (* 100 (+ (* r-lin 0.4124) (* g-lin 0.3576) (* b-lin 0.1805)))
-        y (* 100 (+ (* r-lin 0.2126) (* g-lin 0.7152) (* b-lin 0.0722)))
-        z (* 100 (+ (* r-lin 0.0193) (* g-lin 0.1192) (* b-lin 0.9505)))
+  (let [[r g b] (map #(to-linear-rgb (/ % 255.0)) rgb)]
+    [(+ (* 0.4124564 r) (* 0.3575761 g) (* 0.1804375 b))
+     (+ (* 0.2126729 r) (* 0.7151522 g) (* 0.0721750 b))
+     (+ (* 0.0193339 r) (* 0.1191920 g) (* 0.9503041 b))]))
+
+(defn rgb->lab
+  "Convert RGB to LAB color space (CIE L*a*b*), relative to the D65 white
+   point. CSS lab() uses D50, so these are not CSS values."
+  [rgb]
+  (let [[x y z] (rgb->xyz rgb)
         ;; Normalize for D65 illuminant
-        x (/ x 95.047)
-        y (/ y 100.000)
-        z (/ z 108.883)
+        x (/ x 0.95047)
+        z (/ z 1.08883)
         ;; Convert to LAB
         f (fn [t]
             (if (> t 0.008856)
@@ -1342,7 +1383,12 @@
   (color-from-rgb (kelvin->rgb kelvin)))
 
 (defn- rgb->xy
-  "CIE 1931 xy chromaticity of an sRGB vector, or nil for black."
+  "CIE 1931 xy chromaticity of an sRGB vector, or nil for black.
+
+   Keeps the 4-digit matrix of IEC 61966-2-1 on purpose. McCamy's formula,
+   which rgb->kelvin applies to this result, is only good to tens of
+   kelvin, and with these digits sRGB white comes out at 6504 K, the
+   nominal temperature of D65. The full matrix gives 6503 K."
   [rgb]
   (let [[r g b] (map #(to-linear-rgb (/ % 255.0)) rgb)
         x (+ (* 0.4124 r) (* 0.3576 g) (* 0.1805 b))
