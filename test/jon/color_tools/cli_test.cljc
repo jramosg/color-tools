@@ -3,7 +3,8 @@
    [clojure.string :as str]
    [clojure.test :refer [are deftest is testing]]
    [jon.color-tools :as ct]
-   [jon.color-tools.cli :as cli]))
+   [jon.color-tools.cli :as cli]
+   [jon.color-tools.cli.commands :as commands]))
 
 (defn- run
   "Run the CLI with `args`. A map as the first argument sets :stdin text,
@@ -407,3 +408,204 @@
   (let [{:keys [exit err]} (run "kelvin" "500")]
     (is (= 2 exit))
     (is (str/includes? err "KELVIN must be from 1000 to 40000 kelvin"))))
+
+(defn- fails-with?
+  "True when the CLI exits with `code` and stderr starts with `message`."
+  [code message & args]
+  (let [{:keys [exit err]} (apply run args)]
+    (and (= code exit)
+         (str/starts-with? err (str "color-tools: " message)))))
+
+(deftest contrast-test
+  (is (= ["ratio     3.15"
+          "aa        false"
+          "aa-large  true"
+          "aaa       false"]
+         (lines "contrast" "#3498db" "#ffffff")))
+  (testing "without --level a low ratio is not a failure"
+    (is (= 0 (:exit (run "contrast" "#777" "#888")))))
+  (testing "--level turns it into a check"
+    (are [level exit] (= exit (:exit (run "contrast" "#3498db" "#ffffff"
+                                          "--level" level)))
+      "aa-large" 0
+      "aa" 1
+      "aaa" 1)
+    (is (= (str "{\n"
+                "  \"ratio\": 21,\n"
+                "  \"aa\": true,\n"
+                "  \"aa-large\": true,\n"
+                "  \"aaa\": true,\n"
+                "  \"level\": \"aaa\",\n"
+                "  \"pass\": true\n"
+                "}\n")
+           (out "contrast" "#000" "#fff" "-l" "aaa" "--json"))))
+  (testing "the check uses the unrounded ratio, like the library"
+    (is (= 1 (:exit (run "contrast" "#006ffb" "#ffffff" "--level" "aa")))))
+  (testing "translucent text is composited onto the background"
+    (is (= (lines "contrast" "#808080" "#ffffff")
+           (lines "contrast" "rgba(0,0,0,0.5)" "#ffffff"))))
+  (testing "a whole palette from stdin; one failure fails the run"
+    (let [{:keys [exit out]} (run {:stdin "#000\n#3498db\n"}
+                                  "contrast" "-" "#fff" "--level" "aa"
+                                  "--edn")]
+      (is (= 1 exit))
+      (is (= (str "[{:ratio " #?(:clj "21.0" :cljs "21") ", :aa true, :aa-large true, :aaa true,"
+                  " :level :aa, :pass true}"
+                  " {:ratio 3.15, :aa false, :aa-large true, :aaa false,"
+                  " :level :aa, :pass false}]\n")
+             out))))
+  (is (fails-with? 2 "--level must be one of aa, aa-large, aaa"
+                   "contrast" "#000" "#fff" "--level" "a")))
+
+(deftest accessibility-test
+  (testing "luminance"
+    (is (= ["0.283"] (lines "luminance" "#3498db")))
+    (is (= (str (ct/luminance "#3498db") "\n")
+           (out "luminance" "#3498db" "--json"))))
+  (testing "text-color"
+    (is (= ["#ffffff" "#000000"] (lines "text-color" "#3498db" "#fff")))
+    (is (= ["#ffffff"] (lines "contrast-text" "#3498db"))))
+  (testing "accessible"
+    (is (= [(ct/find-accessible-color "#ffffff" "#3498db")]
+           (lines "accessible" "#3498db" "--on" "#ffffff")))
+    (is (= [(ct/find-accessible-color "#000000" "#3498db" :aaa)]
+           (lines "accessible" "#3498db" "--on" "#000" "--level" "aaa")))
+    (is (= {:exit 1
+            :out "none\n"
+            :err (str "color-tools: warning: no lightness of #3498db"
+                      " reaches aaa on #777777\n")}
+           (run "accessible" "#3498db" "--on" "#777" "--level" "aaa")))
+    (is (fails-with? 2 "--on BACKGROUND is required" "accessible" "#fff"))
+    (is (fails-with? 2 "invalid color \"nope\""
+                     "accessible" "#fff" "--on" "nope"))))
+
+(deftest theme-test
+  (let [theme (ct/accessible-theme "#3498db")]
+    (testing "tokens in a stable order"
+      (is (= ["mode           light"
+              "level          aa"
+              "background     #f7fbfe"
+              "on-background  #111827"
+              "surface        #ebf5fb"
+              "on-surface     #111827"
+              "muted          #b2bbc3"
+              "on-muted       #374151"
+              "primary        #3498db"
+              "on-primary     #000000"
+              "secondary      #3336db"
+              "on-secondary   #ffffff"
+              "accent         #db7633"
+              "on-accent      #000000"
+              "border         #d9dde0"
+              "focus-ring     #8433db"
+              "scale"
+              "  50   #f5fafd"
+              "  100  #ebf5fb"
+              "  200  #cce5f6"
+              "  300  #aed6f1"
+              "  400  #7bbce8"
+              "  500  #3498db"
+              "  600  #2c81ba"
+              "  700  #246a99"
+              "  800  #1d5478"
+              "  900  #153d58"]
+             (lines "theme" "#3498db"))))
+    (testing "every token of the library theme is printed"
+      (let [printed (out "theme" "#3498db" "--edn")]
+        (doseq [[k v] (dissoc theme :scale :mode :level)]
+          (is (str/includes? printed (str k " " (pr-str v)))))
+        (doseq [[k v] (:scale theme)]
+          (is (str/includes? printed (str k " " (pr-str v)))))))
+    (testing "CSS output holds every custom property, in order"
+      (let [css (lines "theme" "#3498db" "--format" "css")
+            vars (ct/theme->css-vars theme)]
+        (is (= ":root {" (first css)))
+        (is (= "}" (last css)))
+        (is (= "  --ct-background: #f7fbfe;" (second css)))
+        (is (= "  --ct-scale-900: #153d58;" (last (butlast css))))
+        (is (= (set (map (fn [[k v]] (str "  " k ": " v ";")) vars))
+               (set (rest (butlast css))))))))
+  (testing "modes and levels"
+    (is (= (:on-primary (ct/accessible-theme "#3498db"
+                                             {:mode :dark :level :aaa}))
+           (second (re-find #"on-primary\s+(\S+)"
+                            (out "theme" "#3498db" "--mode" "dark"
+                                 "--level" "aaa")))))
+    (is (str/includes? (out "theme" "#3498db" "-m" "dark" "--json")
+                       "\"mode\": \"dark\""))
+    (is (fails-with? 2 "--mode must be one of light, dark"
+                     "theme" "#fff" "--mode" "sepia")))
+  (testing "--prefix and --selector"
+    (let [css (lines "theme" "#3498db" "--format" "css" "--prefix" "brand"
+                     "--selector" "[data-theme=dark]")]
+      (is (= "[data-theme=dark] {" (first css)))
+      (is (= "  --brand-background: #f7fbfe;" (second css))))
+    (is (= "  --x_background: #f7fbfe;"
+           (second (lines "theme" "#3498db" "--format" "css"
+                          "--prefix=--x_"))))
+    (is (fails-with? 2 "--prefix may contain only letters, digits, - and _"
+                     "theme" "#fff" "--prefix" "a b")))
+  (testing "--vars gives the custom properties as data"
+    (is (= "--ct-background     #f7fbfe"
+           (first (lines "theme" "#3498db" "--vars"))))
+    (is (str/includes? (out "theme" "#3498db" "--vars" "--json")
+                       "\"--ct-scale-900\": \"#153d58\"")))
+  (testing "--to converts CSS values, when the format is a CSS color"
+    (is (= "  --ct-primary: oklch(0.653 0.135 242.687);"
+           (some #(when (str/includes? % "--ct-primary:") %)
+                 (lines "theme" "#3498db" "--format" "css" "--to" "oklch"
+                        "-p" "3"))))
+    (is (fails-with? 2 "--to hsv is not a CSS color"
+                     "theme" "#fff" "--format" "css" "--to" "hsv"))))
+
+(deftest compare-test
+  (testing "distance"
+    (is (= ["43.0465"] (lines "distance" "#3498db" "#2980b9")))
+    (is (= (str (ct/color-distance "#3498db" "#2980b9") "\n")
+           (out "distance" "#3498db" "#2980b9" "--json")))
+    (is (= (str (ct/delta-e "#3498db" "#2980b9") "\n")
+           (out "distance" "#3498db" "#2980b9" "--metric" "delta-e"
+                "--json"))))
+  (testing "similar"
+    (is (= ["metric     rgb"
+            "distance   1.4142"
+            "threshold  50"
+            "similar    true"]
+           (lines "similar" "#3498db" "#3499dc")))
+    (are [args exit] (= exit (:exit (apply run "similar" args)))
+      ["#3498db" "#2980b9"] 0
+      ["#3498db" "#2980b9" "--threshold" "40"] 1
+      ["#3498db" "#3499dc" "--metric" "delta-e"] 0
+      ["#3498db" "#2980b9" "--metric" "delta-e"] 1
+      ["#3498db" "#2980b9" "--metric" "delta-e" "--threshold" "11"] 0))
+  (testing "is"
+    (are [args exit expected]
+         (= {:exit exit :out expected :err ""} (apply run "is" args))
+      ["dark" "#2c3e50"] 0 "true\n"
+      ["light" "#2c3e50"] 1 "false\n"
+      ["warm" "red"] 0 "true\n"
+      ["cool" "red"] 1 "false\n"
+      ["vibrant" "#3498db"] 0 "true\n"
+      ["vibrant" "#3498db" "--threshold" "80"] 1 "false\n"
+      ["muted" "#3498db" "--threshold" "80"] 0 "true\n"
+      ["warm" "red" "blue" "--json"] 1 "[true, false]\n"
+      ["dark" "#000" "--quiet"] 0 "")
+    (is (fails-with? 2 "PROPERTY must be one of warm, cool, light, dark"
+                     "is" "shiny" "red"))
+    (is (fails-with? 2 "--threshold applies only to vibrant and muted"
+                     "is" "dark" "red" "--threshold" "3")))
+  (testing "brightness and temperature"
+    (is (= ["130"] (lines "brightness" "#3498db")))
+    (is (= ["cool" "warm"] (lines "temperature" "#3498db" "red")))
+    (is (= "[\"cool\", \"warm\"]\n"
+           (out "temperature" "#3498db" "red" "--json")))
+    (is (= "[:cool :warm]\n" (out "temperature" "#3498db" "red" "--edn")))))
+
+(deftest every-command-has-help-test
+  (doseq [command (mapcat #(cons (:name %) (:aliases %)) commands/commands)
+          :let [help (out "help" command)]]
+    (testing command
+      (is (str/starts-with? help "Usage: color-tools "))
+      (is (str/includes? help "Examples:"))
+      (doseq [line (str/split-lines help)]
+        (is (<= (count line) 80) line)))))

@@ -3,6 +3,7 @@
    library functions it covers and a function from parsed arguments to
    plain data. jon.color-tools.cli does the dispatch and the printing."
   (:require
+   [clojure.string :as str]
    [jon.color-tools :as ct]
    [jon.color-tools.cli.output :as out]
    [jon.color-tools.cli.parse :as parse]))
@@ -24,7 +25,9 @@
   [[:inspect "Inspect and convert"]
    [:adjust "Adjust"]
    [:mix "Mix and blend"]
-   [:generate "Palettes and gradients"]])
+   [:generate "Palettes and gradients"]
+   [:accessibility "Accessibility and themes"]
+   [:compare "Analyze and compare"]])
 
 ;; =============================================================================
 ;; Arguments
@@ -38,7 +41,7 @@
       (*warn* (str s " is outside sRGB; clamped to " (ct/->hex color))))
     parsed))
 
-(def ^:private color-param
+(def color-param
   {:key :color :label "COLOR" :parse (comp :color checked-color)})
 
 (def ^:private parsed-color-param
@@ -425,8 +428,8 @@
    {:name "interpolate"
     :group :generate
     :summary "Pick the color at a position between two or more colors"
-    :doc (str "Position 0 is the first color and 1 the last. Several\n"
-              "positions give a list.")
+    :doc (str "Position 0 is the first color and 1 the last. Repeat --at\n"
+              "or separate positions with commas to get a list.")
     :params [(variadic (assoc color-param :key :colors) 2)]
     :opts [:at :space]
     :examples ["interpolate '#ff0000' '#0000ff' --at 0.25"
@@ -447,6 +450,266 @@
     :api '[kelvin->color kelvin->rgb kelvin->hex]
     :run (fn [{:keys [kelvin]} _] (ct/kelvin->color kelvin))}])
 
+;; =============================================================================
+;; Accessibility and themes
+;; =============================================================================
+
+(def ^:private levels [:aa :aa-large :aaa])
+
+(defn- contrast
+  "WCAG contrast of text on a background. Translucent text is composited
+   onto the background first, since that is the color a reader sees."
+  [{:keys [color background]} {:keys [level]}]
+  (when (< (:a background) 1)
+    (*warn* "the alpha of the background is ignored"))
+  (let [text (if (< (:a color) 1)
+               (ct/alpha-blend (ct/with-alpha background 1) color)
+               color)
+        result (concat [:ratio (ct/contrast-ratio text background)]
+                       (mapcat (fn [l] [l (ct/accessible? text background l)])
+                               levels))]
+    (if level
+      (let [pass? (ct/accessible? text background level)]
+        (verdict (apply array-map (concat result [:level level :pass pass?]))
+                 pass?))
+      (apply array-map result))))
+
+(defn- accessible [{:keys [color]} {:keys [on level]}]
+  (when-not on
+    (throw (parse/usage-error "--on BACKGROUND is required")))
+  (let [level (or level :aa)
+        found (ct/find-accessible-color on color level)]
+    (when-not found
+      (*warn* (str "no lightness of " (ct/->hex color) " reaches "
+                   (name level) " on " (ct/->hex on))))
+    (verdict (some-> found ct/color) (some? found))))
+
+(def ^:private theme-tokens
+  [:background :on-background :surface :on-surface :muted :on-muted
+   :primary :on-primary :secondary :on-secondary :accent :on-accent
+   :border :focus-ring])
+
+(def ^:private scale-steps
+  [:50 :100 :200 :300 :400 :500 :600 :700 :800 :900])
+
+(defn- css-prefix
+  "The custom property prefix for --prefix. A bare word such as brand
+   becomes --brand-; a value that starts with -- is used as given."
+  [prefix]
+  (cond
+    (not (re-matches #"[A-Za-z0-9_-]+" prefix))
+    (throw (parse/usage-error
+            (str "--prefix may contain only letters, digits, - and _; got "
+                 (pr-str prefix))))
+
+    (str/starts-with? prefix "--") prefix
+    :else (str "--" prefix (when-not (str/ends-with? prefix "-") "-"))))
+
+(defn- theme-vars
+  "The theme as custom properties, in token order. Each name comes from
+   theme->css-vars, one token at a time, so the order is ours and the
+   naming is the library's."
+  [theme prefix]
+  (let [options (cond-> {} prefix (assoc :prefix prefix))
+        css-var (fn [token-theme]
+                  (let [[k v] (first (ct/theme->css-vars token-theme options))]
+                    [k (ct/color v)]))]
+    (apply array-map
+           (concat
+            (mapcat #(css-var (select-keys theme [%])) theme-tokens)
+            (mapcat #(css-var {:scale (select-keys (:scale theme) [%])})
+                    scale-steps)))))
+
+(defn- theme [{:keys [color]} {:keys [mode level prefix vars format]}]
+  (let [mode (parse/parse-choice "--mode" [:light :dark] (or mode "light"))
+        prefix (some-> prefix css-prefix)
+        theme (ct/accessible-theme color {:mode mode :level (or level :aa)})
+        colors (fn [m ks] (mapcat (fn [k] [k (ct/color (m k))]) ks))]
+    (if (or vars (= :css format))
+      (theme-vars theme prefix)
+      (apply array-map
+             (concat [:mode mode :level (:level theme)]
+                     (colors theme theme-tokens)
+                     [:scale (apply array-map
+                                    (colors (:scale theme) scale-steps))])))))
+
+(def ^:private accessibility-commands
+  [{:name "contrast"
+    :group :accessibility
+    :summary "WCAG contrast ratio of text on a background"
+    :doc (str "Prints the ratio and whether it passes each WCAG level.\n"
+              "With --level, exits 1 when the pair fails that level, for\n"
+              "use in scripts and CI. Translucent text is composited onto\n"
+              "the background first.")
+    :params [(assoc color-param :label "TEXT")
+             (assoc color-param :key :background :label "BACKGROUND")]
+    :opts [:level]
+    :examples ["contrast '#3498db' '#ffffff'"
+               "contrast '#3498db' '#ffffff' --level aa"
+               "contrast - '#ffffff' --level aa --json < palette.txt"]
+    :api '[contrast-ratio accessible?]
+    :run contrast}
+
+   {:name "luminance"
+    :group :accessibility
+    :summary "WCAG relative luminance, from 0 to 1"
+    :params [(variadic color-param 1)]
+    :each? true
+    :examples ["luminance '#3498db'"]
+    :api '[luminance]
+    :run (fn [{:keys [color]} _] (ct/luminance color))}
+
+   {:name "accessible"
+    :group :accessibility
+    :summary "Adjust a color until it is readable on a background"
+    :doc (str "Changes the lightness of COLOR until it meets --level\n"
+              "(default aa) on the --on background. Exits 1 and prints\n"
+              "none when no lightness is enough.")
+    :params [color-param]
+    :opts [[:on "The background color (required)"] :level]
+    :examples ["accessible '#3498db' --on '#ffffff'"
+               "accessible '#3498db' --on '#ffffff' --level aaa"]
+    :api '[find-accessible-color]
+    :run accessible}
+
+   {:name "text-color"
+    :aliases ["contrast-text"]
+    :group :accessibility
+    :summary "Black or white, whichever reads best on a background"
+    :params [(variadic (assoc color-param :label "BACKGROUND") 1)]
+    :each? true
+    :examples ["text-color '#3498db'"]
+    :api '[get-contrast-text]
+    :run (fn [{:keys [color]} _] (ct/color (ct/get-contrast-text color)))}
+
+   {:name "theme"
+    :group :accessibility
+    :summary "Generate accessible UI tokens from one brand color"
+    :doc (str "Prints backgrounds, surfaces, brand colors, the text color\n"
+              "that meets --level on each, and a 50 to 900 scale.\n"
+              "--format css prints custom properties ready to paste; with\n"
+              "it, --to takes hex, rgb, rgba, hsl, oklab or oklch.\n"
+              "--prefix brand gives --brand-primary; a prefix that starts\n"
+              "with -- is used as given.")
+    :css? true
+    :params [color-param]
+    :opts [[:mode "light (default) or dark"] :level :prefix :selector :vars
+           [:format "text (default), json, edn or css"]]
+    :examples ["theme '#3498db'"
+               "theme '#3498db' --mode dark --level aaa --json"
+               "theme '#3498db' --format css > theme.css"
+               "theme '#3498db' --format css --prefix brand --to oklch"
+               "theme '#3498db' --mode dark --format css --selector .dark"]
+    :api '[accessible-theme theme->css-vars]
+    :run theme}])
+
+;; =============================================================================
+;; Analyze and compare
+;; =============================================================================
+
+(def ^:private metrics
+  {:rgb {:distance ct/color-distance :similar? ct/similar? :threshold 50}
+   :delta-e {:distance ct/delta-e
+             :similar? ct/perceptually-similar?
+             :threshold 2.3}})
+
+(def ^:private metric-doc
+  (str "--metric rgb is the straight-line distance between the RGB\n"
+       "channels, from 0 to about 441.67. --metric delta-e is the CIE76\n"
+       "difference in LAB, closer to what the eye sees: under 1 is\n"
+       "invisible, 2 to 10 noticeable, over 10 clearly different."))
+
+(defn- similar [{:keys [color other]} {:keys [metric threshold]}]
+  (let [metric (or metric :rgb)
+        {:keys [distance similar?] :as m} (metrics metric)
+        threshold (or threshold (:threshold m))
+        result (similar? color other threshold)]
+    (verdict (array-map :metric metric
+                        :distance (distance color other)
+                        :threshold threshold
+                        :similar result)
+             result)))
+
+(def ^:private predicates
+  {:warm ct/warm?
+   :cool ct/cool?
+   :light ct/light?
+   :dark ct/dark?
+   :vibrant ct/vibrant?
+   :muted ct/muted?})
+
+(defn- is [{:keys [predicate color]} {:keys [threshold]}]
+  (when (and threshold (not (#{:vibrant :muted} predicate)))
+    (throw (parse/usage-error
+            "--threshold applies only to vibrant and muted")))
+  (let [f (predicates predicate)
+        result (if threshold (f color threshold) (f color))]
+    (verdict result result)))
+
+(def ^:private compare-commands
+  [{:name "distance"
+    :group :compare
+    :summary "How different two colors are, as a number"
+    :doc metric-doc
+    :params [color-param (assoc color-param :key :other)]
+    :opts [:metric]
+    :examples ["distance '#3498db' '#2980b9'"
+               "distance '#3498db' '#2980b9' --metric delta-e"]
+    :api '[color-distance delta-e]
+    :run (fn [{:keys [color other]} {:keys [metric]}]
+           ((:distance (metrics (or metric :rgb))) color other))}
+
+   {:name "similar"
+    :group :compare
+    :summary "Check that two colors are close; exit 1 if not"
+    :doc (str metric-doc "\n"
+              "The default --threshold is 50 for rgb and 2.3 for delta-e,\n"
+              "the just noticeable difference.")
+    :params [color-param (assoc color-param :key :other)]
+    :opts [:metric [:threshold "Largest distance that counts as similar"]]
+    :examples ["similar '#3498db' '#3499dc'"
+               "similar '#3498db' '#2980b9' --metric delta-e --threshold 5"]
+    :api '[similar? perceptually-similar?]
+    :run similar}
+
+   {:name "is"
+    :group :compare
+    :summary "Test a property of a color; exit 1 if false"
+    :doc (str "PROPERTY is warm, cool, light, dark, vibrant or muted.\n"
+              "Warm hues run from magenta through red to yellow. Dark\n"
+              "means a brightness under 128. Vibrant means an HSL\n"
+              "saturation above --threshold (default 60); muted is the\n"
+              "opposite.")
+    :params [{:key :predicate :label "PROPERTY"
+              :parse #(parse/parse-choice "PROPERTY" (keys predicates) %)}
+             (variadic color-param 1)]
+    :each? true
+    :opts [[:threshold "Saturation, from 0 to 100, that counts as vibrant"]]
+    :examples ["is dark '#2c3e50'"
+               "is vibrant '#3498db' --threshold 80"
+               "is light \"$BACKGROUND\" --quiet && echo 'use dark text'"]
+    :api '[warm? cool? light? dark? vibrant? muted?]
+    :run is}
+
+   {:name "brightness"
+    :group :compare
+    :summary "Perceived brightness, from 0 to 255"
+    :params [(variadic color-param 1)]
+    :each? true
+    :examples ["brightness '#3498db'"]
+    :api '[brightness]
+    :run (fn [{:keys [color]} _] (ct/brightness color))}
+
+   {:name "temperature"
+    :group :compare
+    :summary "Whether a color is warm or cool"
+    :doc "For a temperature in kelvin, use 'convert COLOR --to kelvin'."
+    :params [(variadic color-param 1)]
+    :each? true
+    :examples ["temperature '#3498db'"]
+    :api '[temperature]
+    :run (fn [{:keys [color]} _] (ct/temperature color))}])
+
 (def commands
   (vec (concat inspect-commands adjust-commands mix-commands
-               generate-commands)))
+               generate-commands accessibility-commands compare-commands)))
