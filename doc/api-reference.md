@@ -1083,7 +1083,7 @@ primaries such as pure red have no meaningful temperature.
 
 ```clojure
 (rgb->kelvin [255 255 255])
-;=> 6504  ; sRGB white is D65
+;=> 6503  ; sRGB white is D65, nominally 6504 K
 
 (rgb->kelvin (kelvin->rgb 3000))
 ;=> 2879

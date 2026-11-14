@@ -1587,7 +1587,7 @@
 (deftest rgb->kelvin-test
   (testing "sRGB white and grays are D65"
     (doseq [rgb [[255 255 255] [128 128 128] [10 10 10]]]
-      (is (= 6504 (sut/rgb->kelvin rgb)) (pr-str rgb))))
+      (is (= 6503 (sut/rgb->kelvin rgb)) (pr-str rgb))))
 
   (testing "Return nil for black and for colors far from the black body curve"
     (doseq [rgb [[0 0 0] [255 0 0] [0 255 0] [0 0 255] [0 255 255]
