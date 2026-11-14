@@ -522,7 +522,9 @@
             [converter-bar "Sat" s 100 hex]
             [converter-bar "Light" l 100 hex]]]
           [:div.converter-error
-           [:strong "No valid color yet"]
+           [:strong (if (str/blank? input)
+                      "Paste a color to convert"
+                      "Not a valid color")]
            [:span "Try HEX, RGB, RGBA, HSL, HSV, OKLAB, or OKLCH."]])]]
       (when result
         [:div.converter-output-grid
