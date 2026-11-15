@@ -60,7 +60,7 @@
 (defn- hex-swatch [color]
   (out/shown color :hex true))
 
-(defn- info [{{:keys [input color]} :color} _]
+(defn- info [{{:keys [input color]} :color} {:keys [level]}]
   (array-map
    :input input
    :hex (hex-swatch color)
@@ -78,7 +78,7 @@
    :temperature (ct/temperature color)
    :vibrant (ct/vibrant? color)
    :kelvin (ct/rgb->kelvin (ct/->rgb color))
-   :text-color (hex-swatch (ct/color (ct/get-contrast-text color)))))
+   :text-color (hex-swatch (ct/color (ct/get-contrast-text color level)))))
 
 (defn- validate [{input :color} {:keys [as]}]
   (let [{:keys [format color error]} (parse/try-color input)
@@ -109,9 +109,10 @@
     :summary "Show every format and property of a color"
     :doc (str "Prints the color in each supported format, its closest name,\n"
               "WCAG luminance, brightness, warmth, approximate temperature\n"
-              "and the black or white text color that reads best on it.")
+              "and black or white text for --level (default aa).")
     :params [(variadic parsed-color-param 1)]
     :each? true
+    :opts [[:level "WCAG level for text-color (default aa)"]]
     :examples ["info '#3498db'"
                "info navy 'hsl(204,70%,53%)' --json"]
     :api '[->hex ->rgb ->hsl ->hsv rgb->lab rgb->oklab rgb->oklch ->name
@@ -602,9 +603,10 @@
    {:name "accessible"
     :group :accessibility
     :summary "Adjust a color until it is readable on a background"
-    :doc (str "Changes the lightness of COLOR until it meets --level\n"
-              "(default aa) on the --on background. Exits 1 and prints\n"
-              "none when no lightness is enough.")
+    :doc (str "Finds the nearest whole HSL lightness that meets --level\n"
+              "(default aa) on the --on background. Keeps hue and\n"
+              "saturation; a color that already passes is unchanged.\n"
+              "Exits 1 and prints none when no lightness is enough.")
     :params [color-param]
     :opts [[:on "The background color (required)"] :level]
     :examples ["accessible '#3498db' --on '#ffffff'"
@@ -615,12 +617,19 @@
    {:name "text-color"
     :aliases ["contrast-text"]
     :group :accessibility
-    :summary "Black or white, whichever reads best on a background"
+    :summary "Pick black or white text at a WCAG level"
+    :doc (str "Picks white when it meets --level (default aa), otherwise\n"
+              "black when black meets it. When neither reaches the level,\n"
+              "returns whichever has more contrast. Use aa-large for\n"
+              "large text, where white can stay on mid-tone colors.")
     :params [(variadic (assoc color-param :label "BACKGROUND") 1)]
     :each? true
-    :examples ["text-color '#3498db'"]
+    :opts [:level]
+    :examples ["text-color '#3498db'"
+               "text-color '#3498db' --level aa-large"]
     :api '[get-contrast-text]
-    :run (fn [{:keys [color]} _] (ct/color (ct/get-contrast-text color)))}
+    :run (fn [{:keys [color]} {:keys [level]}]
+           (ct/color (ct/get-contrast-text color level)))}
 
    {:name "theme"
     :group :accessibility
