@@ -715,10 +715,9 @@
                          new-color)))]
       ; get first non null result from try-color function. 
      (some try-color
-          (->> (range 0 101)
+           (->> (range 0 101)
                ; sort by distance of value to l0. This lets us check light and dark by pretty cleanly.
-               (sort-by #(Math/abs (- % l0)))))))) 
-
+                (sort-by #(Math/abs (- % l0))))))))
 
 (defn get-contrast-text
   "Get the best contrast text color (black or white) for a given background color.
