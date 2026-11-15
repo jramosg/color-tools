@@ -29,7 +29,7 @@ All notable changes to this project will be documented in this file. This change
   at `:aaa` for mid-tone colors, and the documentation now says so.
 - `split-complementary` added the base hue twice, producing incorrect
   palettes for nonzero base hues. It now rotates by 180 degrees plus or
-  minus the requested angle (#86).
+  minus the requested angle.
 - The demo converter rejected `rgba()` without an alpha, such as
   `rgba(52, 152, 219)`. CSS treats `rgba()` as an alias of `rgb()`, so it now
   reads it as RGBA with an alpha of 1.
