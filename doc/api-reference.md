@@ -457,8 +457,26 @@ Checks whether two colors meet a WCAG threshold. `level` can be `:aa`,
 (find-accessible-color background target-color level) => color | nil
 ```
 
-Attempts to adjust `target-color` until it meets the requested contrast level
-against `background`. `level` defaults to `:aa`.
+Finds the variant of `target-color` nearest to it in lightness that meets the
+requested contrast level against `background`. `level` defaults to `:aa`.
+
+It keeps the hue and saturation of the target and tries each whole HSL
+lightness from 0 to 100, starting at the target's own and moving outward.
+When a darker and a lighter variant are equally near, it tries the darker one
+first.
+
+```clojure
+(find-accessible-color "#ffffff" "#3498db")
+;=> "#207ab6"  ; A darker blue, 4.65:1 on white
+
+(find-accessible-color "#000000" "#3498db")
+;=> "#3498db"  ; Already passes, so it comes back unchanged
+
+(find-accessible-color "#808080" "#3498db" :aaa)
+;=> nil  ; No color reaches 7:1 on a mid-gray
+```
+
+Returns a hex string for string input and an RGB vector otherwise.
 
 ### `get-contrast-text`
 

@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## Unreleased
+### Changed
+- `find-accessible-color` returns the variant of the target nearest to it in
+  lightness that meets the level, instead of black whenever black passes:
+  `(find-accessible-color "#ffffff" "#3498db")` gives `"#207ab6"`, a darker
+  blue, where it gave `"#000000"`. It keeps hue and saturation, returns a
+  target that already passes unchanged, and returns `nil` when no lightness
+  passes.
 ### Fixed
 - The demo converter rejected `rgba()` without an alpha, such as
   `rgba(52, 152, 219)`. CSS treats `rgba()` as an alias of `rgb()`, so it now

@@ -698,26 +698,40 @@
        (contrast-threshold level))))
 
 (defn find-accessible-color
-  "Find an accessible color by adjusting lightness"
+  "Find the variant of `target-color` nearest to it in lightness that meets
+   a WCAG contrast level against `background`.
+
+   Keeps the hue and saturation of the target and tries each whole HSL
+   lightness from 0 to 100, starting at the target's own and moving
+   outward. When a darker and a lighter variant are equally near, the
+   darker one is tried first.
+
+   Returns the target itself when it already meets the level, and nil when
+   no lightness does. No color reaches :aaa on a mid-tone background.
+
+   level is :aa (4.5, the default), :aa-large (3) or :aaa (7). Returns a
+   hex string for string input and an RGB vector otherwise."
   ([background target-color]
    (find-accessible-color background target-color :aa))
   ([background target-color level]
    (let [threshold (contrast-threshold level)
-         target-color-hsl (->hsl target-color)
-         [_ _ l0] target-color-hsl ; get cur target color's lightness
-         try-color (fn [lightness]
-                     (let [[h s _] target-color-hsl
-                           new-color (if (string? target-color)
-                                       (hsl->hex [h s lightness])
-                                       (hsl->rgb [h s lightness]))]
-                       (when (>= (raw-contrast-ratio background new-color)
-                                 threshold)
-                         new-color)))]
-      ; get first non null result from try-color function. 
-     (some try-color
-           (->> (range 0 101)
-               ; sort by distance of value to l0. This lets us check light and dark by pretty cleanly.
-                (sort-by #(Math/abs (- % l0))))))))
+         passes? #(>= (raw-contrast-ratio background %) threshold)
+         [h s l] (->hsl target-color)
+         variant (fn [lightness]
+                   (if (string? target-color)
+                     (hsl->hex [h s lightness])
+                     (hsl->rgb [h s lightness])))]
+     (if (passes? target-color)
+       ;; Not the variant at its own lightness: HSL is rounded to whole
+       ;; numbers, so that could be a slightly different color.
+       (if (string? target-color)
+         (->hex target-color)
+         (->rgb target-color))
+       (->> (range 0 101)
+            (sort-by #(Math/abs (- % l)))
+            (map variant)
+            (filter passes?)
+            first)))))
 
 (defn get-contrast-text
   "Get the best contrast text color (black or white) for a given background color.
