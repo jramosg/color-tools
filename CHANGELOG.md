@@ -10,31 +10,20 @@ All notable changes to this project will be documented in this file. This change
 
 ### Changed
 - `get-contrast-text` aims for `:aa` (4.5:1) by default, as `accessible?`
-  does, instead of 3:1. For about 20% of colors, the mid-tones, it now
-  returns black where it returned white: `#3498db` gets `"#000000"` (6.66:1)
-  instead of `"#ffffff"` (3.15:1). Pass `:aa-large` for the old result, for
-  example on a button with a large label.
+  does, instead of 3:1.
 - `accessible-theme` picks `:on-primary`, `:on-secondary` and `:on-accent`
-  with `get-contrast-text` at the theme's level, so the two agree. Themes at
-  `:aa` and `:aaa` are unchanged. At `:aa-large`, about 7% of brand colors
-  get white text where they got black, since white now comes first.
+  with `get-contrast-text` at the theme's level, so the two agree.
 - `find-accessible-color` returns the variant of the target nearest to it in
-  lightness that meets the level, instead of black whenever black passes:
-  `(find-accessible-color "#ffffff" "#3498db")` gives `"#207ab6"`, a darker
-  blue, where it gave `"#000000"`. It keeps hue and saturation, returns a
-  target that already passes unchanged, and returns `nil` when no lightness
-  passes.
+  lightness that meets the level, instead of black whenever black passes.
 - `accessible-theme` builds on that search, so two tokens keep their color
   where they used to fall back to black or white: `:focus-ring` keeps its
   hue and `:on-muted` its slate tint, at the nearest lightness that meets the
-  level. `:on-primary`, `:on-secondary` and `:on-accent` are unchanged: black
-  or white, whichever the level needs.
+  level.
 
 ### Fixed
 - `accessible-theme` could return a dark `:muted` surface on which no text
   color meets `:aaa`, so `:on-muted` missed the level it promises. `:muted`
-  now darkens until the level is reachable: `#ffff00` in dark mode at
-  `:aaa` gets `#575726` instead of `#67672d`. Other themes are unchanged.
+  now darkens until the level is reachable.
 - The documentation of `accessible-theme` said every `:on-*` token meets the
   requested level. On `:primary`, `:secondary` and `:accent` that can't hold
   at `:aaa` for mid-tone colors, and the documentation now says so.
@@ -49,12 +38,10 @@ All notable changes to this project will be documented in this file. This change
   valid. Empty input now says "Paste a color to convert" and anything else
   that fails to parse says "Not a valid color".
 - `rgb->lab` converted with the sRGB matrix rounded to 4 digits, which put
-  Lab values off by up to 0.02: red came out as `[53.233 80.109 67.220]`
-  instead of the reference `[53.241 80.092 67.203]`. It now uses the full
-  matrix and matches reference values to 0.001. `delta-e` and
-  `perceptually-similar?` build on it, so their results shift by a similar
-  amount. `rgb->kelvin` uses the same matrix and can differ by 1 K: sRGB
-  white is now 6503 K instead of 6504 K.
+  Lab values off by up to 0.02. It now uses the full matrix and matches
+  reference values to 0.001. `delta-e` and `perceptually-similar?` build on
+  it, so their results shift by a similar amount.
+  `rgb->kelvin` uses the same matrix and can differ by 1 K.
 
 ## [1.3.0] - 2026-11-13
 ### Added
