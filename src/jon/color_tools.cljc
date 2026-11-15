@@ -869,6 +869,20 @@
     (or (some-> (find-accessible-color background preferred-color level) ->hex)
         (better-contrast-color background "#000000" "#ffffff"))))
 
+(defn- brand-text-color
+  "Black or white text for a brand color: white on dark colors and black
+   on light ones, unless the other one is needed to meet `level`. When
+   neither meets it, the one with more contrast.
+
+   Not the nearest-lightness search of accessible-color. Starting from
+   black or white, that search lands on a gray, which always has less
+   contrast than one of the two and nothing to recommend it."
+  [background level]
+  (let [preferred (if (dark? background) "#ffffff" "#000000")]
+    (if (accessible? background preferred level)
+      preferred
+      (better-contrast-color background "#000000" "#ffffff"))))
+
 (defn- theme-scale
   [base-color]
   (let [steps [[:50 tint 0.95] [:100 tint 0.9] [:200 tint 0.75]
@@ -921,19 +935,11 @@
                                   (if light? "#374151" "#e5e7eb")
                                   level)
       :primary primary
-      :on-primary (accessible-color primary
-                                    (if (dark? primary) "#ffffff" "#000000")
-                                    level)
+      :on-primary (brand-text-color primary level)
       :secondary secondary
-      :on-secondary (accessible-color secondary
-                                      (if (dark? secondary)
-                                        "#ffffff"
-                                        "#000000")
-                                      level)
+      :on-secondary (brand-text-color secondary level)
       :accent accent
-      :on-accent (accessible-color accent
-                                   (if (dark? accent) "#ffffff" "#000000")
-                                   level)
+      :on-accent (brand-text-color accent level)
       :border (if light? (shade background 0.12) (tint background 0.16))
       :focus-ring ring})))
 

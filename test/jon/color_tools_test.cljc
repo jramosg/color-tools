@@ -542,6 +542,48 @@
       (is (sut/accessible? (:surface theme) (:on-surface theme) :aaa))
       (is (sut/accessible? (:primary theme) (:on-primary theme) :aaa))))
 
+  (testing "Text on brand tokens is black or white"
+    ;; White is preferred on #1f86c7 and misses AA. The nearest gray that
+    ;; passes, #171717, has less contrast than black.
+    (is (= "#000000" (:on-primary (sut/accessible-theme "#1f86c7"))))
+    (doseq [level [:aa-large :aa :aaa]
+            mode [:light :dark]
+            r (range 0 256 51)
+            g (range 0 256 51)
+            b (range 0 256 51)
+            :let [theme (sut/accessible-theme [r g b]
+                                              {:mode mode :level level})]
+            token [:on-primary :on-secondary :on-accent]]
+      (is (contains? #{"#000000" "#ffffff"} (token theme))
+          (pr-str [r g b] mode level token))))
+
+  (testing "The focus ring keeps its hue when it has to change lightness"
+    ;; The ring is the brand hue turned by 65 degrees. On this background
+    ;; that color misses 3:1, and the ring used to fall back to black.
+    (let [theme (sut/accessible-theme "#9988ee")
+          [ring-hue] (sut/->hsl (:focus-ring theme))
+          [wanted-hue] (sut/->hsl (sut/adjust-hue "#9988ee" 65))]
+      (is (= "#e75ac4" (:focus-ring theme)))
+      (is (= wanted-hue ring-hue))
+      (is (sut/accessible? (:background theme) (:focus-ring theme)
+                           :aa-large))))
+
+  (testing "The focus ring meets 3:1 on the background for every color"
+    (doseq [mode [:light :dark]
+            r (range 0 256 51)
+            g (range 0 256 51)
+            b (range 0 256 51)
+            :let [theme (sut/accessible-theme [r g b] {:mode mode})]]
+      (is (sut/accessible? (:background theme) (:focus-ring theme)
+                           :aa-large)
+          (pr-str [r g b] mode))))
+
+  (testing "Muted text keeps its tint when it has to get darker"
+    ;; The preferred slate misses AAA here; this used to become black.
+    (let [theme (sut/accessible-theme "#ff66aa" {:level :aaa})]
+      (is (= "#272e3a" (:on-muted theme)))
+      (is (sut/accessible? (:muted theme) (:on-muted theme) :aaa))))
+
   (testing "CSS custom properties can be exported with a custom prefix"
     (let [theme (sut/accessible-theme "#3498db")
           css-vars (sut/theme->css-vars theme {:prefix "--brand-"})]

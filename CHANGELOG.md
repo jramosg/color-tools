@@ -9,6 +9,11 @@ All notable changes to this project will be documented in this file. This change
   blue, where it gave `"#000000"`. It keeps hue and saturation, returns a
   target that already passes unchanged, and returns `nil` when no lightness
   passes.
+- `accessible-theme` builds on that search, so two tokens keep their color
+  where they used to fall back to black or white: `:focus-ring` keeps its
+  hue and `:on-muted` its slate tint, at the nearest lightness that meets the
+  level. `:on-primary`, `:on-secondary` and `:on-accent` are unchanged: black
+  or white, whichever the level needs.
 ### Fixed
 - The demo converter rejected `rgba()` without an alpha, such as
   `rgba(52, 152, 219)`. CSS treats `rgba()` as an alias of `rgb()`, so it now
