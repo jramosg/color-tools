@@ -698,23 +698,40 @@
        (contrast-threshold level))))
 
 (defn find-accessible-color
-  "Find an accessible color by adjusting lightness"
+  "Find the variant of `target-color` nearest to it in lightness that meets
+   a WCAG contrast level against `background`.
+
+   Keeps the hue and saturation of the target and tries each whole HSL
+   lightness from 0 to 100, starting at the target's own and moving
+   outward. When a darker and a lighter variant are equally near, the
+   darker one is tried first.
+
+   Returns the target itself when it already meets the level, and nil when
+   no lightness does. No color reaches :aaa on a mid-tone background.
+
+   level is :aa (4.5, the default), :aa-large (3) or :aaa (7). Returns a
+   hex string for string input and an RGB vector otherwise."
   ([background target-color]
    (find-accessible-color background target-color :aa))
   ([background target-color level]
    (let [threshold (contrast-threshold level)
-         target-color-hsl (->hsl target-color)
-         try-color (fn [lightness]
-                     (let [[h s _] target-color-hsl
-                           new-color (if (string? target-color)
-                                       (hsl->hex [h s lightness])
-                                       (hsl->rgb [h s lightness]))]
-                       (when (>= (raw-contrast-ratio background new-color)
-                                 threshold)
-                         new-color)))]
-     (or (try-color 0)    ; Try black first
-         (try-color 100)  ; Then white
-         (some try-color (range 0 101 5)))))) ; Then try other lightness values
+         passes? #(>= (raw-contrast-ratio background %) threshold)
+         [h s l] (->hsl target-color)
+         variant (fn [lightness]
+                   (if (string? target-color)
+                     (hsl->hex [h s lightness])
+                     (hsl->rgb [h s lightness])))]
+     (if (passes? target-color)
+       ;; Not the variant at its own lightness: HSL is rounded to whole
+       ;; numbers, so that could be a slightly different color.
+       (if (string? target-color)
+         (->hex target-color)
+         (->rgb target-color))
+       (->> (range 0 101)
+            (sort-by #(Math/abs (- % l)))
+            (map variant)
+            (filter passes?)
+            first)))))
 
 (defn get-contrast-text
   "Get the best contrast text color (black or white) for a given background color.
@@ -845,6 +862,20 @@
     color1
     color2))
 
+(defn- brand-text-color
+  "Black or white text for a brand color: white on dark colors and black
+   on light ones, unless the other one is needed to meet `level`. When
+   neither meets it, the one with more contrast.
+
+   Not the nearest-lightness search of accessible-color. Starting from
+   black or white, that search lands on a gray, which always has less
+   contrast than one of the two and nothing to recommend it."
+  [background level]
+  (let [preferred (if (dark? background) "#ffffff" "#000000")]
+    (if (accessible? background preferred level)
+      preferred
+      (better-contrast-color background "#000000" "#ffffff"))))
+
 (defn- accessible-color
   [background preferred-color level]
   (if (accessible? background preferred-color level)
@@ -904,19 +935,11 @@
                                   (if light? "#374151" "#e5e7eb")
                                   level)
       :primary primary
-      :on-primary (accessible-color primary
-                                    (if (dark? primary) "#ffffff" "#000000")
-                                    level)
+      :on-primary (brand-text-color primary level)
       :secondary secondary
-      :on-secondary (accessible-color secondary
-                                      (if (dark? secondary)
-                                        "#ffffff"
-                                        "#000000")
-                                      level)
+      :on-secondary (brand-text-color secondary level)
       :accent accent
-      :on-accent (accessible-color accent
-                                   (if (dark? accent) "#ffffff" "#000000")
-                                   level)
+      :on-accent (brand-text-color accent level)
       :border (if light? (shade background 0.12) (tint background 0.16))
       :focus-ring ring})))
 

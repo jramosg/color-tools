@@ -259,11 +259,11 @@ Find accessible alternatives by adjusting lightness:
 
 ;; Find an accessible version of the text color
 (color/find-accessible-color bg desired-text :aa)
-;=> "#000000"  ; Black is the first candidate that meets AA
+;=> "#52110a"  ; Closest lightness of the red that meets AA
 
 ;; For large text (lower requirements)
 (color/find-accessible-color bg desired-text :aa-large)
-;=> "#000000"  ; Black passes the large-text threshold too
+;=> "#841c10"  ; The large-text threshold allows a lighter red
 ```
 
 ### Generating Accessible Theme Tokens
