@@ -60,14 +60,15 @@
           (/ (double (Math/round scaled)) factor))))))
 
 (defn round
-  "Round a number to specified decimal places. Returns an integer at 0
-   places and a double otherwise. Large values that have no fractional
-   digit at the requested precision come back unchanged."
+  "Round a number to specified decimal places. Returns a 32-bit integer
+   at 0 places when it fits, and a double otherwise. Large values that
+   have no fractional digit at the requested precision come back unchanged."
   ([n] (round n 0))
   ([n decimals]
-   (let [decimals (or decimals 0)]
-     (cond-> (round-places n decimals)
-       (= decimals 0) int))))
+   (let [decimals (or decimals 0)
+         rounded (round-places n decimals)]
+     (cond-> rounded
+       (and (= decimals 0) (<= -2147483648 rounded 2147483647)) int))))
 
 (defn round-int [n]
   (round n 0))
@@ -292,12 +293,15 @@
             (= max-val r) (mod (/ (- g b) diff) 6)
             (= max-val g) (+ (/ (- b r) diff) 2)
             (= max-val b) (+ (/ (- r g) diff) 4))]
-    [(* h 60) (* s 100) (* l 100)]))
+    (mapv double [(* h 60) (* s 100) (* l 100)])))
 
 (defn rgb->hsl
-  "Convert RGB to HSL, rounded to whole coordinates for compatibility."
-  [rgb]
-  (mapv round-int (rgb->hsl-coords rgb)))
+  "Convert RGB to HSL, rounded to whole coordinates by default.
+   Pass {:full-precision? true} to preserve the computed doubles."
+  ([rgb] (rgb->hsl rgb {}))
+  ([rgb options]
+   (cond->> (rgb->hsl-coords rgb)
+     (not (:full-precision? options)) (mapv round-int))))
 
 (defn- hsl->rgb-coords [hsl]
   {:pre [(valid-hsl? hsl)]}
@@ -316,12 +320,16 @@
                      (< h-norm (/ 4 6)) [0 x c]
                      (< h-norm (/ 5 6)) [x 0 c]
                      :else [c 0 x])]
-    [(* (+ r' m) 255) (* (+ g' m) 255) (* (+ b' m) 255)]))
+    (clamp-rgb
+     (mapv double [(* (+ r' m) 255) (* (+ g' m) 255) (* (+ b' m) 255)]))))
 
 (defn hsl->rgb
-  "Convert HSL to RGB, quantized to 8-bit channels."
-  [hsl]
-  (mapv round-int (hsl->rgb-coords hsl)))
+  "Convert HSL to RGB, rounded to 8-bit channels by default.
+   Pass {:full-precision? true} to preserve fractional channels."
+  ([hsl] (hsl->rgb hsl {}))
+  ([hsl options]
+   (cond->> (hsl->rgb-coords hsl)
+     (not (:full-precision? options)) (mapv round-int))))
 
 (defn hex->hsl
   "Convert hex to HSL"
@@ -348,12 +356,15 @@
             (= max-val r) (mod (/ (- g b) diff) 6)
             (= max-val g) (+ (/ (- b r) diff) 2)
             (= max-val b) (+ (/ (- r g) diff) 4))]
-    [(* h 60) (* s 100) (* v 100)]))
+    (mapv double [(* h 60) (* s 100) (* v 100)])))
 
 (defn rgb->hsv
-  "Convert RGB to HSV, rounded to whole coordinates for compatibility."
-  [rgb]
-  (mapv round-int (rgb->hsv-coords rgb)))
+  "Convert RGB to HSV, rounded to whole coordinates by default.
+   Pass {:full-precision? true} to preserve the computed doubles."
+  ([rgb] (rgb->hsv rgb {}))
+  ([rgb options]
+   (cond->> (rgb->hsv-coords rgb)
+     (not (:full-precision? options)) (mapv round-int))))
 
 (defn- hsv->rgb-coords [hsv]
   (let [[h s v] hsv
@@ -371,12 +382,16 @@
                      (< h-norm (/ 4 6)) [0 x c]
                      (< h-norm (/ 5 6)) [x 0 c]
                      :else [c 0 x])]
-    [(* (+ r' m) 255) (* (+ g' m) 255) (* (+ b' m) 255)]))
+    (clamp-rgb
+     (mapv double [(* (+ r' m) 255) (* (+ g' m) 255) (* (+ b' m) 255)]))))
 
 (defn hsv->rgb
-  "Convert HSV to RGB, quantized to 8-bit channels."
-  [hsv]
-  (mapv round-int (hsv->rgb-coords hsv)))
+  "Convert HSV to RGB, rounded to 8-bit channels by default.
+   Pass {:full-precision? true} to preserve fractional channels."
+  ([hsv] (hsv->rgb hsv {}))
+  ([hsv options]
+   (cond->> (hsv->rgb-coords hsv)
+     (not (:full-precision? options)) (mapv round-int))))
 
 (defn normalize-css-color-string
   "Normalize CSS color string by removing extra spaces and standardizing separators"
@@ -475,14 +490,18 @@
   (instance? Color x))
 
 (defn ->color
-  "Create a Color record from RGB values with optional alpha"
+  "Create a Color record, truncating RGB channels by default.
+   The five-argument form accepts {:full-precision? true} to keep fractions."
   ([r g b] (->color r g b 1.0))
-  ([r g b a]
+  ([r g b a] (->color r g b a {}))
+  ([r g b a options]
    {:pre [(and (>= r 0) (<= r 255))
           (and (>= g 0) (<= g 255))
           (and (>= b 0) (<= b 255))
           (and (>= a 0) (<= a 1))]}
-   (->Color (int r) (int g) (int b) (double a))))
+   (let [[r g b] (cond->> [r g b]
+                   (not (:full-precision? options)) (mapv int))]
+     (->Color r g b (double a)))))
 
 (defn color-from-hex
   "Create a Color record from hex string"
@@ -536,23 +555,8 @@
     :else (throw (ex-info "Invalid color input" {:input color-input
                                                  :reason :unknown-format}))))
 
-;; Convenient factory function
-(defn color
-  "Create a Color record from various input formats.
-   
-   Usage:
-   (color 255 0 0)           ; RGB values
-   (color 255 0 0 0.8)       ; RGBA values  
-   (color \"#ff0000\")         ; Hex string
-   (color [255 0 0])         ; RGB vector
-   (color [255 0 0 0.8])     ; RGBA vector
-   (color (color 255 0 0))   ; From another Color record"
-  ([input] (normalize-color-input input))
-  ([r g b] (->color r g b))
-  ([r g b a] (->color r g b a)))
-
 (defn- rgba-coords
-  "Read channels without passing fractional vectors through ->color."
+  "Read RGB or RGBA channels, supplying opaque alpha for RGB input."
   [input]
   (let [coords (if (and (string? input)
                         (or (valid-css-rgb? input) (valid-css-rgba? input)))
@@ -563,6 +567,25 @@
       (valid-rgba? coords) coords
       :else (let [{:keys [r g b a]} (normalize-color-input input)]
               [r g b a]))))
+
+;; Convenient factory function
+(defn color
+  "Create a Color record from various input formats.
+   
+   Usage:
+   (color 255 0 0)           ; RGB values
+   (color 255 0 0 0.8)       ; RGBA values  
+   (color \"#ff0000\")         ; Hex string
+   (color [255 0 0])         ; RGB vector
+   (color [255 0 0 0.8])     ; RGBA vector
+   (color (color 255 0 0))   ; From another Color record
+   (color [10.7 20.2 30.9] {:full-precision? true}) ; Keep RGB fractions"
+  ([input] (normalize-color-input input))
+  ([input options]
+   (let [[r g b a] (rgba-coords input)]
+     (->color r g b a options)))
+  ([r g b] (->color r g b))
+  ([r g b a] (->color r g b a)))
 
 (defn ->rgb
   "Convert a color to an RGB vector, preserving fractional channels."
@@ -704,15 +727,17 @@
 ;; Contrast and Accessibility
 ;; =============================================================================
 
+(defn- to-linear-rgb
+  "Remove sRGB gamma encoding from a channel in the 0-1 range."
+  [c]
+  (if (<= c 0.04045)
+    (/ c 12.92)
+    (Math/pow (/ (+ c 0.055) 1.055) 2.4)))
+
 (defn luminance
-  "Calculate relative luminance of a color"
+  "Calculate WCAG relative luminance using the sRGB cutoff of 0.04045."
   [color]
-  (let [rgb (->rgb color)
-        [r g b] (map #(let [val (/ % 255)]
-                        (if (<= val 0.03928)
-                          (/ val 12.92)
-                          (Math/pow (/ (+ val 0.055) 1.055) 2.4)))
-                     rgb)]
+  (let [[r g b] (map #(to-linear-rgb (/ % 255.0)) (->rgb color))]
     (+ (* 0.2126 r) (* 0.7152 g) (* 0.0722 b))))
 
 (defn- raw-contrast-ratio
@@ -775,8 +800,7 @@
                      (hsl->hex [h s lightness])
                      (hsl->rgb [h s lightness])))]
      (if (passes? target-color)
-       ;; Not the variant at its own lightness: HSL is rounded to whole
-       ;; numbers, so that could be a slightly different color.
+       ;; Keep a passing target unchanged instead of searching the grid.
        (if (string? target-color)
          (->hex target-color)
          (->rgb target-color))
@@ -849,7 +873,7 @@
    (let [count (or count 5)
          [h] (->hsl color)
          variations (for [i (range count)
-                          :let [factor (/ i (dec count))
+                          :let [factor (/ i (max 1 (dec count)))
                                 new-l (+ 20 (* 60 factor))
                                 new-s (+ 50 (* 50 (- 1 (* 0.5 factor))))]]
                       (if (string? color)
@@ -861,11 +885,9 @@
   "Get split-complementary colors"
   ([color] (split-complementary color 30))
   ([color angle]
-   (let [angle (or angle 30)
-         [h] (->hsl color)
-         comp-hue (+ h 180)]
-     [(adjust-hue color (- comp-hue angle))
-      (adjust-hue color (+ comp-hue angle))])))
+   (let [angle (or angle 30)]
+     [(adjust-hue color (- 180 angle))
+      (adjust-hue color (+ 180 angle))])))
 
 ;; =============================================================================
 ;; Advanced Palette Generation
@@ -1337,18 +1359,11 @@
   ([colors steps color-space]
    (let [color-space (or color-space :rgb)]
      (for [i (range steps)]
-       (interpolate colors (/ i (dec steps)) color-space)))))
+       (interpolate colors (/ i (max 1 (dec steps))) color-space)))))
 
 ;; =============================================================================
 ;; Perceptual Color Difference (Delta E)
 ;; =============================================================================
-
-(defn- to-linear-rgb
-  "Remove sRGB gamma encoding from a channel in the 0-1 range."
-  [c]
-  (if (<= c 0.04045)
-    (/ c 12.92)
-    (Math/pow (/ (+ c 0.055) 1.055) 2.4)))
 
 (defn- rgb->xyz
   "CIE 1931 XYZ of an sRGB vector, with the Y of white at 1. The matrix
@@ -1542,8 +1557,9 @@
    255 scale. The inverse of rgb->oklab.
 
    Returns unrounded floats and does not clamp. Colors outside the sRGB
-   gamut produce channels below 0 or above 255; check with in-gamut?. ->hex
-   and color round and clamp as usual.
+   gamut produce channels below 0 or above 255; check with in-gamut?. Use
+   clamp-rgb before ->hex or color. The full-precision option on color
+   preserves fractional channels; its default still truncates them.
 
    The matrices are the exact inverses of the ones rgb->oklab uses, so
    (oklab->rgb (rgb->oklab rgb)) returns rgb to within float error. Checks

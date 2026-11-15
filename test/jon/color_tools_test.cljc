@@ -108,6 +108,8 @@
   (is (not (sut/valid-css-rgb? "rgb(255, 0, 0, 0)"))) ; extra component
   (is (not (sut/valid-css-rgb? "rgba(255, 0, 0, 1)"))) ; rgba format
   (is (sut/valid-css-rgb? "rgb(254.5, 0, 0)"))
+  (is (sut/valid-css-rgb? "rgb(255.5, 0, 0)"))
+  (is (nil? (sut/parse-css-color-components "rgb(255.5, 0, 0)")))
   (is (not (sut/valid-css-rgb? "rgb(-1, 0, 0)")))      ; negative numbers
   (is (not (sut/valid-css-rgb? "#ff0000")))            ; hex format
   (is (not (sut/valid-css-rgb? "red"))))                ; color name
@@ -131,6 +133,8 @@
   (is (not (sut/valid-css-rgba? "rgba(255, 0, 0, -0.5)"))) ; negative alpha
   (is (not (sut/valid-css-rgba? "rgb(255, 0, 0)")))     ; rgb format
   (is (sut/valid-css-rgba? "rgba(254.5, 0, 0, 1)"))
+  (is (sut/valid-css-rgba? "rgba(255.5, 0, 0, 1)"))
+  (is (nil? (sut/parse-css-color-components "rgba(255.5, 0, 0, 1)")))
   (is (not (sut/valid-css-rgba? "#ff0000")))             ; hex format
   (is (not (sut/valid-css-rgba? "red"))))                ; color name
 
@@ -1513,6 +1517,13 @@
       1.005     2 1.0))
   (testing "Return an integer at 0 places"
     (is (int? (sut/round 2.7))))
+
+  (testing "Zero decimal places do not overflow a 32-bit integer"
+    (doseq [n [4.0E9 -4.0E9 1.0E20 -1.0E300]]
+      (is (= n (sut/round n)) (str n))
+      (is (= n (sut/round-int n)) (str n)))
+    (is (= 2147483648.0 (sut/round 2147483647.7)))
+    (is (= -2147483649.0 (sut/round -2147483648.7))))
   (testing "Keep large values instead of overflowing a long"
     (is (= 40000.0 (sut/round 40000.0 15)))
     (is (= 1.0E10 (sut/round 1.0E10 10)))
@@ -1580,6 +1591,92 @@
 (defn- max-channel-error [expected actual]
   (apply max (map #(Math/abs (double (- %1 %2))) expected actual)))
 
+(deftest full-precision-conversions-test
+  (let [options {:full-precision? true}]
+    (testing "Opt-in conversions retain fractions and return doubles"
+      (is (= [127.5 127.5 127.5] (sut/hsl->rgb [0 0 50] options)))
+      (is (= [127.5 127.5 127.5] (sut/hsv->rgb [0 0 50] options)))
+      (is (= [0.0 0.0 50.19607843137255]
+             (sut/rgb->hsl [128 128 128] options)))
+      (doseq [convert [sut/rgb->hsl sut/rgb->hsv]
+              x (convert [52 152 219] options)]
+        (is (double? x))))
+
+    (testing "Opt-in RGB round trips through HSL and HSV keep precision"
+      (doseq [rgb (concat [[0.0 0.0 0.001] [52.25 152.75 219.125]
+                           [255.0 254.999 255.0]]
+                          (for [r (range 0 256 51)
+                                g (range 0 256 51)
+                                b (range 0 256 51)]
+                            [r g b]))
+              [to-space to-rgb] [[sut/rgb->hsl sut/hsl->rgb]
+                                 [sut/rgb->hsv sut/hsv->rgb]]]
+        (is (< (max-channel-error rgb (to-rgb (to-space rgb options)
+                                              options))
+               1.0E-10)
+            (pr-str rgb))))
+
+    (testing "Opt-in record construction preserves fractional channels"
+      (let [rgb [10.7 20.2 30.9]
+            rgba (conj rgb 0.4)]
+        (doseq [record [(sut/->color 10.7 20.2 30.9 0.4 options)
+                        (sut/color rgb options)
+                        (sut/color rgba options)
+                        (sut/color "rgba(10.7,20.2,30.9,0.4)" options)]]
+          (is (= rgb (sut/->rgb record))))
+        (is (= "#0b141f" (sut/->hex (sut/color rgb options)))))
+      (doseq [convert [sut/hsl->rgb sut/hsv->rgb]]
+        (is (= [127.5 127.5 127.5]
+               (sut/->rgb (sut/color (convert [0 0 50] options)
+                                     options))))))
+
+    (testing "Opt-in Oklab round trips through Color do not truncate RGB"
+      (let [rgb [10.7 20.2 30.9]
+            restored (sut/->rgb (sut/color (sut/oklab->rgb
+                                            (sut/rgb->oklab rgb))
+                                           options))]
+        (is (< (max-channel-error rgb restored) 1.0E-9))))
+
+    (testing "Chain vector calculations before opt-in record construction"
+      (let [mixed (sut/mix (sut/mix [0 0 0] [1 1 1]) [1 1 1])
+            interpolated (sut/interpolate [[0 0 0] [1 1 1]] 0.25)]
+        (is (= [0.75 0.75 0.75] (sut/->rgb (sut/color mixed options))))
+        (is (= [0.25 0.25 0.25]
+               (sut/->rgb (sut/color interpolated options))))
+        (is (= "#010101" (sut/->hex (sut/color mixed options)))))))
+
+  (testing "Existing HSL, HSV and record defaults stay compatible"
+    (is (= [0 0 50] (sut/rgb->hsl [128 128 128])))
+    (is (= [0 0 50] (sut/rgb->hsv [128 128 128])))
+    (is (= [128 128 128] (sut/hsl->rgb [0 0 50])))
+    (is (= [128 128 128] (sut/hsv->rgb [0 0 50])))
+    (doseq [record [(sut/->color 10.7 20.2 30.9)
+                    (sut/color [10.7 20.2 30.9])
+                    (sut/color [10.7 20.2 30.9] {})
+                    (sut/color [10.7 20.2 30.9]
+                               {:full-precision? false})]]
+      (is (= [10 20 30] (sut/->rgb record))))))
+
+(deftest palette-and-gradient-edge-cases-test
+  (testing "Split complements rotate around the base's complementary hue"
+    (doseq [hue [30 90 210 350]
+            :let [base (sut/hsl->rgb [hue 100 50])
+                  [left right] (sut/split-complementary base)]]
+      (is (< (Math/abs (- (mod (+ hue 150) 360)
+                          (first (sut/->hsl left))))
+             1.0E-10))
+      (is (< (Math/abs (- (mod (+ hue 210) 360)
+                          (first (sut/->hsl right))))
+             1.0E-10))))
+
+  (testing "One-step gradients return the first stop"
+    (doseq [space [:rgb :hsl :hsv]]
+      (is (= ["#3498db"] (vec (sut/gradient ["#3498db" "#e74c3c"]
+                                            1 space)))))
+    (is (= ["#000066"] (vec (sut/monochromatic "#0000ff" 1))))
+    (is (empty? (sut/gradient ["#000000" "#ffffff"] 0)))
+    (is (empty? (sut/monochromatic "#0000ff" 0)))))
+
 (deftest precision-pipeline-test
   (testing "Fractional inputs survive conversion and repeated mixing"
     (let [rgb [0.25 1.5 2.75]]
@@ -1589,7 +1686,7 @@
     (is (= [0.75 0.75 0.75]
            (sut/mix (sut/mix [0 0 0] [1 1 1]) [1 1 1]))))
 
-  (testing "Only hex and record output quantize channels"
+  (testing "Hex and legacy record output quantize channels"
     (is (= "#000203" (sut/rgb->hex [0.49999999 1.5 2.5])))
     (is (= "#000203" (sut/->hex [0.49999999 1.5 2.5])))
     (is (= "#808080" (sut/mix "#000000" "#ffffff")))
@@ -1649,6 +1746,18 @@
            1.0E-15))
     (is (not (sut/accessible? [118.9 118.9 118.9] "#ffffff" :aa)))
     (is (pos? (sut/delta-e [100.1 100.1 100.1] [100.2 100.2 100.2]))))
+
+  (testing "WCAG luminance uses the current sRGB transfer cutoff"
+    ;; https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
+    ;; Fractional channels can fall between the old and current cutoffs.
+    (doseq [channel [0.0 1.0 10.0 10.1 10.2 10.3147]]
+      (is (< (Math/abs (- (sut/luminance (vec (repeat 3 channel)))
+                          (/ channel 255 12.92)))
+             1.0E-15)
+          (str channel)))
+    (is (< (Math/abs (- (sut/luminance [11 11 11])
+                        (Math/pow (/ (+ (/ 11 255.0) 0.055) 1.055) 2.4)))
+           1.0E-15)))
 
   (testing "Themes reject white just below AA despite the displayed ratio"
     (doseq [mode [:light :dark]

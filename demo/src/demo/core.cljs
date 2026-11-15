@@ -190,8 +190,12 @@
         format (:format @state)
         rgb (color/->rgb hex)
         ;; ->hsl and ->hsv return [h s l] and [h s v] vectors, not maps
-        [h s l] (color/->hsl hex)
-        [hsv-h hsv-s v] (color/->hsv hex)
+        [h s l] (color/round-coords
+                 (color/rgb->hsl rgb {:full-precision? true})
+                 {:decimal-places 2})
+        [hsv-h hsv-s v] (color/round-coords
+                         (color/rgb->hsv rgb {:full-precision? true})
+                         {:decimal-places 2})
         text-color (color/get-contrast-text hex)]
     [:section.section
      [:h2 (:target icons) "Color Picker & Conversions"]
@@ -294,15 +298,12 @@
 (defn- alpha? [a]
   (in-range? a 0 1))
 
-(defn- rounded-rgb [tokens]
-  (mapv #(int (Math/round %)) tokens))
-
 (defn- converter-result
   ([rgb alpha source] (converter-result rgb alpha source false))
   ([rgb alpha source clamped?]
    (let [hex (color/rgb->hex rgb)
-         hsl (color/rgb->hsl rgb)
-         hsv (color/rgb->hsv rgb)]
+         hsl (color/rgb->hsl rgb {:full-precision? true})
+         hsv (color/rgb->hsv rgb {:full-precision? true})]
      {:source source
       :hex hex
       :rgb rgb
@@ -321,7 +322,7 @@
 (defn- parse-as-rgb [input]
   (let [rgb (if (color/valid-css-rgb? input)
               (color/parse-css-rgb input)
-              (rounded-rgb (numeric-tokens input)))]
+              (numeric-tokens input))]
     (when (rgb-vector? rgb)
       (converter-result rgb 1 "RGB"))))
 
@@ -331,7 +332,7 @@
                ;; rgba() is an alias of rgb() in CSS, so alpha is optional.
                (let [tokens (numeric-tokens input)]
                  (when (#{3 4} (count tokens))
-                   (conj (rounded-rgb (take 3 tokens))
+                   (conj (vec (take 3 tokens))
                          (nth tokens 3 1)))))
         rgb (vec (take 3 rgba))
         alpha (nth rgba 3 nil)]
@@ -343,14 +344,16 @@
         hsl (vec (take 3 tokens))
         alpha (if (= 4 (count tokens)) (nth tokens 3) 1)]
     (when (and (hsl-vector? hsl) (alpha? alpha))
-      (converter-result (color/hsl->rgb hsl) alpha "HSL"))))
+      (converter-result (color/hsl->rgb hsl {:full-precision? true})
+                        alpha "HSL"))))
 
 (defn- parse-as-hsv [input]
   (let [tokens (numeric-tokens input)
         hsv (vec (take 3 tokens))
         alpha (if (= 4 (count tokens)) (nth tokens 3) 1)]
     (when (and (hsv-vector? hsv) (alpha? alpha))
-      (converter-result (color/hsv->rgb hsv) alpha "HSV"))))
+      (converter-result (color/hsv->rgb hsv {:full-precision? true})
+                        alpha "HSV"))))
 
 (defn- css-tokens
   "Numbers in a CSS color function, with whether each one is a percentage."
@@ -379,10 +382,10 @@
 
 (defn- oklab-result [oklab alpha source]
   (let [exact (color/oklab->rgb oklab)
-        rgb (mapv #(Math/round %) (color/clamp-rgb exact))
-        ;; Typed CSS values are rounded, so only report clamping when it
-        ;; changes the 8-bit result.
-        clamped? (boolean (some #(or (< % -0.5) (> % 255.5)) exact))]
+        rgb (color/clamp-rgb exact)
+        ;; Ignore floating-point noise at the gamut boundary.
+        clamped? (boolean (some #(or (< % -1.0E-7) (> % 255.0000001))
+                                exact))]
     (converter-result rgb alpha source clamped?)))
 
 (defn- parse-as-oklab [input]
@@ -431,17 +434,21 @@
   (-> (.toFixed n decimals)
       (str/replace #"\.?0+$" "")))
 
-(defn- format-rgb [[r g b]]
-  (str "rgb(" r ", " g ", " b ")"))
+(defn- format-rgb [rgb]
+  (let [[r g b] (color/round-coords rgb {:decimal-places 4})]
+    (str "rgb(" r ", " g ", " b ")")))
 
-(defn- format-rgba [[r g b a]]
-  (str "rgba(" r ", " g ", " b ", " (trim-decimal a 3) ")"))
+(defn- format-rgba [rgba]
+  (let [[r g b a] (color/round-coords rgba {:decimal-places 4})]
+    (str "rgba(" r ", " g ", " b ", " (trim-decimal a 3) ")")))
 
-(defn- format-hsl [[h s l]]
-  (str "hsl(" h "°, " s "%, " l "%)"))
+(defn- format-hsl [hsl]
+  (let [[h s l] (color/round-coords hsl {:decimal-places 2})]
+    (str "hsl(" h "°, " s "%, " l "%)")))
 
-(defn- format-hsv [[h s v]]
-  (str "hsv(" h "°, " s "%, " v "%)"))
+(defn- format-hsv [hsv]
+  (let [[h s v] (color/round-coords hsv {:decimal-places 2})]
+    (str "hsv(" h "°, " s "%, " v "%)")))
 
 (defn- converter-output [label value]
   [:button.converter-output
@@ -858,19 +865,19 @@
       [:div.token-card.token-card--scale
        [:div.token-card__header
         [:h4 "Color Scale"]
-       [:span "50-900"]]
-      [:div.theme-scale
-       (doall
-        (for [k theme-scale-steps
-              :let [hex (get scale k)]]
-          (when hex
-            ^{:key k}
-            [:button.theme-scale__swatch
-             {:type "button"
-              :style {:background hex :color (color/get-contrast-text hex)}
-              :on-click #(copy-to-clipboard (.toUpperCase hex))}
-             [:span.theme-scale__step (name k)]
-             [:code.theme-scale__hex (.toUpperCase hex)]])))]]
+        [:span "50-900"]]
+       [:div.theme-scale
+        (doall
+         (for [k theme-scale-steps
+               :let [hex (get scale k)]]
+           (when hex
+             ^{:key k}
+             [:button.theme-scale__swatch
+              {:type "button"
+               :style {:background hex :color (color/get-contrast-text hex)}
+               :on-click #(copy-to-clipboard (.toUpperCase hex))}
+              [:span.theme-scale__step (name k)]
+              [:code.theme-scale__hex (.toUpperCase hex)]])))]]
       [:div.palette-export
        [:button.btn.btn-primary
         {:on-click #(copy-to-clipboard (css-vars-text tokens))}

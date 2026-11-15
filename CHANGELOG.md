@@ -3,11 +3,16 @@ All notable changes to this project will be documented in this file. This change
 
 ## Unreleased
 ### Added
+- `rgb->hsl`, `rgb->hsv`, `hsl->rgb` and `hsv->rgb` accept
+  `{:full-precision? true}` in a second argument to preserve computed
+  doubles. `(color input options)` and `(->color r g b a options)` accept
+  the same flag to keep fractional RGB channels. Existing defaults stay
+  rounded or truncated until 2.0 (#38).
 - `->css` exports numeric CSS with per-call `:decimal-places` or
   `:significant-digits` options. `with-alpha` and `alpha-blend` accept the
   same options for translucent string output; passing both options throws.
 - A Precision section in the API reference explains output rounding and
-  the remaining integer conversion APIs.
+  how to adopt precise calculations and adapt exact comparisons from 1.3.
 - `get-contrast-text` takes a WCAG level: `(get-contrast-text bg :aa-large)`.
   It returns white when white meets the level, black when only black does,
   and the one with more contrast when neither does, the rule Material UI and
@@ -15,9 +20,9 @@ All notable changes to this project will be documented in this file. This change
 
 ### Changed
 - `mix`, `interpolate`, `gradient` and `alpha-blend` retain fractional
-  vector channels. Hex and `Color` results round once to 8-bit channels.
-  HSL and HSV interpolation uses full precision internally, so gradients
-  may change where whole-coordinate rounding previously shifted a step.
+  vector channels. Hex and legacy `Color` results round once to 8-bit
+  channels. HSL and HSV interpolation uses full precision internally, so
+  gradients may change where whole-coordinate rounding shifted a step.
 - `->rgb` and `->rgba` preserve fractional channels from vectors and CSS
   strings, including when used by luminance and Delta E calculations.
 - CSS numeric output preserves fractional channels by default, and CSS
@@ -34,6 +39,17 @@ All notable changes to this project will be documented in this file. This change
   level.
 
 ### Fixed
+- `round` and `round-int` still overflowed on the JVM when rounding large
+  numbers to zero decimal places. Results outside the 32-bit integer range
+  now remain doubles instead of throwing or overflowing.
+- `luminance` used the obsolete sRGB cutoff of 0.03928 instead of WCAG's
+  current 0.04045, miscalculating fractional channels between those values.
+  It now shares the same transfer function as the Lab conversions.
+- `split-complementary` added the base hue twice, producing wrong colors
+  for nonzero base hues. It now rotates by 180 degrees plus or minus
+  the requested angle.
+- One-step `gradient` and `monochromatic` calls divided by zero. They now
+  return the first gradient stop or the first monochromatic variation.
 - Accessibility checks continue to compare raw contrast, including for
   fractional channels. Near a threshold, `accessible-theme` uses the
   passing foreground: `#006ffb` gets black `:on-primary` text at AA, since
@@ -62,13 +78,20 @@ All notable changes to this project will be documented in this file. This change
   it, so their results shift by a similar amount.
   `rgb->kelvin` uses the same matrix and can differ by 1 K.
 
+### Adapting from 1.3
+- Computed vectors can now contain fractions, such as
+  `[127.5 127.5 127.5]` instead of `[128 128 128]`. Exact comparisons can
+  change; Clojure's `=` also distinguishes integers from integral doubles.
+  Compare computed coordinates with a tolerance, or use `mapv round-int`
+  when an integration needs integer channels. Existing HSL/HSV conversion
+  and record-construction defaults are retained; full precision is opt-in.
+  See the [precision guide](doc/api-reference.md#precision).
+
 ### Planned
-- Add full precision public alternatives for the HSL and HSV conversions
-  and RGB `Color` construction, or change them in a major release.
-  `rgb->hsl` and `rgb->hsv` keep whole coordinates, `hsl->rgb` and
-  `hsv->rgb` keep 8-bit channels, and `->color` keeps truncating RGB for
-  compatibility with equality checks in existing code. Oklab records
-  need a constructor that preserves fractional channels (issues #7, #8).
+- In 2.0, make full precision the default for the HSL/HSV conversions and
+  RGB `Color` construction (#38). The explicit 1.4 options provide a
+  migration path. Keep typed values (#7), the CLI (#6) and later roadmap
+  features in their existing 1.x milestones.
 
 ## [1.3.0] - 2026-11-13
 ### Added

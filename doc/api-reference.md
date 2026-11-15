@@ -34,10 +34,10 @@ There is no global precision setting; formatting affects only that call.
 
 `->rgb` and `->rgba` preserve fractional channels from vectors and CSS input.
 `mix`, `interpolate`, `gradient` and `alpha-blend` keep intermediate precision
-and return fractional vector channels. HSL and HSV interpolation also uses
+and return fractional vector channels. HSL and HSV interpolation uses
 unrounded working coordinates, including hue wrapping. Keep results as vectors
-when chaining calculations. Hex and `Color` results quantize once to the
-nearest 8-bit channel; decimal places do not apply to hex output.
+when chaining calculations. Hex and legacy `Color` results quantize once to
+8-bit channels; decimal places do not apply to hex output.
 
 ```clojure
 (mix [0 0 0] [1 1 1])
@@ -74,11 +74,44 @@ hex tokens, so decimal places do not apply.
 ;=> "rgba(255,0,0,0.3333)"
 ```
 
-Compatibility exceptions: `rgb->hsl` and `rgb->hsv` still round to whole
-coordinates, `hsl->rgb` and `hsv->rgb` return 8-bit channels, and `->color`
-(including the `color` factory) still truncates RGB channels. Full precision
-public alternatives or a major release are planned; interpolation already
-bypasses those integer conversions internally.
+### Full precision without changing existing defaults
+
+In 1.4, `rgb->hsl`, `rgb->hsv`, `hsl->rgb` and `hsv->rgb` accept
+`{:full-precision? true}` as a second argument to return unrounded doubles.
+Their one-argument defaults still return rounded integers. The new
+`(color input options)` and `(->color r g b a options)` arities accept the
+same flag to preserve fractional RGB channels; existing constructor arities
+still truncate channels for compatibility.
+
+The change to full-precision defaults is planned for 2.0 (#38). You can
+adopt the explicit options in 1.4 and compare computed coordinates with a
+tolerance. Clojure's `=` also distinguishes integers from integral doubles.
+
+```clojure
+(hsl->rgb [0 0 50])
+;=> [128 128 128]
+
+(hsl->rgb [0 0 50] {:full-precision? true})
+;=> [127.5 127.5 127.5]
+
+(->rgb (color [10.7 20.2 30.9] {:full-precision? true}))
+;=> [10.7 20.2 30.9]
+
+(->hex (color [10.7 20.2 30.9] {:full-precision? true}))
+;=> "#0b141f"
+```
+
+### Changes in 1.4
+
+Vector results of `mix`, `interpolate`, `gradient` and `alpha-blend`, and
+fractional inputs to `->rgb` and `->rgba`, retain precision instead of
+rounding or truncating. Results can change from `128` to `127.5`, including
+colors produced by HSL/HSV interpolation. This corrects premature rounding,
+but can affect callers that compare exact results or require integer channels.
+Use `mapv round-int` at an integration boundary when integers are required.
+CSS parsers now accept decimal channels. Hex and legacy record results keep
+their 8-bit output behavior. Coordinate ranges and vector/record shapes stay
+the same.
 
 ## Validation
 
@@ -223,17 +256,21 @@ Converts an RGBA vector to hex, ignoring alpha.
 
 ```clojure
 (rgb->hsl rgb) => [h s l]
+(rgb->hsl rgb {:full-precision? true}) => [h s l]
 ```
 
-Converts RGB to HSL.
+Converts RGB to HSL, rounded to integers by default. The options form
+preserves full precision and returns doubles.
 
 ### `hsl->rgb`
 
 ```clojure
 (hsl->rgb hsl) => [r g b]
+(hsl->rgb hsl {:full-precision? true}) => [r g b]
 ```
 
-Converts HSL to RGB.
+Converts HSL to RGB on the 0–255 scale, rounded to integers by default.
+The options form preserves fractional channels.
 
 ### `hex->hsl`
 
@@ -255,17 +292,21 @@ Converts HSL to hex.
 
 ```clojure
 (rgb->hsv rgb) => [h s v]
+(rgb->hsv rgb {:full-precision? true}) => [h s v]
 ```
 
-Converts RGB to HSV.
+Converts RGB to HSV, rounded to integers by default. The options form
+preserves full precision and returns doubles.
 
 ### `hsv->rgb`
 
 ```clojure
 (hsv->rgb hsv) => [r g b]
+(hsv->rgb hsv {:full-precision? true}) => [r g b]
 ```
 
-Converts HSV to RGB.
+Converts HSV to RGB on the 0–255 scale, rounded to integers by default.
+The options form preserves fractional channels.
 
 ### `normalize-css-color-string`
 
@@ -307,12 +348,14 @@ Parses a valid CSS `rgba()` string.
 
 ```clojure
 (color input) => Color
+(color input {:full-precision? true}) => Color
 (color r g b) => Color
 (color r g b a) => Color
 ```
 
 Creates a `Color` record from any supported input, RGB channels, or RGBA
-channels.
+channels. Existing arities truncate RGB channels. The two-argument options
+form can preserve fractions with `:full-precision? true`.
 
 ```clojure
 (color "#ff0000")
@@ -333,10 +376,13 @@ Returns true when `x` is a `Color` record.
 ```clojure
 (->color r g b) => Color
 (->color r g b a) => Color
+(->color r g b a {:full-precision? true}) => Color
 ```
 
 Low-level constructor for `Color` records. Prefer `color` when accepting user
-input because it validates and normalizes supported formats.
+input because it validates and normalizes supported formats. Existing arities
+truncate RGB channels; the five-argument form can preserve fractions with
+`:full-precision? true`.
 
 ### `color-from-hex`
 
@@ -864,6 +910,7 @@ results round once to 8-bit channels.
 ```
 
 Generates a gradient with `steps` colors. Color space defaults to `:rgb`.
+One step returns the first stop, and zero steps returns an empty sequence.
 Each step is interpolated directly from the input stops at full precision;
 vector gradients retain fractional channels.
 
@@ -966,8 +1013,9 @@ gamut produce channels below `0` or above `255`; check them with
 
 `->hex` and `color` reject channels outside `0` to `255`, including float
 noise such as `-1e-12`. Use [`oklab->hex`](#oklab-hex) for hex
-output, or [`clamp-rgb`](#clamp-rgb) before `color`. `color`
-truncates fractional channels, so round them first.
+output, or [`clamp-rgb`](#clamp-rgb) before `color`. Pass
+`{:full-precision? true}` to `color` to preserve fractional channels;
+its existing one-argument form still truncates RGB channels.
 
 The function checks that the input is a vector of three finite numbers with
 an assertion precondition.
@@ -1256,6 +1304,8 @@ Clamps `value` into the inclusive range.
 ```
 
 Rounds `n` to `decimals` places. `decimals` defaults to `0`.
+At zero places, results within the 32-bit integer range are integers and
+larger results remain doubles to avoid overflow.
 
 ### `round-int`
 
