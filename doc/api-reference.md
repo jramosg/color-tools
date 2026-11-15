@@ -17,6 +17,69 @@ Manipulation functions generally preserve the input shape. A hex string returns
 a hex string, an RGB vector returns a vector, and a `Color` record returns a
 `Color` record.
 
+## Precision
+
+Keep computed coordinates at full precision and round the values you display.
+`round-coords` accepts exactly one of `{:decimal-places n}` (0 to 15 places)
+or `{:significant-digits n}` (1 to 17 digits). Passing both throws.
+There is no global precision setting; formatting affects only that call.
+
+```clojure
+(round-coords [123.456 0.001234] {:decimal-places 2})
+;=> [123.46 0.0]
+
+(round-coords [123.456 0.001234] {:significant-digits 3})
+;=> [123.0 0.00123]
+```
+
+`->rgb` and `->rgba` preserve fractional channels from vectors and CSS input.
+`mix`, `interpolate`, `gradient` and `alpha-blend` keep intermediate precision
+and return fractional vector channels. HSL and HSV interpolation also uses
+unrounded working coordinates, including hue wrapping. Keep results as vectors
+when chaining calculations. Hex and `Color` results quantize once to the
+nearest 8-bit channel; decimal places do not apply to hex output.
+
+```clojure
+(mix [0 0 0] [1 1 1])
+;=> [0.5 0.5 0.5]
+
+(->hex (mix [0 0 0] [1 1 1]))
+;=> "#010101"
+```
+
+`luminance`, Lab and Oklab conversions, and `delta-e` retain full precision.
+Accessibility decisions use the unrounded contrast ratio. `contrast-ratio`
+still rounds to two decimal places for compatibility: use `accessible?` for
+threshold decisions rather than comparing its displayed return value.
+
+```clojure
+(contrast-ratio [0 111 251] [255 255 255])
+;=> 4.5
+
+(accessible? [0 111 251] [255 255 255] :aa)
+;=> false
+```
+
+`->css` exports numeric CSS with optional `:decimal-places` or
+`:significant-digits`. The string outputs of `with-alpha` and `alpha-blend`
+accept the same options in a final map. By default they preserve all channel
+digits; rounding does not pad with trailing zeros. `theme->css-vars` exports
+hex tokens, so decimal places do not apply.
+
+```clojure
+(->css [12.34567 0 255 0.1234567] {:decimal-places 4})
+;=> "rgba(12.3457,0,255,0.1235)"
+
+(with-alpha "#ff0000" (/ 1.0 3) {:decimal-places 4})
+;=> "rgba(255,0,0,0.3333)"
+```
+
+Compatibility exceptions: `rgb->hsl` and `rgb->hsv` still round to whole
+coordinates, `hsl->rgb` and `hsv->rgb` return 8-bit channels, and `->color`
+(including the `color` factory) still truncates RGB channels. Full precision
+public alternatives or a major release are planned; interpolation already
+bypasses those integer conversions internally.
+
 ## Validation
 
 ### `color-names`
@@ -338,6 +401,17 @@ Converts any supported color input to RGBA.
 ```
 
 Converts any supported color input to hex.
+
+### `->css`
+
+```clojure
+(->css color) => string
+(->css color options) => string
+```
+
+Exports CSS `rgba()` with fractional channels preserved. Pass
+`{:decimal-places n}` or `{:significant-digits n}` to round this string;
+passing both throws. See [Precision](#precision).
 
 ### `->hsl`
 
@@ -667,7 +741,8 @@ to `"--ct-"`.
 ```
 
 Linearly mixes two colors. `ratio` defaults to `0.5`; `0` returns `color1`
-and `1` returns `color2`.
+and `1` returns `color2`. Vector results retain fractional channels. Hex and
+`Color` results round once to 8-bit channels.
 
 ### `blend-multiply`
 
@@ -748,17 +823,24 @@ Generates tone steps. `count` defaults to `5`.
 
 ```clojure
 (alpha-blend base-color overlay-color) => color
+(alpha-blend base-color overlay-color options) => color
 ```
 
 Composites `overlay-color` over `base-color` using source-over alpha blending.
+Vector results retain fractional RGB channels and the output alpha.
+Translucent string output uses CSS `rgba()` and accepts `:decimal-places` or
+`:significant-digits` in `options`. Opaque hex output ignores decimal places.
 
 ### `with-alpha`
 
 ```clojure
 (with-alpha color alpha) => color
+(with-alpha color alpha options) => color
 ```
 
-Sets the alpha channel for a color.
+Sets the alpha channel for a color. Translucent string output accepts
+`:decimal-places` or `:significant-digits` in `options`. These options affect
+only the exported string; vector and record results keep their alpha.
 
 ## Interpolation and Gradients
 
@@ -771,6 +853,8 @@ Sets the alpha channel for a color.
 
 Interpolates through two or more colors at `position` from 0 to 1. Color space
 defaults to `:rgb`; `:hsl` and `:hsv` are also supported.
+Working coordinates and vector results retain full precision. Hex and `Color`
+results round once to 8-bit channels.
 
 ### `gradient`
 
@@ -780,6 +864,8 @@ defaults to `:rgb`; `:hsl` and `:hsv` are also supported.
 ```
 
 Generates a gradient with `steps` colors. Color space defaults to `:rgb`.
+Each step is interpolated directly from the input stops at full precision;
+vector gradients retain fractional channels.
 
 ## Color Difference and Similarity
 

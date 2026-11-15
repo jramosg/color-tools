@@ -3,12 +3,25 @@ All notable changes to this project will be documented in this file. This change
 
 ## Unreleased
 ### Added
+- `->css` exports numeric CSS with per-call `:decimal-places` or
+  `:significant-digits` options. `with-alpha` and `alpha-blend` accept the
+  same options for translucent string output; passing both options throws.
+- A Precision section in the API reference explains output rounding and
+  the remaining integer conversion APIs.
 - `get-contrast-text` takes a WCAG level: `(get-contrast-text bg :aa-large)`.
   It returns white when white meets the level, black when only black does,
   and the one with more contrast when neither does, the rule Material UI and
   Bootstrap use.
 
 ### Changed
+- `mix`, `interpolate`, `gradient` and `alpha-blend` retain fractional
+  vector channels. Hex and `Color` results round once to 8-bit channels.
+  HSL and HSV interpolation uses full precision internally, so gradients
+  may change where whole-coordinate rounding previously shifted a step.
+- `->rgb` and `->rgba` preserve fractional channels from vectors and CSS
+  strings, including when used by luminance and Delta E calculations.
+- CSS numeric output preserves fractional channels by default, and CSS
+  parsers accept decimal channels and exponent notation for round trips.
 - `get-contrast-text` aims for `:aa` (4.5:1) by default, as `accessible?`
   does, instead of 3:1.
 - `accessible-theme` picks `:on-primary`, `:on-secondary` and `:on-accent`
@@ -21,6 +34,12 @@ All notable changes to this project will be documented in this file. This change
   level.
 
 ### Fixed
+- Accessibility checks continue to compare raw contrast, including for
+  fractional channels. Near a threshold, `accessible-theme` uses the
+  passing foreground: `#006ffb` gets black `:on-primary` text at AA, since
+  white's raw ratio is 4.499888 even though `contrast-ratio` displays 4.5.
+- Hex export no longer narrows channels to a 32-bit float before rounding,
+  which could round a channel just below a half-integer up instead of down.
 - `accessible-theme` could return a dark `:muted` surface on which no text
   color meets `:aaa`, so `:on-muted` missed the level it promises. `:muted`
   now darkens until the level is reachable.
@@ -42,6 +61,14 @@ All notable changes to this project will be documented in this file. This change
   reference values to 0.001. `delta-e` and `perceptually-similar?` build on
   it, so their results shift by a similar amount.
   `rgb->kelvin` uses the same matrix and can differ by 1 K.
+
+### Planned
+- Add full precision public alternatives for the HSL and HSV conversions
+  and RGB `Color` construction, or change them in a major release.
+  `rgb->hsl` and `rgb->hsv` keep whole coordinates, `hsl->rgb` and
+  `hsv->rgb` keep 8-bit channels, and `->color` keeps truncating RGB for
+  compatibility with equality checks in existing code. Oklab records
+  need a constructor that preserves fractional channels (issues #7, #8).
 
 ## [1.3.0] - 2026-11-13
 ### Added
