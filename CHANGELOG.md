@@ -72,7 +72,7 @@ All notable changes to this project will be documented in this file. This change
   that fails to parse says "Not a valid color".
 - `luminance` used the obsolete sRGB cutoff of 0.03928 instead of WCAG's
   current 0.04045. Fractional channels between the cutoffs now use the
-  correct linear branch (#88).
+  correct linear branch.
 - `rgb->lab` converted with the sRGB matrix rounded to 4 digits, which put
   Lab values off by up to 0.02. It now uses the full matrix and matches
   reference values to 0.001. `delta-e` and `perceptually-similar?` build on
