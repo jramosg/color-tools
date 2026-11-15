@@ -20,6 +20,8 @@ All notable changes to this project will be documented in this file. This change
   - `color-tools completions bash|zsh|fish` prints a shell completion script
   - Exits 0 on success, 1 when a check such as `contrast --level aa` fails
     and 2 on invalid input, for use in scripts and CI
+  - `info` and `text-color` pick text at AA by default; `--level` selects
+    AA, AA for large text, or AAA
   - Every public function has a command; a test keeps the
     [coverage table](doc/cli.md#library-coverage) current
 - `get-contrast-text` takes a WCAG level: `(get-contrast-text bg :aa-large)`.

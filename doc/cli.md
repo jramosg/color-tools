@@ -306,7 +306,7 @@ dark         false
 temperature  cool
 vibrant      true
 kelvin       none
-text-color   #ffffff
+text-color   #000000
 ```
 
 `convert` reads any notation and prints the `--to` format.
@@ -542,14 +542,22 @@ The check compares the unrounded ratio, so a pair at 4.4999:1 fails `aa`
 even though the ratio displays as 4.5. Translucent text is composited onto
 the background before measuring.
 
-`accessible` adjusts the lightness of a color until it meets `--level`
-(default `aa`) on a background. `text-color` picks black or white.
+`accessible` finds the nearest whole HSL lightness that meets `--level`
+(default `aa`) on a background, keeping hue and saturation. A color that
+already passes is returned unchanged.
+
+`text-color` picks white when it meets `--level` (default `aa`), black when
+only black does, and the one with more contrast when neither does. Use
+`aa-large` for large text. The `text-color` field of `info` follows the same
+rule and also accepts `--level`.
 `luminance` prints the WCAG relative luminance.
 
 ```console
 $ color-tools accessible '#3498db' --on '#ffffff'
-#000000
+#207ab6
 $ color-tools text-color '#3498db'
+#000000
+$ color-tools text-color '#3498db' --level aa-large
 #ffffff
 $ color-tools luminance '#3498db'
 0.283

@@ -181,7 +181,7 @@
           "temperature  cool"
           "vibrant      true"
           "kelvin       none"
-          "text-color   #ffffff"]
+          "text-color   #000000"]
          (lines "info" "#3498db")))
   (testing "structured output keeps coordinates as numbers"
     (let [json (out "info" "rgba(255,255,255,0.5)" "--json")]
@@ -502,9 +502,13 @@
     (is (= (str (ct/luminance "#3498db") "\n")
            (out "luminance" "#3498db" "--json"))))
   (testing "text-color"
-    (is (= ["#ffffff" "#000000"] (lines "text-color" "#3498db" "#fff")))
-    (is (= ["#ffffff"] (lines "contrast-text" "#3498db"))))
+    (is (= ["#000000" "#000000"] (lines "text-color" "#3498db" "#fff")))
+    (is (= ["#000000"] (lines "contrast-text" "#3498db"))))
   (testing "accessible"
+    (is (= ["#207ab6"]
+           (lines "accessible" "#3498db" "--on" "#ffffff")))
+    (is (= ["#3498db"]
+           (lines "accessible" "#3498db" "--on" "#000000")))
     (is (= [(ct/find-accessible-color "#ffffff" "#3498db")]
            (lines "accessible" "#3498db" "--on" "#ffffff")))
     (is (= [(ct/find-accessible-color "#000000" "#3498db" :aaa)]
@@ -517,6 +521,32 @@
     (is (fails-with? 2 "--on BACKGROUND is required" "accessible" "#fff"))
     (is (fails-with? 2 "invalid color \"nope\""
                      "accessible" "#fff" "--on" "nope"))))
+
+(deftest text-color-level-test
+  (testing "text-color, its alias and info honor each requested level"
+    (doseq [[background level expected]
+            [["#3498db" "aa" "#000000"]
+             ["#3498db" "aa-large" "#ffffff"]
+             ["#3498db" "aaa" "#000000"]
+             ["#b8461f" "aaa" "#ffffff"]
+             ["#767676" "aa" "#ffffff"]]]
+      (doseq [command ["text-color" "contrast-text"]]
+        (is (= [expected] (lines command background "--level" level))
+            (pr-str command background level)))
+      (is (= (str "text-color   " expected)
+             (last (lines "info" background "--level" level)))
+          (pr-str background level))))
+  (testing "stdin and structured output use the requested level"
+    (is (= "[\"#ffffff\", \"#000000\"]\n"
+           (out {:stdin "#3498db\n#fff\n"} "text-color" "-" "-l"
+                "aa-large" "--json"))))
+  (testing "AA is the default, including the color shorthand"
+    (is (= (out "text-color" "#3498db")
+           (out "text-color" "#3498db" "--level" "aa")))
+    (is (= (out "info" "#3498db" "--level" "aa-large")
+           (out "#3498db" "--level" "aa-large"))))
+  (is (fails-with? 2 "--level must be one of aa, aa-large, aaa"
+                   "text-color" "#3498db" "--level" "invalid")))
 
 (deftest theme-test
   (let [theme (ct/accessible-theme "#3498db")]

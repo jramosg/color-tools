@@ -40,6 +40,10 @@ check 'oklch rounding' 0 'oklch(0.65 0.13 242.69)' \
   convert '#3498db' --to oklch --precision 2
 check 'palette' 0 '#db3398
 #98db33' palette '#3498db' --type triadic
+check 'AA text by default' 0 '#000000' text-color '#3498db'
+check 'large text level' 0 '#ffffff' text-color '#3498db' --level aa-large
+check 'nearest accessible lightness' 0 '#207ab6' \
+  accessible '#3498db' --on '#ffffff'
 check 'passed check exits 0' 0 'true' is dark '#2c3e50'
 check 'failed check exits 1' 1 'false' is light '#2c3e50'
 check 'bad input exits 2' 2 '' convert nope
