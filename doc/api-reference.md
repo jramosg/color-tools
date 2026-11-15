@@ -1170,6 +1170,8 @@ Clamps `value` into the inclusive range.
 ```
 
 Rounds `n` to `decimals` places. `decimals` defaults to `0`.
+At zero places, results within the 32-bit integer range are integers and
+larger results remain doubles to avoid overflow.
 
 ### `round-int`
 

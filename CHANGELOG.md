@@ -24,6 +24,9 @@ All notable changes to this project will be documented in this file. This change
 - `accessible-theme` could return a dark `:muted` surface on which no text
   color meets `:aaa`, so `:on-muted` missed the level it promises. `:muted`
   now darkens until the level is reachable.
+- `round` and `round-int` overflowed when rounding large numbers to zero
+  decimal places. Values outside the 32-bit integer range now remain
+  doubles; ordinary zero-decimal results still return integers (#89).
 - The documentation of `accessible-theme` said every `:on-*` token meets the
   requested level. On `:primary`, `:secondary` and `:accent` that can't hold
   at `:aaa` for mid-tone colors, and the documentation now says so.
