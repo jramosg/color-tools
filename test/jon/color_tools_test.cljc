@@ -1316,6 +1316,15 @@
     (is (= 10 (count (sut/gradient ["#ff0000" "#0000ff"] 10 :hsl))))
     (is (= 10 (count (sut/gradient ["#ff0000" "#0000ff"] 10 :hsv))))))
 
+(deftest single-step-palette-test
+  (testing "One-step gradients return the first stop"
+    (doseq [space [:rgb :hsl :hsv]]
+      (is (= ["#3498db"] (vec (sut/gradient ["#3498db" "#e74c3c"]
+                                            1 space)))))
+    (is (= ["#000066"] (vec (sut/monochromatic "#0000ff" 1))))
+    (is (empty? (sut/gradient ["#000000" "#ffffff"] 0)))
+    (is (empty? (sut/monochromatic "#0000ff" 0)))))
+
 (deftest test-perceptual-color-difference
   (testing "RGB to LAB conversion"
     (let [[l a b] (sut/rgb->lab [255 0 0])]

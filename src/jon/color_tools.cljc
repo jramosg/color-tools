@@ -797,7 +797,7 @@
    (let [count (or count 5)
          [h] (->hsl color)
          variations (for [i (range count)
-                          :let [factor (/ i (dec count))
+                          :let [factor (/ i (max 1 (dec count)))
                                 new-l (+ 20 (* 60 factor))
                                 new-s (+ 50 (* 50 (- 1 (* 0.5 factor))))]]
                       (if (string? color)
@@ -1275,8 +1275,10 @@
   ([colors steps] (gradient colors steps :rgb))
   ([colors steps color-space]
    (let [color-space (or color-space :rgb)]
-     (for [i (range steps)]
-       (interpolate colors (/ i (dec steps)) color-space)))))
+     (if (= steps 1)
+       (take 1 colors)
+       (for [i (range steps)]
+         (interpolate colors (/ i (dec steps)) color-space))))))
 
 ;; =============================================================================
 ;; Perceptual Color Difference (Delta E)

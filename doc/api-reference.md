@@ -774,6 +774,9 @@ defaults to `:rgb`; `:hsl` and `:hsv` are also supported.
 
 ### `gradient`
 
+One step returns the first stop unchanged; zero steps returns an empty
+sequence.
+
 ```clojure
 (gradient colors steps) => [color ...]
 (gradient colors steps color-space) => [color ...]
