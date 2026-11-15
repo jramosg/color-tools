@@ -2,7 +2,19 @@
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- `get-contrast-text` takes a WCAG level: `(get-contrast-text bg :aa)`. It
+  returns white when white meets the level, black when only black does, and
+  the one with more contrast when neither does, the rule Material UI and
+  Bootstrap use. The one-argument form is unchanged and means `:aa-large`
+  (3:1), which white on a mid-tone such as `#3498db` only just meets. Pass
+  `:aa` for body-size text.
+
 ### Changed
+- `accessible-theme` picks `:on-primary`, `:on-secondary` and `:on-accent`
+  with `get-contrast-text` at the theme's level, so the two agree. Themes at
+  `:aa` and `:aaa` are unchanged. At `:aa-large`, about 7% of brand colors
+  get white text where they got black, since white now comes first.
 - `find-accessible-color` returns the variant of the target nearest to it in
   lightness that meets the level, instead of black whenever black passes:
   `(find-accessible-color "#ffffff" "#3498db")` gives `"#207ab6"`, a darker
