@@ -31,6 +31,13 @@ All notable changes to this project will be documented in this file. This change
   or white, whichever the level needs.
 
 ### Fixed
+- `accessible-theme` could return a dark `:muted` surface on which no text
+  color meets `:aaa`, so `:on-muted` missed the level it promises. `:muted`
+  now darkens until the level is reachable: `#ffff00` in dark mode at
+  `:aaa` gets `#575726` instead of `#67672d`. Other themes are unchanged.
+- The documentation of `accessible-theme` said every `:on-*` token meets the
+  requested level. On `:primary`, `:secondary` and `:accent` that can't hold
+  at `:aaa` for mid-tone colors, and the documentation now says so.
 - The demo converter rejected `rgba()` without an alpha, such as
   `rgba(52, 152, 219)`. CSS treats `rgba()` as an alias of `rgb()`, so it now
   reads it as RGBA with an alpha of 1.
@@ -48,13 +55,6 @@ All notable changes to this project will be documented in this file. This change
   `perceptually-similar?` build on it, so their results shift by a similar
   amount. `rgb->kelvin` uses the same matrix and can differ by 1 K: sRGB
   white is now 6503 K instead of 6504 K.
-- `accessible-theme` could return a dark `:muted` surface on which no text
-  color meets `:aaa`, so `:on-muted` missed the level it promises. `:muted`
-  now darkens until the level is reachable: `#ffff00` in dark mode at
-  `:aaa` gets `#575726` instead of `#67672d`. Other themes are unchanged.
-- The documentation of `accessible-theme` said every `:on-*` token meets the
-  requested level. On `:primary`, `:secondary` and `:accent` that can't hold
-  at `:aaa` for mid-tone colors, and the documentation now says so.
 
 ## [1.3.0] - 2026-11-13
 ### Added
