@@ -734,40 +734,29 @@
             first)))))
 
 (defn get-contrast-text
-  "Get the best contrast text color (black or white) for a given background color.
-   Uses luminance threshold of 0.35 following accessibility best practices, with
-   fallback to ensure WCAG AA compliance:
-   - Light backgrounds (luminance > 0.35) get black text
-   - Dark backgrounds (luminance ≤ 0.35) get white text
-   - If the primary choice doesn't meet WCAG AA standards, tries the alternative
-   - If neither meets standards, returns the one with better contrast ratio
-   Always returns a hex color string for consistency."
-  [background-color]
-  (let [bg-luminance (luminance background-color)
-        black-color "#000000"
-        white-color "#ffffff"
+  "Pick black or white text for a background. Returns a hex string.
 
-        ;; Primary choice based on luminance threshold
-        primary-color (if (> bg-luminance 0.35) black-color white-color)
-        alternative-color (if (> bg-luminance 0.35) white-color black-color)
+   Returns white when white meets the level on the background, black when
+   only black does, and whichever has more contrast when neither does.
+   White comes first because white text on a mid-tone brand color is the
+   usual design choice. Material UI and Bootstrap use the same rule.
 
-        primary-ratio (raw-contrast-ratio background-color primary-color)
-        alternative-ratio (raw-contrast-ratio background-color
-                                              alternative-color)
-        ;; Use the AA-large threshold for the black/white text choice
-        threshold (contrast-threshold :aa-large)]
+   level is :aa (4.5:1, the default), :aa-large (3:1) or :aaa (7:1), as
+   for accessible?. Pass :aa-large when the text is large, such as a
+   heading: it keeps white on mid-tones where :aa needs black.
 
-    (cond
-      ;; If primary choice is accessible, use it
-      (>= primary-ratio threshold) primary-color
-
-      ;; If primary fails but alternative is accessible, use alternative
-      (>= alternative-ratio threshold) alternative-color
-
-      ;; If neither is accessible, choose the one with better contrast ratio
-      :else (if (> primary-ratio alternative-ratio)
-              primary-color
-              alternative-color))))
+   (get-contrast-text \"#3498db\")            ;=> \"#000000\", at 6.66:1
+   (get-contrast-text \"#3498db\" :aa-large)  ;=> \"#ffffff\", at 3.15:1"
+  ([background-color] (get-contrast-text background-color :aa))
+  ([background-color level]
+   (let [threshold (contrast-threshold level)
+         white-ratio (raw-contrast-ratio background-color "#ffffff")
+         black-ratio (raw-contrast-ratio background-color "#000000")]
+     (cond
+       (>= white-ratio threshold) "#ffffff"
+       (>= black-ratio threshold) "#000000"
+       (> white-ratio black-ratio) "#ffffff"
+       :else "#000000"))))
 
 ;; =============================================================================
 ;; Color Harmony and Palettes
@@ -862,20 +851,6 @@
     color1
     color2))
 
-(defn- brand-text-color
-  "Black or white text for a brand color: white on dark colors and black
-   on light ones, unless the other one is needed to meet `level`. When
-   neither meets it, the one with more contrast.
-
-   Not the nearest-lightness search of accessible-color. Starting from
-   black or white, that search lands on a gray, which always has less
-   contrast than one of the two and nothing to recommend it."
-  [background level]
-  (let [preferred (if (dark? background) "#ffffff" "#000000")]
-    (if (accessible? background preferred level)
-      preferred
-      (better-contrast-color background "#000000" "#ffffff"))))
-
 (defn- accessible-color
   [background preferred-color level]
   (if (accessible? background preferred-color level)
@@ -935,11 +910,11 @@
                                   (if light? "#374151" "#e5e7eb")
                                   level)
       :primary primary
-      :on-primary (brand-text-color primary level)
+      :on-primary (get-contrast-text primary level)
       :secondary secondary
-      :on-secondary (brand-text-color secondary level)
+      :on-secondary (get-contrast-text secondary level)
       :accent accent
-      :on-accent (brand-text-color accent level)
+      :on-accent (get-contrast-text accent level)
       :border (if light? (shade background 0.12) (tint background 0.16))
       :focus-ring ring})))
 

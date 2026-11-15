@@ -339,6 +339,13 @@ The parser accepts common CSS color string formats:
 ;; Find an accessible color by adjusting lightness
 (color/find-accessible-color "#3498db" "#e74c3c" :aa)
 ;=> "#52110a"  ; Closest lightness of the red that meets AA
+
+;; Pick black or white text for a background
+(color/get-contrast-text "#3498db")
+;=> "#000000"  ; 6.66:1, meets AA
+
+(color/get-contrast-text "#3498db" :aa-large)
+;=> "#ffffff"  ; 3.15:1, enough for large text such as headings
 ```
 
 ### Accessible Theme Generation

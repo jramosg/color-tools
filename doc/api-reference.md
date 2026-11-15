@@ -415,6 +415,16 @@ Converts a color to grayscale using luminance weights.
 
 ## Contrast and Accessibility
 
+Which function to use:
+
+| You have | You want | Use |
+| --- | --- | --- |
+| Two colors | Their contrast ratio | `contrast-ratio` |
+| Two colors | A yes or no for a WCAG level | `accessible?` |
+| A background | Black or white text for it | `get-contrast-text` |
+| A background and a text color that fails on it | The nearest shade of that color that passes | `find-accessible-color` |
+| One brand color | A whole set of UI colors with text colors | `accessible-theme` |
+
 ### `luminance`
 
 ```clojure
@@ -482,10 +492,33 @@ Returns a hex string for string input and an RGB vector otherwise.
 
 ```clojure
 (get-contrast-text background-color) => string
+(get-contrast-text background-color level) => string
 ```
 
-Returns either black or white, choosing the readable text color for a
-background.
+Picks black or white text for a background and returns it as a hex string.
+
+It returns white when white meets the level on the background, black when
+only black does, and whichever has more contrast when neither does. White
+comes first because white text on a mid-tone brand color is the usual design
+choice; Material UI and Bootstrap use the same rule.
+
+`level` is `:aa` (4.5:1, the default), `:aa-large` (3:1) or `:aaa` (7:1), as
+for `accessible?`. Pass `:aa-large` when the text is large, such as a
+heading: it keeps white on mid-tones where `:aa` needs black.
+
+```clojure
+(get-contrast-text "#3498db")
+;=> "#000000"  ; 6.66:1
+
+(get-contrast-text "#3498db" :aa-large)
+;=> "#ffffff"  ; 3.15:1, enough for large text only
+
+(get-contrast-text "#2c3e50")
+;=> "#ffffff"  ; 10.98:1, white meets AA here
+```
+
+`accessible-theme` picks `:on-primary`, `:on-secondary` and `:on-accent` with
+this function, at the theme's level.
 
 ## Palette Generation
 

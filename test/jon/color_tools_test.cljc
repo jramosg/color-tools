@@ -390,6 +390,49 @@
     (is (= [32 122 182]
            (sut/find-accessible-color "#ffffff" (sut/color "#3498db")))))
 
+  (testing "get-contrast-text takes a level"
+    (testing "the default is :aa, as for accessible?"
+      (doseq [bg ["#3498db" "#e74c3c" "#808080" "#ffffff" "#000000"]]
+        (is (= (sut/get-contrast-text bg)
+               (sut/get-contrast-text bg :aa)
+               (sut/get-contrast-text bg nil))
+            bg)))
+    (testing "white on a mid-tone passes :aa-large and not :aa"
+      (is (= "#000000" (sut/get-contrast-text "#3498db")))
+      (is (= "#ffffff" (sut/get-contrast-text "#3498db" :aa-large)))
+      (is (= "#000000" (sut/get-contrast-text "#e74c3c")))
+      (is (= "#ffffff" (sut/get-contrast-text "#e74c3c" :aa-large))))
+    (testing "white stays where it meets the level"
+      (is (= "#ffffff" (sut/get-contrast-text "#2c3e50" :aa)))
+      (is (= "#ffffff" (sut/get-contrast-text "#2c3e50" :aaa)))
+      (is (= "#ffffff" (sut/get-contrast-text [44 62 80] :aa)))
+      (is (= "#ffffff" (sut/get-contrast-text (sut/color "#2c3e50") :aa))))
+    (testing "neither meets :aaa on a mid-tone: the one with more contrast"
+      (is (= "#000000" (sut/get-contrast-text "#3498db" :aaa)))
+      (is (not (sut/accessible? "#3498db" "#000000" :aaa)))
+      (is (= "#ffffff" (sut/get-contrast-text "#b8461f" :aaa)))
+      (is (not (sut/accessible? "#b8461f" "#ffffff" :aaa)))))
+
+  (testing "get-contrast-text follows its rule for every color and level"
+    (doseq [level [:aa-large :aa :aaa]
+            r (range 0 256 51)
+            g (range 0 256 51)
+            b (range 0 256 51)
+            :let [bg [r g b]
+                  text (sut/get-contrast-text bg level)
+                  white? (sut/accessible? bg "#ffffff" level)
+                  black? (sut/accessible? bg "#000000" level)]]
+      (is (= text
+             (cond
+               white? "#ffffff"
+               black? "#000000"
+               (> (sut/contrast-ratio bg "#ffffff")
+                  (sut/contrast-ratio bg "#000000")) "#ffffff"
+               :else "#000000"))
+          (pr-str bg level))
+      (when (not= :aaa level)
+        (is (sut/accessible? bg text level) (pr-str bg level)))))
+
   (testing "Get contrast text color"
     ; Light backgrounds should get black text
     (is (= "#000000" (sut/get-contrast-text "#ffffff")))  ; white bg -> black text
@@ -402,7 +445,9 @@
     (is (= "#ffffff" (sut/get-contrast-text "#0000ff")))  ; blue bg -> white text
     (is (= "#ffffff" (sut/get-contrast-text "#800080")))  ; purple bg -> white text
     (is (= "#ffffff" (sut/get-contrast-text "#008000")))  ; dark green bg -> white text
-    (is (= "#ffffff" (sut/get-contrast-text "#129BA5")))  ; teal bg -> white text
+    ;; White has 3.3:1 on this teal: fine for large text, below AA.
+    (is (= "#ffffff" (sut/get-contrast-text "#129BA5" :aa-large)))
+    (is (= "#000000" (sut/get-contrast-text "#129BA5")))
 
     ; Gray tones
     (is (= "#000000" (sut/get-contrast-text "#c0c0c0")))  ; light gray -> black text
@@ -552,6 +597,20 @@
       (is (not (contains? css-vars "--brand-level"))))))
 
 (deftest test-accessible-theme-fallbacks
+  (testing "Text on brand tokens is what get-contrast-text picks"
+    (doseq [level [:aa-large :aa :aaa]
+            mode [:light :dark]
+            r (range 0 256 51)
+            g (range 0 256 51)
+            b (range 0 256 51)
+            :let [theme (sut/accessible-theme [r g b]
+                                              {:mode mode :level level})]
+            [brand text] [[:primary :on-primary]
+                          [:secondary :on-secondary]
+                          [:accent :on-accent]]]
+      (is (= (sut/get-contrast-text (brand theme) level) (text theme))
+          (pr-str [r g b] mode level brand))))
+
   (testing "Text on brand tokens is black or white"
     ;; White is preferred on #1f86c7 and misses AA. The nearest gray that
     ;; passes, #171717, has less contrast than black.
