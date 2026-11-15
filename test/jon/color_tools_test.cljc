@@ -281,6 +281,19 @@
             mixed-75 (sut/mix red blue 0.75)]
         (is (not= mixed-25 mixed-75))))))
 
+(deftest luminance-srgb-cutoff-test
+  (testing "WCAG luminance uses the current sRGB transfer cutoff"
+    ;; https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
+    ;; Fractional channels can fall between the old and current cutoffs.
+    (doseq [channel [0.0 1.0 10.0 10.1 10.2 10.3147]]
+      (is (< (Math/abs (- (sut/luminance (sut/->Color channel channel channel 1.0))
+                          (/ channel 255 12.92)))
+             1.0E-15)
+          (str channel)))
+    (is (< (Math/abs (- (sut/luminance [11 11 11])
+                        (Math/pow (/ (+ (/ 11 255.0) 0.055) 1.055) 2.4)))
+           1.0E-15))))
+
 (deftest test-contrast-and-accessibility
   (testing "Luminance calculation"
     (let [white-lum (sut/luminance "#ffffff")

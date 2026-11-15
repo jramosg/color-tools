@@ -551,7 +551,8 @@ Which function to use:
 (luminance color) => number
 ```
 
-Calculates WCAG relative luminance from 0 to 1.
+Calculates WCAG relative luminance from 0 to 1, using the current sRGB
+transfer cutoff of 0.04045.
 
 ### `contrast-ratio`
 
