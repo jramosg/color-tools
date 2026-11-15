@@ -39,17 +39,6 @@ All notable changes to this project will be documented in this file. This change
   level.
 
 ### Fixed
-- `round` and `round-int` still overflowed on the JVM when rounding large
-  numbers to zero decimal places. Results outside the 32-bit integer range
-  now remain doubles instead of throwing or overflowing.
-- `luminance` used the obsolete sRGB cutoff of 0.03928 instead of WCAG's
-  current 0.04045, miscalculating fractional channels between those values.
-  It now shares the same transfer function as the Lab conversions.
-- `split-complementary` added the base hue twice, producing wrong colors
-  for nonzero base hues. It now rotates by 180 degrees plus or minus
-  the requested angle.
-- One-step `gradient` and `monochromatic` calls divided by zero. They now
-  return the first gradient stop or the first monochromatic variation.
 - Accessibility checks continue to compare raw contrast, including for
   fractional channels. Near a threshold, `accessible-theme` uses the
   passing foreground: `#006ffb` gets black `:on-primary` text at AA, since

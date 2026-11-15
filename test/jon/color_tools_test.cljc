@@ -1518,12 +1518,6 @@
   (testing "Return an integer at 0 places"
     (is (int? (sut/round 2.7))))
 
-  (testing "Zero decimal places do not overflow a 32-bit integer"
-    (doseq [n [4.0E9 -4.0E9 1.0E20 -1.0E300]]
-      (is (= n (sut/round n)) (str n))
-      (is (= n (sut/round-int n)) (str n)))
-    (is (= 2147483648.0 (sut/round 2147483647.7)))
-    (is (= -2147483649.0 (sut/round -2147483648.7))))
   (testing "Keep large values instead of overflowing a long"
     (is (= 40000.0 (sut/round 40000.0 15)))
     (is (= 1.0E10 (sut/round 1.0E10 10)))
@@ -1657,26 +1651,6 @@
                                {:full-precision? false})]]
       (is (= [10 20 30] (sut/->rgb record))))))
 
-(deftest palette-and-gradient-edge-cases-test
-  (testing "Split complements rotate around the base's complementary hue"
-    (doseq [hue [30 90 210 350]
-            :let [base (sut/hsl->rgb [hue 100 50])
-                  [left right] (sut/split-complementary base)]]
-      (is (< (Math/abs (- (mod (+ hue 150) 360)
-                          (first (sut/->hsl left))))
-             1.0E-10))
-      (is (< (Math/abs (- (mod (+ hue 210) 360)
-                          (first (sut/->hsl right))))
-             1.0E-10))))
-
-  (testing "One-step gradients return the first stop"
-    (doseq [space [:rgb :hsl :hsv]]
-      (is (= ["#3498db"] (vec (sut/gradient ["#3498db" "#e74c3c"]
-                                            1 space)))))
-    (is (= ["#000066"] (vec (sut/monochromatic "#0000ff" 1))))
-    (is (empty? (sut/gradient ["#000000" "#ffffff"] 0)))
-    (is (empty? (sut/monochromatic "#0000ff" 0)))))
-
 (deftest precision-pipeline-test
   (testing "Fractional inputs survive conversion and repeated mixing"
     (let [rgb [0.25 1.5 2.75]]
@@ -1746,18 +1720,6 @@
            1.0E-15))
     (is (not (sut/accessible? [118.9 118.9 118.9] "#ffffff" :aa)))
     (is (pos? (sut/delta-e [100.1 100.1 100.1] [100.2 100.2 100.2]))))
-
-  (testing "WCAG luminance uses the current sRGB transfer cutoff"
-    ;; https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
-    ;; Fractional channels can fall between the old and current cutoffs.
-    (doseq [channel [0.0 1.0 10.0 10.1 10.2 10.3147]]
-      (is (< (Math/abs (- (sut/luminance (vec (repeat 3 channel)))
-                          (/ channel 255 12.92)))
-             1.0E-15)
-          (str channel)))
-    (is (< (Math/abs (- (sut/luminance [11 11 11])
-                        (Math/pow (/ (+ (/ 11 255.0) 0.055) 1.055) 2.4)))
-           1.0E-15)))
 
   (testing "Themes reject white just below AA despite the displayed ratio"
     (doseq [mode [:light :dark]

@@ -910,7 +910,6 @@ results round once to 8-bit channels.
 ```
 
 Generates a gradient with `steps` colors. Color space defaults to `:rgb`.
-One step returns the first stop, and zero steps returns an empty sequence.
 Each step is interpolated directly from the input stops at full precision;
 vector gradients retain fractional channels.
 
@@ -1304,8 +1303,6 @@ Clamps `value` into the inclusive range.
 ```
 
 Rounds `n` to `decimals` places. `decimals` defaults to `0`.
-At zero places, results within the 32-bit integer range are integers and
-larger results remain doubles to avoid overflow.
 
 ### `round-int`
 

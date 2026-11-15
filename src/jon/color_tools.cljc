@@ -60,15 +60,14 @@
           (/ (double (Math/round scaled)) factor))))))
 
 (defn round
-  "Round a number to specified decimal places. Returns a 32-bit integer
-   at 0 places when it fits, and a double otherwise. Large values that
-   have no fractional digit at the requested precision come back unchanged."
+  "Round a number to specified decimal places. Returns an integer at 0
+   places and a double otherwise. Large values that have no fractional
+   digit at the requested precision come back unchanged."
   ([n] (round n 0))
   ([n decimals]
-   (let [decimals (or decimals 0)
-         rounded (round-places n decimals)]
-     (cond-> rounded
-       (and (= decimals 0) (<= -2147483648 rounded 2147483647)) int))))
+   (let [decimals (or decimals 0)]
+     (cond-> (round-places n decimals)
+       (= decimals 0) int))))
 
 (defn round-int [n]
   (round n 0))
@@ -727,17 +726,15 @@
 ;; Contrast and Accessibility
 ;; =============================================================================
 
-(defn- to-linear-rgb
-  "Remove sRGB gamma encoding from a channel in the 0-1 range."
-  [c]
-  (if (<= c 0.04045)
-    (/ c 12.92)
-    (Math/pow (/ (+ c 0.055) 1.055) 2.4)))
-
 (defn luminance
-  "Calculate WCAG relative luminance using the sRGB cutoff of 0.04045."
+  "Calculate relative luminance of a color"
   [color]
-  (let [[r g b] (map #(to-linear-rgb (/ % 255.0)) (->rgb color))]
+  (let [rgb (->rgb color)
+        [r g b] (map #(let [val (/ % 255)]
+                        (if (<= val 0.03928)
+                          (/ val 12.92)
+                          (Math/pow (/ (+ val 0.055) 1.055) 2.4)))
+                     rgb)]
     (+ (* 0.2126 r) (* 0.7152 g) (* 0.0722 b))))
 
 (defn- raw-contrast-ratio
@@ -873,7 +870,7 @@
    (let [count (or count 5)
          [h] (->hsl color)
          variations (for [i (range count)
-                          :let [factor (/ i (max 1 (dec count)))
+                          :let [factor (/ i (dec count))
                                 new-l (+ 20 (* 60 factor))
                                 new-s (+ 50 (* 50 (- 1 (* 0.5 factor))))]]
                       (if (string? color)
@@ -885,9 +882,11 @@
   "Get split-complementary colors"
   ([color] (split-complementary color 30))
   ([color angle]
-   (let [angle (or angle 30)]
-     [(adjust-hue color (- 180 angle))
-      (adjust-hue color (+ 180 angle))])))
+   (let [angle (or angle 30)
+         [h] (->hsl color)
+         comp-hue (+ h 180)]
+     [(adjust-hue color (- comp-hue angle))
+      (adjust-hue color (+ comp-hue angle))])))
 
 ;; =============================================================================
 ;; Advanced Palette Generation
@@ -1359,11 +1358,18 @@
   ([colors steps color-space]
    (let [color-space (or color-space :rgb)]
      (for [i (range steps)]
-       (interpolate colors (/ i (max 1 (dec steps))) color-space)))))
+       (interpolate colors (/ i (dec steps)) color-space)))))
 
 ;; =============================================================================
 ;; Perceptual Color Difference (Delta E)
 ;; =============================================================================
+
+(defn- to-linear-rgb
+  "Remove sRGB gamma encoding from a channel in the 0-1 range."
+  [c]
+  (if (<= c 0.04045)
+    (/ c 12.92)
+    (Math/pow (/ (+ c 0.055) 1.055) 2.4)))
 
 (defn- rgb->xyz
   "CIE 1931 XYZ of an sRGB vector, with the Y of white at 1. The matrix

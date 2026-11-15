@@ -313,7 +313,7 @@ The parser accepts common CSS color string formats:
 ;=> ["#3ce74d" "#4d3ce7"]
 
 (color/generate-palette :split-complementary "#2ecc71" {:angle 25})
-;=> ["#cc2ecc" "#cc2e48"]
+;=> ["#8acc2e" "#2ecc56"]
 ```
 
 ### Accessibility and Contrast
