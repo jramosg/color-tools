@@ -698,59 +698,65 @@
        (contrast-threshold level))))
 
 (defn find-accessible-color
-  "Find an accessible color by adjusting lightness"
+  "Find the variant of `target-color` nearest to it in lightness that meets
+   a WCAG contrast level against `background`.
+
+   Keeps the hue and saturation of the target and tries each whole HSL
+   lightness from 0 to 100, starting at the target's own and moving
+   outward. When a darker and a lighter variant are equally near, the
+   darker one is tried first.
+
+   Returns the target itself when it already meets the level, and nil when
+   no lightness does. No color reaches :aaa on a mid-tone background.
+
+   level is :aa (4.5, the default), :aa-large (3) or :aaa (7). Returns a
+   hex string for string input and an RGB vector otherwise."
   ([background target-color]
    (find-accessible-color background target-color :aa))
   ([background target-color level]
    (let [threshold (contrast-threshold level)
-         target-color-hsl (->hsl target-color)
-         try-color (fn [lightness]
-                     (let [[h s _] target-color-hsl
-                           new-color (if (string? target-color)
-                                       (hsl->hex [h s lightness])
-                                       (hsl->rgb [h s lightness]))]
-                       (when (>= (raw-contrast-ratio background new-color)
-                                 threshold)
-                         new-color)))]
-     (or (try-color 0)    ; Try black first
-         (try-color 100)  ; Then white
-         (some try-color (range 0 101 5)))))) ; Then try other lightness values
+         passes? #(>= (raw-contrast-ratio background %) threshold)
+         [h s l] (->hsl target-color)
+         variant (fn [lightness]
+                   (if (string? target-color)
+                     (hsl->hex [h s lightness])
+                     (hsl->rgb [h s lightness])))]
+     (if (passes? target-color)
+       ;; Not the variant at its own lightness: HSL is rounded to whole
+       ;; numbers, so that could be a slightly different color.
+       (if (string? target-color)
+         (->hex target-color)
+         (->rgb target-color))
+       (->> (range 0 101)
+            (sort-by #(Math/abs (- % l)))
+            (map variant)
+            (filter passes?)
+            first)))))
 
 (defn get-contrast-text
-  "Get the best contrast text color (black or white) for a given background color.
-   Uses luminance threshold of 0.35 following accessibility best practices, with
-   fallback to ensure WCAG AA compliance:
-   - Light backgrounds (luminance > 0.35) get black text
-   - Dark backgrounds (luminance ≤ 0.35) get white text
-   - If the primary choice doesn't meet WCAG AA standards, tries the alternative
-   - If neither meets standards, returns the one with better contrast ratio
-   Always returns a hex color string for consistency."
-  [background-color]
-  (let [bg-luminance (luminance background-color)
-        black-color "#000000"
-        white-color "#ffffff"
+  "Pick black or white text for a background. Returns a hex string.
 
-        ;; Primary choice based on luminance threshold
-        primary-color (if (> bg-luminance 0.35) black-color white-color)
-        alternative-color (if (> bg-luminance 0.35) white-color black-color)
+   Returns white when white meets the level on the background, black when
+   only black does, and whichever has more contrast when neither does.
+   White comes first because white text on a mid-tone brand color is the
+   usual design choice. Material UI and Bootstrap use the same rule.
 
-        primary-ratio (raw-contrast-ratio background-color primary-color)
-        alternative-ratio (raw-contrast-ratio background-color
-                                              alternative-color)
-        ;; Use the AA-large threshold for the black/white text choice
-        threshold (contrast-threshold :aa-large)]
+   level is :aa (4.5:1, the default), :aa-large (3:1) or :aaa (7:1), as
+   for accessible?. Pass :aa-large when the text is large, such as a
+   heading: it keeps white on mid-tones where :aa needs black.
 
-    (cond
-      ;; If primary choice is accessible, use it
-      (>= primary-ratio threshold) primary-color
-
-      ;; If primary fails but alternative is accessible, use alternative
-      (>= alternative-ratio threshold) alternative-color
-
-      ;; If neither is accessible, choose the one with better contrast ratio
-      :else (if (> primary-ratio alternative-ratio)
-              primary-color
-              alternative-color))))
+   (get-contrast-text \"#3498db\")            ;=> \"#000000\", at 6.66:1
+   (get-contrast-text \"#3498db\" :aa-large)  ;=> \"#ffffff\", at 3.15:1"
+  ([background-color] (get-contrast-text background-color :aa))
+  ([background-color level]
+   (let [threshold (contrast-threshold level)
+         white-ratio (raw-contrast-ratio background-color "#ffffff")
+         black-ratio (raw-contrast-ratio background-color "#000000")]
+     (cond
+       (>= white-ratio threshold) "#ffffff"
+       (>= black-ratio threshold) "#000000"
+       (> white-ratio black-ratio) "#ffffff"
+       :else "#000000"))))
 
 ;; =============================================================================
 ;; Color Harmony and Palettes
@@ -940,19 +946,11 @@
                                   (if light? "#374151" "#e5e7eb")
                                   level)
       :primary primary
-      :on-primary (accessible-color primary
-                                    (if (dark? primary) "#ffffff" "#000000")
-                                    level)
+      :on-primary (get-contrast-text primary level)
       :secondary secondary
-      :on-secondary (accessible-color secondary
-                                      (if (dark? secondary)
-                                        "#ffffff"
-                                        "#000000")
-                                      level)
+      :on-secondary (get-contrast-text secondary level)
       :accent accent
-      :on-accent (accessible-color accent
-                                   (if (dark? accent) "#ffffff" "#000000")
-                                   level)
+      :on-accent (get-contrast-text accent level)
       :border (if light? (shade background 0.12) (tint background 0.16))
       :focus-ring ring})))
 

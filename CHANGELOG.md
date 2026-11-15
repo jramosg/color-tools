@@ -22,7 +22,30 @@ All notable changes to this project will be documented in this file. This change
     and 2 on invalid input, for use in scripts and CI
   - Every public function has a command; a test keeps the
     [coverage table](doc/cli.md#library-coverage) current
+- `get-contrast-text` takes a WCAG level: `(get-contrast-text bg :aa-large)`.
+  It returns white when white meets the level, black when only black does,
+  and the one with more contrast when neither does, the rule Material UI and
+  Bootstrap use.
+
+### Changed
+- `get-contrast-text` aims for `:aa` (4.5:1) by default, as `accessible?`
+  does, instead of 3:1.
+- `accessible-theme` picks `:on-primary`, `:on-secondary` and `:on-accent`
+  with `get-contrast-text` at the theme's level, so the two agree.
+- `find-accessible-color` returns the variant of the target nearest to it in
+  lightness that meets the level, instead of black whenever black passes.
+- `accessible-theme` builds on that search, so two tokens keep their color
+  where they used to fall back to black or white: `:focus-ring` keeps its
+  hue and `:on-muted` its slate tint, at the nearest lightness that meets the
+  level.
+
 ### Fixed
+- `accessible-theme` could return a dark `:muted` surface on which no text
+  color meets `:aaa`, so `:on-muted` missed the level it promises. `:muted`
+  now darkens until the level is reachable.
+- The documentation of `accessible-theme` said every `:on-*` token meets the
+  requested level. On `:primary`, `:secondary` and `:accent` that can't hold
+  at `:aaa` for mid-tone colors, and the documentation now says so.
 - The demo converter rejected `rgba()` without an alpha, such as
   `rgba(52, 152, 219)`. CSS treats `rgba()` as an alias of `rgb()`, so it now
   reads it as RGBA with an alpha of 1.
@@ -33,20 +56,11 @@ All notable changes to this project will be documented in this file. This change
 - The demo converter said "No valid color yet" for input that will never be
   valid. Empty input now says "Paste a color to convert" and anything else
   that fails to parse says "Not a valid color".
-- `accessible-theme` could return a dark `:muted` surface on which no text
-  color meets `:aaa`, so `:on-muted` missed the level it promises. `:muted`
-  now darkens until the level is reachable: `#ffff00` in dark mode at
-  `:aaa` gets `#575726` instead of `#67672d`. Other themes are unchanged.
-- The documentation of `accessible-theme` said every `:on-*` token meets the
-  requested level. On `:primary`, `:secondary` and `:accent` that can't hold
-  at `:aaa` for mid-tone colors, and the documentation now says so.
 - `rgb->lab` converted with the sRGB matrix rounded to 4 digits, which put
-  Lab values off by up to 0.02: red came out as `[53.233 80.109 67.220]`
-  instead of the reference `[53.241 80.092 67.203]`. It now uses the full
-  matrix and matches reference values to 0.001. `delta-e` and
-  `perceptually-similar?` build on it, so their results shift by a similar
-  amount. `rgb->kelvin` uses the same matrix and can differ by 1 K: sRGB
-  white is now 6503 K instead of 6504 K.
+  Lab values off by up to 0.02. It now uses the full matrix and matches
+  reference values to 0.001. `delta-e` and `perceptually-similar?` build on
+  it, so their results shift by a similar amount.
+  `rgb->kelvin` uses the same matrix and can differ by 1 K.
 
 ## [1.3.0] - 2026-11-13
 ### Added
