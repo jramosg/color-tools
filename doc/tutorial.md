@@ -331,7 +331,7 @@ Generate harmonious color combinations based on color theory:
 
 ;; Split complementary (base + two colors near complement)
 (color/split-complementary base-color)
-;=> ["#3ce7b4" "#3c6fe7"]
+;=> ["#3ce7a2" "#3c80e7"]
 
 ;; Analogous (adjacent colors)
 (color/analogous base-color 4 30)  ; 4 colors, 30° apart

@@ -511,6 +511,18 @@
       (is (= 2 (count split)))
       (is (every? string? split)))))
 
+(deftest split-complementary-base-hue-test
+  (testing "Split complements rotate around the base's complementary hue"
+    (doseq [hue [30 90 210 350]
+            :let [base (sut/hsl->rgb [hue 100 50])
+                  [left right] (sut/split-complementary base)]]
+      (is (< (Math/abs (- (mod (+ hue 150) 360)
+                          (first (sut/->hsl left))))
+             1.0E-10))
+      (is (< (Math/abs (- (mod (+ hue 210) 360)
+                          (first (sut/->hsl right))))
+             1.0E-10)))))
+
 (deftest test-palette-generation
   (testing "Generate different palette types"
     (let [base "#ff0000"]

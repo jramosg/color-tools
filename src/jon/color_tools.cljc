@@ -809,11 +809,9 @@
   "Get split-complementary colors"
   ([color] (split-complementary color 30))
   ([color angle]
-   (let [angle (or angle 30)
-         [h] (->hsl color)
-         comp-hue (+ h 180)]
-     [(adjust-hue color (- comp-hue angle))
-      (adjust-hue color (+ comp-hue angle))])))
+   (let [angle (or angle 30)]
+     [(adjust-hue color (- 180 angle))
+      (adjust-hue color (+ 180 angle))])))
 
 ;; =============================================================================
 ;; Advanced Palette Generation
