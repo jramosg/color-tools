@@ -342,10 +342,10 @@ The parser accepts common CSS color string formats:
 
 ;; Pick black or white text for a background
 (color/get-contrast-text "#3498db")
-;=> "#ffffff"  ; 3.15:1, enough for large text
+;=> "#000000"  ; 6.66:1, meets AA
 
-(color/get-contrast-text "#3498db" :aa)
-;=> "#000000"  ; 6.66:1, for body-size text
+(color/get-contrast-text "#3498db" :aa-large)
+;=> "#ffffff"  ; 3.15:1, enough for large text such as headings
 ```
 
 ### Accessible Theme Generation

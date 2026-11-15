@@ -391,16 +391,17 @@
            (sut/find-accessible-color "#ffffff" (sut/color "#3498db")))))
 
   (testing "get-contrast-text takes a level"
-    (testing "the default is :aa-large"
+    (testing "the default is :aa, as for accessible?"
       (doseq [bg ["#3498db" "#e74c3c" "#808080" "#ffffff" "#000000"]]
         (is (= (sut/get-contrast-text bg)
-               (sut/get-contrast-text bg :aa-large)
+               (sut/get-contrast-text bg :aa)
                (sut/get-contrast-text bg nil))
             bg)))
     (testing "white on a mid-tone passes :aa-large and not :aa"
-      (is (= "#ffffff" (sut/get-contrast-text "#3498db")))
-      (is (= "#000000" (sut/get-contrast-text "#3498db" :aa)))
-      (is (= "#000000" (sut/get-contrast-text "#e74c3c" :aa))))
+      (is (= "#000000" (sut/get-contrast-text "#3498db")))
+      (is (= "#ffffff" (sut/get-contrast-text "#3498db" :aa-large)))
+      (is (= "#000000" (sut/get-contrast-text "#e74c3c")))
+      (is (= "#ffffff" (sut/get-contrast-text "#e74c3c" :aa-large))))
     (testing "white stays where it meets the level"
       (is (= "#ffffff" (sut/get-contrast-text "#2c3e50" :aa)))
       (is (= "#ffffff" (sut/get-contrast-text "#2c3e50" :aaa)))
@@ -444,7 +445,9 @@
     (is (= "#ffffff" (sut/get-contrast-text "#0000ff")))  ; blue bg -> white text
     (is (= "#ffffff" (sut/get-contrast-text "#800080")))  ; purple bg -> white text
     (is (= "#ffffff" (sut/get-contrast-text "#008000")))  ; dark green bg -> white text
-    (is (= "#ffffff" (sut/get-contrast-text "#129BA5")))  ; teal bg -> white text
+    ;; White has 3.3:1 on this teal: fine for large text, below AA.
+    (is (= "#ffffff" (sut/get-contrast-text "#129BA5" :aa-large)))
+    (is (= "#000000" (sut/get-contrast-text "#129BA5")))
 
     ; Gray tones
     (is (= "#000000" (sut/get-contrast-text "#c0c0c0")))  ; light gray -> black text

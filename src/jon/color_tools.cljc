@@ -741,16 +741,15 @@
    White comes first because white text on a mid-tone brand color is the
    usual design choice. Material UI and Bootstrap use the same rule.
 
-   level is :aa-large (3:1, the default), :aa (4.5:1) or :aaa (7:1). The
-   default suits large text, such as headings. Pass :aa for body-size
-   text: at :aa-large, white on a mid-tone background can be as low as
-   3:1.
+   level is :aa (4.5:1, the default), :aa-large (3:1) or :aaa (7:1), as
+   for accessible?. Pass :aa-large when the text is large, such as a
+   heading: it keeps white on mid-tones where :aa needs black.
 
-   (get-contrast-text \"#3498db\")      ;=> \"#ffffff\", at 3.15:1
-   (get-contrast-text \"#3498db\" :aa)  ;=> \"#000000\", at 6.66:1"
-  ([background-color] (get-contrast-text background-color :aa-large))
+   (get-contrast-text \"#3498db\")            ;=> \"#000000\", at 6.66:1
+   (get-contrast-text \"#3498db\" :aa-large)  ;=> \"#ffffff\", at 3.15:1"
+  ([background-color] (get-contrast-text background-color :aa))
   ([background-color level]
-   (let [threshold (contrast-threshold (or level :aa-large))
+   (let [threshold (contrast-threshold level)
          white-ratio (raw-contrast-ratio background-color "#ffffff")
          black-ratio (raw-contrast-ratio background-color "#000000")]
      (cond

@@ -3,14 +3,17 @@ All notable changes to this project will be documented in this file. This change
 
 ## Unreleased
 ### Added
-- `get-contrast-text` takes a WCAG level: `(get-contrast-text bg :aa)`. It
-  returns white when white meets the level, black when only black does, and
-  the one with more contrast when neither does, the rule Material UI and
-  Bootstrap use. The one-argument form is unchanged and means `:aa-large`
-  (3:1), which white on a mid-tone such as `#3498db` only just meets. Pass
-  `:aa` for body-size text.
+- `get-contrast-text` takes a WCAG level: `(get-contrast-text bg :aa-large)`.
+  It returns white when white meets the level, black when only black does,
+  and the one with more contrast when neither does, the rule Material UI and
+  Bootstrap use.
 
 ### Changed
+- `get-contrast-text` aims for `:aa` (4.5:1) by default, as `accessible?`
+  does, instead of 3:1. For about 20% of colors, the mid-tones, it now
+  returns black where it returned white: `#3498db` gets `"#000000"` (6.66:1)
+  instead of `"#ffffff"` (3.15:1). Pass `:aa-large` for the old result, for
+  example on a button with a large label.
 - `accessible-theme` picks `:on-primary`, `:on-secondary` and `:on-accent`
   with `get-contrast-text` at the theme's level, so the two agree. Themes at
   `:aa` and `:aaa` are unchanged. At `:aa-large`, about 7% of brand colors
@@ -26,6 +29,7 @@ All notable changes to this project will be documented in this file. This change
   hue and `:on-muted` its slate tint, at the nearest lightness that meets the
   level. `:on-primary`, `:on-secondary` and `:on-accent` are unchanged: black
   or white, whichever the level needs.
+
 ### Fixed
 - The demo converter rejected `rgba()` without an alpha, such as
   `rgba(52, 152, 219)`. CSS treats `rgba()` as an alias of `rgb()`, so it now

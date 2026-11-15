@@ -502,17 +502,18 @@ only black does, and whichever has more contrast when neither does. White
 comes first because white text on a mid-tone brand color is the usual design
 choice; Material UI and Bootstrap use the same rule.
 
-`level` is `:aa-large` (3:1, the default), `:aa` (4.5:1) or `:aaa` (7:1). The
-default suits large text such as headings. Pass `:aa` for body-size text:
+`level` is `:aa` (4.5:1, the default), `:aa-large` (3:1) or `:aaa` (7:1), as
+for `accessible?`. Pass `:aa-large` when the text is large, such as a
+heading: it keeps white on mid-tones where `:aa` needs black.
 
 ```clojure
 (get-contrast-text "#3498db")
-;=> "#ffffff"  ; 3.15:1, enough for large text only
-
-(get-contrast-text "#3498db" :aa)
 ;=> "#000000"  ; 6.66:1
 
-(get-contrast-text "#2c3e50" :aa)
+(get-contrast-text "#3498db" :aa-large)
+;=> "#ffffff"  ; 3.15:1, enough for large text only
+
+(get-contrast-text "#2c3e50")
 ;=> "#ffffff"  ; 10.98:1, white meets AA here
 ```
 
