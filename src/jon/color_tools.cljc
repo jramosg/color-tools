@@ -704,6 +704,7 @@
   ([background target-color level]
    (let [threshold (contrast-threshold level)
          target-color-hsl (->hsl target-color)
+         [_ _ l0] target-color-hsl ; get cur target color's lightness
          try-color (fn [lightness]
                      (let [[h s _] target-color-hsl
                            new-color (if (string? target-color)
@@ -712,9 +713,12 @@
                        (when (>= (raw-contrast-ratio background new-color)
                                  threshold)
                          new-color)))]
-     (or (try-color 0)    ; Try black first
-         (try-color 100)  ; Then white
-         (some try-color (range 0 101 5)))))) ; Then try other lightness values
+      ; get first non null result from try-color function. 
+     (some try-color
+          (->> (range 0 101)
+               ; sort by distance of value to l0. This lets us check light and dark by pretty cleanly.
+               (sort-by #(Math/abs (- % l0)))))))) 
+
 
 (defn get-contrast-text
   "Get the best contrast text color (black or white) for a given background color.
