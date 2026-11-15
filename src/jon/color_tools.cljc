@@ -60,14 +60,15 @@
           (/ (double (Math/round scaled)) factor))))))
 
 (defn round
-  "Round a number to specified decimal places. Returns an integer at 0
-   places and a double otherwise. Large values that have no fractional
-   digit at the requested precision come back unchanged."
+  "Round a number to specified decimal places. Returns a 32-bit integer
+   at 0 places when it fits, and a double otherwise. Large values that
+   have no fractional digit at the requested precision come back unchanged."
   ([n] (round n 0))
   ([n decimals]
-   (let [decimals (or decimals 0)]
-     (cond-> (round-places n decimals)
-       (= decimals 0) int))))
+   (let [decimals (or decimals 0)
+         rounded (round-places n decimals)]
+     (cond-> rounded
+       (and (= decimals 0) (<= -2147483648 rounded 2147483647)) int))))
 
 (defn round-int [n]
   (round n 0))

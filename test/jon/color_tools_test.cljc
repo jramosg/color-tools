@@ -1513,6 +1513,12 @@
       1.005     2 1.0))
   (testing "Return an integer at 0 places"
     (is (int? (sut/round 2.7))))
+  (testing "Zero decimal places do not overflow a 32-bit integer"
+    (doseq [n [4.0E9 -4.0E9 1.0E20 -1.0E300]]
+      (is (= n (sut/round n)) (str n))
+      (is (= n (sut/round-int n)) (str n)))
+    (is (= 2147483648.0 (sut/round 2147483647.7)))
+    (is (= -2147483649.0 (sut/round -2147483648.7))))
   (testing "Keep large values instead of overflowing a long"
     (is (= 40000.0 (sut/round 40000.0 15)))
     (is (= 1.0E10 (sut/round 1.0E10 10)))
