@@ -338,7 +338,7 @@ The parser accepts common CSS color string formats:
 
 ;; Find an accessible color by adjusting lightness
 (color/find-accessible-color "#3498db" "#e74c3c" :aa)
-;=> "#000000"  ; Black is the first candidate that meets AA
+;=> "#52110a"  ; Closest lightness of the red that meets AA
 ```
 
 ### Accessible Theme Generation

@@ -632,7 +632,7 @@ numeric scale.
 ;=> {:background "#f6fafd"
 ;    :surface "#e9f3f9"
 ;    :primary "#1f86c7"
-;    :on-primary "#000000"
+;    :on-primary "#171717"
 ;    :focus-ring "#6d1fc7"}
 ```
 
