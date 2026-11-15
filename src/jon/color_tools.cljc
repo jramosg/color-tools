@@ -154,9 +154,9 @@
 (defn valid-rgb?
   "Check if vector is a valid RGB color"
   [rgb]
-  (and (vector? rgb)
-       (= 3 (count rgb))
-       (every? #(and (number? %) (<= 0 % 255)) rgb)))
+   (and (vector? rgb)
+    (= 3 (count rgb))
+    (every? #(and (number? %) (<= 0 % 255)) rgb)))
 
 (defn valid-rgba?
   "Check if vector is a valid RGBA color"
@@ -465,6 +465,16 @@
     (throw (ex-info "Invalid CSS RGBA format" {:input css-str}))))
 
 ;; =============================================================================
+;; Colorspace protocol
+;; =============================================================================
+
+(defprotocol Colorspace
+"Protocol to convert a record into different Colorspace impls 
+into a vector of a different Colorspace, -><colorspace>."
+  (->rgb [c])
+  (->oklab [c]))
+
+;; =============================================================================
 ;; Color Record Type
 ;; =============================================================================
 
@@ -483,6 +493,7 @@
     (if (= a 1.0)
       (rgb->hex [r g b])
       (css-rgba [r g b a] {}))))
+
 
 (defn color?
   "Check if value is a Color record"
@@ -1508,9 +1519,8 @@
       (when (and (<= duv max-duv) (<= 1000 cct 40000))
         (round cct 0)))))
 
-;; =============================================================================
-;; Oklab
-;; =============================================================================
+
+
 
 (defn rgb->oklab
   "Convert an sRGB vector [r g b], with channels from 0 to 255, to Oklab.
@@ -1554,10 +1564,12 @@
         (neg? c) -))))
 
 (defn- valid-oklab?
+  "Either oklab record or record of L a b"
   [oklab]
-  (and (vector? oklab)
-       (= 3 (count oklab))
-       (every? finite? oklab)))
+    (and (vector? oklab)
+         (= 3 (count oklab))
+         (every? finite? oklab)))
+
 
 (defn oklab->rgb
   "Convert Oklab coordinates [l a b] to an sRGB vector [r g b] on the 0 to
@@ -1677,3 +1689,26 @@
    gamut like oklab->hex."
   [oklch]
   (oklab->hex (oklch->oklab oklch)))
+
+
+;; =============================================================================
+;; Oklab
+;; =============================================================================
+(defrecord Oklab [L a b] 
+    Colorspace
+    (->rgb [this] 
+        (oklab->rgb [L a b]))
+    (->oklab [_] [L a b]))
+
+
+(extend-protocol Colorspace
+    Color 
+    (->rgb [c] ((juxt :r :g :b) c)) ; gets overriden by ->rgb intentionally maybe?
+    (->oklab [c] 
+        (rgb->oklab (->rgb c))))
+
+(defn ->rgb
+    "Convert a color-ish to RGB vector"
+    [color]
+    (let [color-record (normalize-color-input color)]
+      ((juxt :r :g :b) color-record)))
