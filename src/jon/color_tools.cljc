@@ -60,14 +60,15 @@
           (/ (double (Math/round scaled)) factor))))))
 
 (defn round
-  "Round a number to specified decimal places. Returns an integer at 0
-   places and a double otherwise. Large values that have no fractional
-   digit at the requested precision come back unchanged."
+  "Round a number to specified decimal places. Returns a 32-bit integer
+   at 0 places when it fits, and a double otherwise. Large values that
+   have no fractional digit at the requested precision come back unchanged."
   ([n] (round n 0))
   ([n decimals]
-   (let [decimals (or decimals 0)]
-     (cond-> (round-places n decimals)
-       (= decimals 0) int))))
+   (let [decimals (or decimals 0)
+         rounded (round-places n decimals)]
+     (cond-> rounded
+       (and (= decimals 0) (<= -2147483648 rounded 2147483647)) int))))
 
 (defn round-int [n]
   (round n 0))
@@ -870,7 +871,7 @@
    (let [count (or count 5)
          [h] (->hsl color)
          variations (for [i (range count)
-                          :let [factor (/ i (dec count))
+                          :let [factor (/ i (max 1 (dec count)))
                                 new-l (+ 20 (* 60 factor))
                                 new-s (+ 50 (* 50 (- 1 (* 0.5 factor))))]]
                       (if (string? color)
@@ -882,11 +883,9 @@
   "Get split-complementary colors"
   ([color] (split-complementary color 30))
   ([color angle]
-   (let [angle (or angle 30)
-         [h] (->hsl color)
-         comp-hue (+ h 180)]
-     [(adjust-hue color (- comp-hue angle))
-      (adjust-hue color (+ comp-hue angle))])))
+   (let [angle (or angle 30)]
+     [(adjust-hue color (- 180 angle))
+      (adjust-hue color (+ 180 angle))])))
 
 ;; =============================================================================
 ;; Advanced Palette Generation
@@ -1357,8 +1356,10 @@
   ([colors steps] (gradient colors steps :rgb))
   ([colors steps color-space]
    (let [color-space (or color-space :rgb)]
-     (for [i (range steps)]
-       (interpolate colors (/ i (dec steps)) color-space)))))
+     (if (= steps 1)
+       (take 1 colors)
+       (for [i (range steps)]
+         (interpolate colors (/ i (dec steps)) color-space))))))
 
 ;; =============================================================================
 ;; Perceptual Color Difference (Delta E)

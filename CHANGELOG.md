@@ -48,12 +48,21 @@ All notable changes to this project will be documented in this file. This change
 - `accessible-theme` could return a dark `:muted` surface on which no text
   color meets `:aaa`, so `:on-muted` missed the level it promises. `:muted`
   now darkens until the level is reachable.
+- `round` and `round-int` overflowed when rounding large numbers to zero
+  decimal places. Values outside the 32-bit integer range now remain
+  doubles; ordinary zero-decimal results still return integers (#89).
 - The documentation of `accessible-theme` said every `:on-*` token meets the
   requested level. On `:primary`, `:secondary` and `:accent` that can't hold
   at `:aaa` for mid-tone colors, and the documentation now says so.
+- `split-complementary` added the base hue twice, producing incorrect
+  palettes for nonzero base hues. It now rotates by 180 degrees plus or
+  minus the requested angle.
 - The demo converter rejected `rgba()` without an alpha, such as
   `rgba(52, 152, 219)`. CSS treats `rgba()` as an alias of `rgb()`, so it now
   reads it as RGBA with an alpha of 1.
+- One-step `gradient` and `monochromatic` calls divided by zero. They now
+  return the first gradient stop unchanged or the first monochromatic
+  variation, while zero steps still returns an empty sequence.
 - The demo converter showed "Detected RGB" for invalid input that names
   another format, such as `hsl(400, 50%, 50%)`, with a color made from its
   numbers. Input that starts with a format name now gets only that format's

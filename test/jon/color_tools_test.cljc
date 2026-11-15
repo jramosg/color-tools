@@ -515,6 +515,18 @@
       (is (= 2 (count split)))
       (is (every? string? split)))))
 
+(deftest split-complementary-base-hue-test
+  (testing "Split complements rotate around the base's complementary hue"
+    (doseq [hue [30 90 210 350]
+            :let [base (sut/hsl->rgb [hue 100 50])
+                  [left right] (sut/split-complementary base)]]
+      (is (< (Math/abs (- (mod (+ hue 150) 360)
+                          (first (sut/->hsl left))))
+             1.0E-10))
+      (is (< (Math/abs (- (mod (+ hue 210) 360)
+                          (first (sut/->hsl right))))
+             1.0E-10)))))
+
 (deftest test-palette-generation
   (testing "Generate different palette types"
     (let [base "#ff0000"]
@@ -1320,6 +1332,15 @@
     (is (= 10 (count (sut/gradient ["#ff0000" "#0000ff"] 10 :hsl))))
     (is (= 10 (count (sut/gradient ["#ff0000" "#0000ff"] 10 :hsv))))))
 
+(deftest single-step-palette-test
+  (testing "One-step gradients return the first stop"
+    (doseq [space [:rgb :hsl :hsv]]
+      (is (= ["#3498db"] (vec (sut/gradient ["#3498db" "#e74c3c"]
+                                            1 space)))))
+    (is (= ["#000066"] (vec (sut/monochromatic "#0000ff" 1))))
+    (is (empty? (sut/gradient ["#000000" "#ffffff"] 0)))
+    (is (empty? (sut/monochromatic "#0000ff" 0)))))
+
 (deftest test-perceptual-color-difference
   (testing "RGB to LAB conversion"
     (let [[l a b] (sut/rgb->lab [255 0 0])]
@@ -1517,7 +1538,12 @@
       1.005     2 1.0))
   (testing "Return an integer at 0 places"
     (is (int? (sut/round 2.7))))
-
+  (testing "Zero decimal places do not overflow a 32-bit integer"
+    (doseq [n [4.0E9 -4.0E9 1.0E20 -1.0E300]]
+      (is (= n (sut/round n)) (str n))
+      (is (= n (sut/round-int n)) (str n)))
+    (is (= 2147483648.0 (sut/round 2147483647.7)))
+    (is (= -2147483649.0 (sut/round -2147483648.7))))
   (testing "Keep large values instead of overflowing a long"
     (is (= 40000.0 (sut/round 40000.0 15)))
     (is (= 1.0E10 (sut/round 1.0E10 10)))

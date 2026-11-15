@@ -904,6 +904,9 @@ results round once to 8-bit channels.
 
 ### `gradient`
 
+One step returns the first stop unchanged; zero steps returns an empty
+sequence.
+
 ```clojure
 (gradient colors steps) => [color ...]
 (gradient colors steps color-space) => [color ...]
@@ -1303,6 +1306,8 @@ Clamps `value` into the inclusive range.
 ```
 
 Rounds `n` to `decimals` places. `decimals` defaults to `0`.
+At zero places, results within the 32-bit integer range are integers and
+larger results remain doubles to avoid overflow.
 
 ### `round-int`
 
