@@ -862,13 +862,6 @@
     color1
     color2))
 
-(defn- accessible-color
-  [background preferred-color level]
-  (if (accessible? background preferred-color level)
-    (->hex preferred-color)
-    (or (some-> (find-accessible-color background preferred-color level) ->hex)
-        (better-contrast-color background "#000000" "#ffffff"))))
-
 (defn- brand-text-color
   "Black or white text for a brand color: white on dark colors and black
    on light ones, unless the other one is needed to meet `level`. When
@@ -882,6 +875,13 @@
     (if (accessible? background preferred level)
       preferred
       (better-contrast-color background "#000000" "#ffffff"))))
+
+(defn- accessible-color
+  [background preferred-color level]
+  (if (accessible? background preferred-color level)
+    (->hex preferred-color)
+    (or (some-> (find-accessible-color background preferred-color level) ->hex)
+        (better-contrast-color background "#000000" "#ffffff"))))
 
 (defn- theme-scale
   [base-color]

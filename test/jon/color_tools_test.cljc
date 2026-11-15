@@ -542,6 +542,16 @@
       (is (sut/accessible? (:surface theme) (:on-surface theme) :aaa))
       (is (sut/accessible? (:primary theme) (:on-primary theme) :aaa))))
 
+  (testing "CSS custom properties can be exported with a custom prefix"
+    (let [theme (sut/accessible-theme "#3498db")
+          css-vars (sut/theme->css-vars theme {:prefix "--brand-"})]
+      (is (= (:primary theme) (get css-vars "--brand-primary")))
+      (is (= (get-in theme [:scale :500])
+             (get css-vars "--brand-scale-500")))
+      (is (not (contains? css-vars "--brand-mode")))
+      (is (not (contains? css-vars "--brand-level"))))))
+
+(deftest test-accessible-theme-fallbacks
   (testing "Text on brand tokens is black or white"
     ;; White is preferred on #1f86c7 and misses AA. The nearest gray that
     ;; passes, #171717, has less contrast than black.
@@ -582,16 +592,7 @@
     ;; The preferred slate misses AAA here; this used to become black.
     (let [theme (sut/accessible-theme "#ff66aa" {:level :aaa})]
       (is (= "#272e3a" (:on-muted theme)))
-      (is (sut/accessible? (:muted theme) (:on-muted theme) :aaa))))
-
-  (testing "CSS custom properties can be exported with a custom prefix"
-    (let [theme (sut/accessible-theme "#3498db")
-          css-vars (sut/theme->css-vars theme {:prefix "--brand-"})]
-      (is (= (:primary theme) (get css-vars "--brand-primary")))
-      (is (= (get-in theme [:scale :500])
-             (get css-vars "--brand-scale-500")))
-      (is (not (contains? css-vars "--brand-mode")))
-      (is (not (contains? css-vars "--brand-level"))))))
+      (is (sut/accessible? (:muted theme) (:on-muted theme) :aaa)))))
 
 (deftest test-color-temperature
   (testing "Warm color detection"
