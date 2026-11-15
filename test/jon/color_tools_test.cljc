@@ -1276,6 +1276,16 @@
       (is (> l 0))
       (is (> a 0))))
 
+  (testing "matches reference Lab values for D65"
+    ;; Bruce Lindbloom's calculator, sRGB with the D65 reference white.
+    (doseq [[rgb reference] [[[255 0 0] [53.2408 80.0925 67.2032]]
+                             [[0 255 0] [87.7347 -86.1827 83.1793]]
+                             [[0 0 255] [32.2970 79.1875 -107.8602]]
+                             [[255 255 255] [100.0 0.0 0.0]]
+                             [[0 0 0] [0.0 0.0 0.0]]]
+            [actual expected] (map vector (sut/rgb->lab rgb) reference)]
+      (is (< (Math/abs (- actual expected)) 0.001) (pr-str rgb))))
+
   (testing "Delta E calculation"
     (let [red "#ff0000"
           red2 "#fe0000"
@@ -1687,7 +1697,7 @@
 (deftest rgb->kelvin-test
   (testing "sRGB white and grays are D65"
     (doseq [rgb [[255 255 255] [128 128 128] [10 10 10]]]
-      (is (= 6504 (sut/rgb->kelvin rgb)) (pr-str rgb))))
+      (is (= 6503 (sut/rgb->kelvin rgb)) (pr-str rgb))))
 
   (testing "Return nil for black and for colors far from the black body curve"
     (doseq [rgb [[0 0 0] [255 0 0] [0 255 0] [0 0 255] [0 255 255]

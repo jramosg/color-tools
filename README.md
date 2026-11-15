@@ -587,7 +587,7 @@ These projects influenced the API:
 
 ;; Convert to LAB color space
 (color/rgb->lab [255 0 0])
-;=> [53.23 80.11 67.2]
+;=> [53.24 80.09 67.2]
 ```
 
 ### Oklab Conversion
@@ -641,7 +641,7 @@ for axis definitions, gamut handling, and input requirements.
 
 ;; Approximate temperature from color
 (color/rgb->kelvin (color/kelvin->rgb 1800))
-;=> 1805  ; Close to the original 1800K
+;=> 1806  ; Close to the original 1800K
 ```
 
 ### Planned Features (Inspired by these libraries)
