@@ -34,12 +34,12 @@ check() {
 
 cli=("$@")
 
-check 'convert' 0 'hsl(204, 70%, 53%)' convert '#3498db' --to hsl
+check 'convert' 0 'hsl(204.0719, 69.8745%, 53.1373%)' convert '#3498db' --to hsl
 check 'json' 0 '[52, 152, 219]' convert '#3498db' --to rgb --json
 check 'oklch rounding' 0 'oklch(0.65 0.13 242.69)' \
   convert '#3498db' --to oklch --precision 2
-check 'palette' 0 '#db3398
-#98db33' palette '#3498db' --type triadic
+check 'palette' 0 '#db3498
+#98db34' palette '#3498db' --type triadic
 check 'AA text by default' 0 '#000000' text-color '#3498db'
 check 'large text level' 0 '#ffffff' text-color '#3498db' --level aa-large
 check 'nearest accessible lightness' 0 '#207ab6' \
@@ -48,6 +48,21 @@ check 'passed check exits 0' 0 'true' is dark '#2c3e50'
 check 'failed check exits 1' 1 'false' is light '#2c3e50'
 check 'bad input exits 2' 2 '' convert nope
 check 'unknown command exits 2' 2 '' frobnicate
+check 'fractional RGB input' 0 '[0.25, 1.5, 2.75]' \
+  convert 'rgb(0.25,1.5,2.75)' --to rgb --json
+check 'precise HSL input' 0 '[127.5, 127.5, 127.5]' \
+  convert 'hsl(0,0%,50%)' --to rgb --json
+check 'mix keeps fractions' 0 '[127.5, 0, 127.5]' \
+  mix red blue --to rgb --json
+check 'alpha-safe rounding' 0 'rgba(13, 1, 255, 0.123)' \
+  convert 'rgba(12.6,0.6,254.8,0.1234567)' --to rgba --precision 0
+check 'rounded RGB stays in range' 0 'rgba(255, 0, 100, 0.5)' \
+  convert 'rgba(255,0,96,0.5)' --to rgba --significant 1
+check 'zero hue adjustment' 0 '#123456' rotate '#123456' 0
+check 'neutral Lab white' 0 '[100, 0, 0]' convert white --to lab --json
+check 'one-step gradient' 0 '#ff0000' gradient red blue --steps 1
+check 'one-step gray palette' 0 '#333333' \
+  palette '#808080' --type monochromatic --count 1
 
 out="$(printf '#f00\n#00f\n' | "${cli[@]}" lighten - 0.2 --json 2>/dev/null)"
 if [ "$out" = '["#ff6666", "#6666ff"]' ]; then

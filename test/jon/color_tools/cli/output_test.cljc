@@ -32,8 +32,8 @@
       :hex8 "#3498dbff"
       :rgb "rgb(52, 152, 219)"
       :rgba "rgba(52, 152, 219, 1)"
-      :hsl "hsl(204, 70%, 53%)"
-      :hsv "hsv(204, 76%, 86%)"
+      :hsl "hsl(204.0719, 69.8745%, 53.1373%)"
+      :hsv "hsv(204.0719, 76.2557%, 85.8824%)"
       :lab "lab(60.157 -6.096 -42.2295)"
       :oklab "oklab(0.6531 -0.0618 -0.1197)"
       :oklch "oklch(0.6531 0.1347 242.6867)"
@@ -86,8 +86,9 @@
 (deftest json-test
   (testing "colors follow --to; numbers keep full precision"
     (is (= "\"#3498db\"\n" (out/json (out/resolve blue {:format :json}))))
-    (is (= "[204, 70, 53]\n"
-           (out/json (out/resolve blue {:format :json :to :hsl}))))
+    (is (= "[204.0719, 69.8745, 53.1373]\n"
+           (out/json (out/resolve blue {:format :json :to :hsl
+                                        :precision 4}))))
     (is (= "[0.653091517685353, 0.13470212300578396, 242.68666272850191]\n"
            (out/json (out/resolve blue {:format :json :to :oklch}))))
     (is (= "[0.65, 0.13, 242.69]\n"
@@ -120,12 +121,13 @@
 (deftest edn-test
   (testing "scalars and vectors of scalars stay on one line"
     (is (= "\"#3498db\"\n" (out/edn (out/resolve blue {:format :edn}))))
-    (is (= "[204 70 53]\n"
-           (out/edn (out/resolve blue {:format :edn :to :hsl})))))
+    (is (= "[204.0719 69.8745 53.1373]\n"
+           (out/edn (out/resolve blue {:format :edn :to :hsl
+                                       :precision 4})))))
   (testing "maps print one entry per line, nested ones aligned"
     (is (= (str "{:mode :light\n"
                 " :primary \"#3498db\"\n"
-                " :hsl [204 70 53]\n"
+                " :hsl [204.0719 69.8745 53.1373]\n"
                 " :kelvin nil\n"
                 " :scale {:50 \"#ffffff\"\n"
                 "         :500 \"#3498db\"}}\n")
@@ -134,7 +136,7 @@
                                 :hsl (out/shown blue :hsl) :kelvin nil
                                 :scale (array-map :50 (ct/color "#fff")
                                                   :500 blue))
-                     {:format :edn})))))
+                     {:format :edn :precision 4})))))
   (testing "vectors of collections print one item per line"
     (is (= "[{:a 1\n  :b 2}\n {:a 3}]\n"
            (out/edn [(array-map :a 1 :b 2) {:a 3}])))

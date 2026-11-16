@@ -8,9 +8,14 @@
   (let [{:keys [format color]} (parse/try-color input)]
     [format (some-> color ct/->rgba)]))
 
+(defn- close-color? [[fmt rgba] [expected-fmt expected]]
+  (and (= fmt expected-fmt)
+       (= (count rgba) (count expected))
+       (every? #(< (Math/abs %) 1.0E-9) (map - rgba expected))))
+
 (deftest try-color-test
   (testing "formats the library parses"
-    (are [input expected] (= expected (parsed input))
+    (are [input expected] (close-color? (parsed input) expected)
       "#3498db" [:hex [52 152 219 1.0]]
       "3498DB" [:hex [52 152 219 1.0]]
       "#fff" [:hex [255 255 255 1.0]]
@@ -21,7 +26,7 @@
       "RGB( 52 152 219 )" [:rgb [52 152 219 1.0]]
       "rgba(52, 152, 219, 0.5)" [:rgba [52 152 219 0.5]]))
   (testing "hex with an alpha channel"
-    (are [input expected] (= expected (parsed input))
+    (are [input expected] (close-color? (parsed input) expected)
       "#3498dbff" [:hex [52 152 219 1.0]]
       "#3498DB00" [:hex [52 152 219 0.0]]
       "#f00f" [:hex [255 0 0 1.0]])
@@ -33,31 +38,39 @@
       (is (= "not a color" (:error (parse/try-color "3498db80"))))
       (is (= "not a color" (:error (parse/try-color "6500"))))))
   (testing "CSS forms the library does not parse"
-    (are [input expected] (= expected (parsed input))
+    (are [input expected] (close-color? (parsed input) expected)
       "rgb(52 152 219 / 50%)" [:rgba [52 152 219 0.5]]
       "rgba(52,152,219)" [:rgb [52 152 219 1.0]]
       "rgb(100%, 0%, 0%)" [:rgb [255 0 0 1.0]]
       "52,152,219" [:rgb [52 152 219 1.0]]
       "52 152 219 0.5" [:rgba [52 152 219 0.5]]
-      "hsl(204, 70%, 53%)" [:hsl [51 152 219 1.0]]
-      "hsl(204deg 70% 53% / 0.25)" [:hsl [51 152 219 0.25]]
-      "hsl(-30, 50%, 50%)" [:hsl [191 64 128 1.0]]
-      "hsv(204, 76%, 86%)" [:hsv [53 153 219 1.0]]
-      "hsb(204, 76, 86)" [:hsv [53 153 219 1.0]]
+      "hsl(204, 70%, 53%)" [:hsl [51.255 151.929 219.045 1.0]]
+      "hsl(204deg 70% 53% / 0.25)" [:hsl [51.255 151.929 219.045 0.25]]
+      "hsl(-30, 50%, 50%)" [:hsl [191.25 63.75 127.5 1.0]]
+      "hsv(204, 76%, 86%)" [:hsv [52.632 152.6328 219.3 1.0]]
+      "hsb(204, 76, 86)" [:hsv [52.632 152.6328 219.3 1.0]]
       "rgb( 52 , 152,219 )" [:rgb [52 152 219 1.0]]
       "rgb(52, 152, 219, 50%)" [:rgba [52 152 219 0.5]]
-      "hsl(204° 70% 53%)" [:hsl [51 152 219 1.0]]))
+      "hsl(204° 70% 53%)" [:hsl [51.255 151.929 219.045 1.0]]))
   (testing "Oklab and OKLCh"
     (let [{:keys [format in-gamut? color]}
           (parse/try-color "oklab(0.65 -0.06 -0.11)")]
       (is (= :oklab format))
       (is (true? in-gamut?))
-      (is (= [59 151 212] (ct/->rgb color))))
+      (is (= "#3b97d4" (ct/->hex color)))
+      (is (some #(not (== % (Math/floor %))) (ct/->rgb color))))
     (let [{:keys [format in-gamut? color]}
           (parse/try-color "oklch(70% 0.4 150)")]
       (is (= :oklch format))
       (is (false? in-gamut?))
-      (is (= [0 214 0] (ct/->rgb color)) "clamped to sRGB")))
+      (is (< 213.85 (:g color) 213.86))
+      (is (zero? (:r color)))
+      (is (zero? (:b color))))
+    (testing "fractional RGB and alpha survive parsing"
+      (is (= [:rgba [0.25 1.5 2.75 0.1234567]]
+             (parsed "rgba(0.25,1.5,2.75,0.1234567)")))
+      (is (= [:hsl [127.5 127.5 127.5 1.0]]
+             (parsed "hsl(0,0%,50%)")))))
   (testing "color temperature"
     (is (= [:kelvin [255 254 250 1.0]] (parsed "6500k")))
     (is (= [:kelvin [255 254 250 1.0]] (parsed "6500 K"))))
@@ -67,6 +80,10 @@
       "foo" "not a color"
       "#12345" "not a color"
       "rgb(256,0,0)" "rgb channels must be from 0 to 255"
+      "rgb(4294967296,0,0)" "rgb channels must be from 0 to 255"
+      "rgba(4294967296,0,0,0.5)" "rgb channels must be from 0 to 255"
+      "4294967296,0,0" "rgb channels must be from 0 to 255"
+      "rgb(-0.4,0,0)" "rgb channels must be from 0 to 255"
       "rgba(0,0,0,2)" "alpha must be from 0 to 1"
       "hsl(204,170%,53%)" "hsl saturation and lightness must be from 0 to 100"
       "hsv(204,76%,186%)" "hsv saturation and value must be from 0 to 100"

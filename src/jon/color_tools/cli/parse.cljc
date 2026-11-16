@@ -161,7 +161,7 @@
   "The number in a component. A percentage counts against `full`."
   [{:keys [n unit]} full]
   (if (= "%" unit)
-    (* n (/ full 100.0))
+    (/ (* n full) 100.0)
     n))
 
 (defn- alpha-of [component]
@@ -172,13 +172,21 @@
 
 (defn- apply-alpha [color alpha]
   (cond-> color
-    alpha (ct/with-alpha alpha)))
+    (some? alpha) (assoc :a (double alpha))))
+
+(defn- channel
+  "The fractional channel a component stands for, or nil out of range."
+  [component]
+  (let [n (scaled component 255)]
+    (when (<= 0 n 255)
+      (cond-> n
+        (== n (Math/floor n)) int))))
 
 (defn- rgb-color [[r g b a]]
-  (let [rgb (mapv #(ct/round-int (scaled % 255)) [r g b])
+  (let [rgb (mapv channel [r g b])
         alpha (alpha-of a)]
     (cond
-      (not (ct/valid-rgb? rgb))
+      (some nil? rgb)
       {:error "rgb channels must be from 0 to 255"}
 
       (not (valid-alpha? alpha))
@@ -186,7 +194,7 @@
 
       :else
       {:format (if alpha :rgba :rgb)
-       :color (apply-alpha (ct/color-from-rgb rgb) alpha)})))
+       :color (apply-alpha (ct/color rgb {:full-precision? true}) alpha)})))
 
 (defn- hue-color
   "Build a color from hsl or hsv components. Hue wraps around 360."
@@ -204,7 +212,10 @@
 
       :else
       {:format fmt
-       :color (apply-alpha (from-vec coords) alpha)})))
+       :color (apply-alpha
+               (ct/color (from-vec coords {:full-precision? true})
+                         {:full-precision? true})
+               alpha)})))
 
 (defn- oklab-color
   "Build a color from Oklab coordinates. Colors outside sRGB are clamped;
@@ -214,7 +225,10 @@
     {:format fmt
      :oklab oklab
      :in-gamut? (ct/in-gamut? oklab)
-     :color (apply-alpha (ct/color (ct/oklab->hex oklab)) alpha)}
+     :color (apply-alpha
+             (ct/color (ct/clamp-rgb (ct/oklab->rgb oklab))
+                       {:full-precision? true})
+             alpha)}
     {:error "alpha must be from 0 to 1"}))
 
 (def ^:private function-formats
@@ -244,8 +258,8 @@
         :else
         (case fmt
           :rgb (rgb-color comps)
-          :hsl (hue-color :hsl ct/valid-hsl? ct/color-from-hsl comps)
-          :hsv (hue-color :hsv ct/valid-hsv? ct/color-from-hsv comps)
+          :hsl (hue-color :hsl ct/valid-hsl? ct/hsl->rgb comps)
+          :hsv (hue-color :hsv ct/valid-hsv? ct/hsv->rgb comps)
           :oklab (let [[l a b alpha] comps]
                    (oklab-color :oklab
                                 [(scaled l 1) (scaled a 0.4) (scaled b 0.4)]
@@ -260,22 +274,15 @@
                                   (alpha-of alpha)))))))))
 
 (defn- library-color
-  "Colors the library parses itself: hex, names and plain CSS rgb()/rgba()."
+  "Colors the library parses itself: hex and names. rgb() goes through
+   function-color, which checks the range of each channel."
   [s]
   (cond
     (ct/valid-hex? s)
     {:format :hex :color (ct/color-from-hex s)}
 
     (ct/name->hex s)
-    {:format :name :color (ct/color-from-hex (ct/name->hex s))}
-
-    (ct/valid-css-rgb? s)
-    (when-let [rgb (ct/parse-css-color-components s)]
-      {:format :rgb :color (ct/color-from-rgb rgb)})
-
-    (ct/valid-css-rgba? s)
-    (when-let [rgba (ct/parse-css-color-components s)]
-      {:format :rgba :color (ct/color-from-rgba rgba)})))
+    {:format :name :color (ct/color-from-hex (ct/name->hex s))}))
 
 (defn- alpha-hex-color
   "CSS hex with an alpha channel: #rgba or #rrggbbaa. The # is required,

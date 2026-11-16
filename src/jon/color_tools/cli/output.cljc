@@ -72,16 +72,21 @@
                       .toPlainString)
              :cljs (expand-exponent (str x)))))
 
-(defn- rounder
-  "A function that rounds fractional numbers as the options ask. Integers
-   pass through."
+(defn- rounding-options
   [{:keys [precision significant]} default-places]
-  (let [options (cond
-                  precision {:decimal-places precision}
-                  significant {:significant-digits significant}
-                  default-places {:decimal-places default-places})]
+  (cond
+    precision {:decimal-places precision}
+    significant {:significant-digits significant}
+    default-places {:decimal-places default-places}))
+
+(defn- rounder
+  "A function that rounds fractional numbers as the options ask. Whole
+   numbers pass through, whatever their type: JavaScript cannot tell 255.0
+   from 255, so the value decides."
+  [options default-places]
+  (let [options (rounding-options options default-places)]
     (fn [x]
-      (if (and options (number? x) (not (integer? x)))
+      (if (and options (number? x) (not (== x (Math/floor (double x)))))
         (first (ct/round-coords [x] options))
         x))))
 
@@ -105,8 +110,8 @@
                        5))
       :rgb rgb
       :rgba (ct/->rgba color)
-      :hsl (ct/->hsl color)
-      :hsv (ct/->hsv color)
+      :hsl (ct/rgb->hsl rgb {:full-precision? true})
+      :hsv (ct/rgb->hsv rgb {:full-precision? true})
       :lab (ct/rgb->lab rgb)
       :oklab (ct/rgb->oklab rgb)
       :oklch (ct/rgb->oklch rgb)
@@ -134,16 +139,19 @@
 (defn- cell
   "Convert a color to `fmt`. With no format, opaque colors print as hex and
    translucent ones as rgba(), so the alpha is never dropped silently."
-  [color fmt swatch? round-fn]
+  [color fmt swatch? round-fn css-options]
   (let [rounded (fn [fmt]
-                  (let [value (color-value color fmt)]
-                    (if (sequential? value)
-                      (mapv round-fn value)
-                      (round-fn value))))
+                  (if (#{:rgb :rgba} fmt)
+                    (let [coords (ct/->rgba (ct/->css color css-options))]
+                      (if (= :rgb fmt) (subvec coords 0 3) coords))
+                    (let [value (color-value color fmt)]
+                      (if (sequential? value)
+                        (mapv round-fn value)
+                        (round-fn value)))))
         rgb (ct/->rgb color)]
     (cond
       fmt (->Cell fmt (rounded fmt) rgb swatch?)
-      (= 1.0 (:a color)) (->Cell :hex (ct/->hex color) rgb swatch?)
+      (== 1 (:a color)) (->Cell :hex (ct/->hex color) rgb swatch?)
       :else (->Cell :css-rgba (value-text :rgba (rounded :rgba)) rgb
                     swatch?))))
 
@@ -152,13 +160,14 @@
    ask for, and fractional numbers are rounded. Text output rounds to 4
    decimal places by default; structured output keeps full precision."
   [tree {:keys [to format] :as options}]
-  (let [round-fn (rounder options (when (#{:text :css} format)
-                                    default-text-places))
+  (let [places (when (#{:text :css} format) default-text-places)
+        round-fn (rounder options places)
+        css-options (or (rounding-options options places) {})
         walk (fn walk [x]
                (cond
-                 (ct/color? x) (cell x to true round-fn)
+                 (ct/color? x) (cell x to true round-fn css-options)
                  (instance? Shown x) (cell (:color x) (:fmt x) (:swatch? x)
-                                           round-fn)
+                                           round-fn css-options)
                  (plain-map? x) (ordered-map (fn [[k v]] [k (walk v)]) x)
                  (sequential? x) (mapv walk x)
                  (number? x) (round-fn x)
@@ -181,7 +190,7 @@
   [rgb ansi]
   (str "\u001b[48;"
        (if (= :truecolor ansi)
-         (str "2;" (str/join ";" rgb))
+         (str "2;" (str/join ";" (map ct/round-int rgb)))
          (str "5;" (ansi-256 rgb)))
        "m  \u001b[0m "))
 

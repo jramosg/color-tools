@@ -16,8 +16,8 @@ aaa       false
 $ color-tools convert '#3498db' --to oklch
 oklch(0.6531 0.1347 242.6867)
 $ color-tools palette '#3498db' --type triadic
-#db3398
-#98db33
+#db3498
+#98db34
 ```
 
 ## Installation
@@ -137,9 +137,15 @@ color-tools info "$BRAND_COLOR"     # double quotes around a variable
 color-tools info 3498db             # hex without the # needs no quotes
 ```
 
-Every color is held as 8-bit sRGB with an alpha, as in the library's `Color`
-record. Converting `oklch()` input back to `oklch` therefore gives the
-coordinates of the nearest 8-bit color, not the digits you typed.
+Colors retain fractional sRGB channels and alpha. The CLI opts into the
+library's full-precision RGB, HSL and HSV conversions and record construction.
+Oklab and OKLCh inputs keep their computed channels instead of passing through
+hex. Hex output and terminal swatches round to 8-bit channels.
+
+Mixing, tinting, compositing, interpolation and gradients keep fractional
+results. HSL adjustments and the library's other 8-bit operations still
+return whole channels; their intermediate calculations use the library's
+current precision rules.
 
 Oklab and OKLCh can describe colors a screen cannot show. Those are clamped
 into sRGB with a warning on stderr; `color-tools gamut` tells you beforehand.
@@ -159,12 +165,12 @@ Any command that prints colors takes `--to` (or `-t`) with `hex`, `hex8`,
 
 ```console
 $ color-tools convert '#3498db' --to hsl
-hsl(204, 70%, 53%)
+hsl(204.0719, 69.8745%, 53.1373%)
 $ color-tools lighten '#3498db' 0.2 --to rgb
-rgb(138, 196, 234)
+rgb(139, 196, 234)
 $ color-tools palette '#3498db' --type triadic --to oklch
-oklch(0.6112 0.2212 349.0374)
-oklch(0.8168 0.2008 129.584)
+oklch(0.6119 0.2203 349.0988)
+oklch(0.8169 0.2003 129.6267)
 ```
 
 Without `--to`, colors print as hex. A translucent color prints as `rgba()`
@@ -192,7 +198,7 @@ numbers.
 
 ```console
 $ color-tools convert '#3498db' --to hsl --json
-[204, 70, 53]
+[204.0718562874251, 69.8744769874477, 53.13725490196078]
 $ color-tools contrast '#3498db' '#ffffff' --json
 {
   "ratio": 3.15,
@@ -218,6 +224,12 @@ keys keep the order shown in the text output.
 Text output rounds fractional numbers to 4 decimal places. JSON and EDN keep
 full precision, so scripts decide how to round. `--precision N` (or `-p`)
 and `--significant N` set the rounding for either.
+
+RGB and RGBA formatting uses the library's CSS exporter. `--precision N`
+rounds RGB to N decimal places and alpha to at least 3 places, so
+`--precision 0` preserves an opacity such as 0.5. `--significant N` rounds
+every RGB/RGBA coordinate, including whole channels, and clamps rounded RGB
+to 0 through 255. Rounding affects only the output of that call.
 
 ```console
 $ color-tools convert '#3498db' --to oklch
@@ -293,8 +305,8 @@ $ color-tools info '#3498db'
 input        #3498db
 hex          #3498db
 rgb          rgb(52, 152, 219)
-hsl          hsl(204, 70%, 53%)
-hsv          hsv(204, 76%, 86%)
+hsl          hsl(204.0719, 69.8745%, 53.1373%)
+hsv          hsv(204.0719, 76.2557%, 85.8824%)
 lab          lab(60.157 -6.096 -42.2295)
 oklab        oklab(0.6531 -0.0618 -0.1197)
 oklch        oklch(0.6531 0.1347 242.6867)
@@ -372,17 +384,17 @@ Amounts are fractions from 0 to 1, or percentages such as `20%`.
 
 ```console
 $ color-tools lighten '#3498db' 0.2
-#8ac4ea
+#8bc4ea
 $ color-tools darken '#3498db' 20%
-#19608f
+#196090
 $ color-tools saturate '#3498db' 0.2
-#1b9df3
+#1c9df3
 $ color-tools desaturate '#3498db' 0.2
-#4b93c3
+#4c93c3
 $ color-tools rotate '#3498db' 180
-#db7633
+#db7734
 $ color-tools rotate '#3498db' -30
-#33dbca
+#34dbca
 $ color-tools invert '#3498db'
 #cb6724
 $ color-tools grayscale '#3498db'
@@ -396,7 +408,7 @@ These commands keep the alpha of the color they are given:
 
 ```console
 $ color-tools lighten 'rgba(52, 152, 219, 0.5)' 0.2
-rgba(138, 196, 234, 0.5)
+rgba(139, 196, 234, 0.5)
 ```
 
 ### Mix and blend
@@ -447,22 +459,22 @@ Without `--type` it prints them all.
 
 ```console
 $ color-tools palette '#3498db'
-complementary        #db7633
-triadic              #db3398 #98db33
-tetradic             #ca33db #db7633 #44db33
-analogous            #3344db #7633db #ca33db
-split-complementary  #33a9db #6633db
-monochromatic        #003d66 #066aad #1096ef #5db4ee #a6d4f2
+complementary        #db7734
+triadic              #db3498 #98db34
+tetradic             #cb34db #db7734 #45db34
+analogous            #3445db #7734db #cb34db
+split-complementary  #db3445 #dbca34
+monochromatic        #0f3a57 #1f6594 #318fce #73b0d9 #b1d1e7
 $ color-tools palette '#3498db' --type analogous --count 5 --angle 15
-#336edb
-#3344db
-#4c33db
-#7633db
-#a033db
+#346edb
+#3445db
+#4d34db
+#7734db
+#a134db
 $ color-tools palette '#3498db' --type monochromatic --count 3
-#003d66
-#1096ef
-#a6d4f2
+#0f3a57
+#318fce
+#b1d1e7
 ```
 
 `--count` applies to `analogous`, `monochromatic` and `random`; `--angle` to
@@ -478,6 +490,10 @@ color-tools random --count 5 --to hsl
 `gradient` generates evenly spaced steps across two or more stops, and
 `interpolate` picks single positions. `--space` is `rgb`, `hsl` or `hsv`;
 the last two take the shortest way around the hue circle.
+
+`--steps 1` returns the first gradient stop. Monochromatic palettes follow
+the base saturation, so gray input gives grays; `--count 1` returns the
+darkest step.
 
 ```console
 $ color-tools gradient '#ff0000' '#0000ff' --steps 5
@@ -579,12 +595,12 @@ muted          #b2bbc3
 on-muted       #374151
 primary        #3498db
 on-primary     #000000
-secondary      #3336db
+secondary      #3437db
 on-secondary   #ffffff
-accent         #db7633
+accent         #db7734
 on-accent      #000000
 border         #d9dde0
-focus-ring     #8433db
+focus-ring     #8534db
 scale
   50   #f5fafd
   100  #ebf5fb
@@ -606,7 +622,7 @@ has more contrast and a warning on stderr names the pair:
 ```console
 $ color-tools theme '#3498db' --level aaa --quiet
 color-tools: warning: on-primary has 6.66:1 on primary #3498db; no text color reaches aaa (7:1) on it
-color-tools: warning: on-accent has 6.65:1 on accent #db7633; no text color reaches aaa (7:1) on it
+color-tools: warning: on-accent has 6.7:1 on accent #db7734; no text color reaches aaa (7:1) on it
 ```
 
 `--format css` prints custom properties, ready for a stylesheet:
@@ -622,12 +638,12 @@ $ color-tools theme '#3498db' --mode dark --format css --prefix brand --selector
   --brand-on-muted: #e5e7eb;
   --brand-primary: #3498db;
   --brand-on-primary: #000000;
-  --brand-secondary: #3336db;
+  --brand-secondary: #3437db;
   --brand-on-secondary: #ffffff;
-  --brand-accent: #db7633;
+  --brand-accent: #db7734;
   --brand-on-accent: #000000;
   --brand-border: #2e383f;
-  --brand-focus-ring: #8433db;
+  --brand-focus-ring: #8534db;
   --brand-scale-50: #f5fafd;
   --brand-scale-100: #ebf5fb;
   --brand-scale-200: #cce5f6;
@@ -802,6 +818,7 @@ command or a reason before the build passes.
 | --- | --- |
 | `->Color` | `convert` |
 | `->color` | `convert` |
+| `->css` | `convert` |
 | `->hex` | `info`, `convert` |
 | `->hsl` | `info`, `convert` |
 | `->hsv` | `info`, `convert` |
@@ -885,7 +902,7 @@ command or a reason before the build passes.
 | `rgba->hex` | `convert` |
 | `round` | None. Number helper; --precision and --significant round output |
 | `round-coords` | `convert` |
-| `round-int` | None. Number helper; channels are whole numbers in every output |
+| `round-int` | None. Number helper; hex and terminal swatches use 8-bit channels |
 | `saturate` | `saturate` |
 | `shade` | `shade` |
 | `shades` | `shades` |

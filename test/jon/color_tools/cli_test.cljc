@@ -1,5 +1,6 @@
 (ns jon.color-tools.cli-test
   (:require
+   #?(:clj [clojure.edn :as reader] :cljs [cljs.reader :as reader])
    [clojure.string :as str]
    [clojure.test :refer [are deftest is testing]]
    [jon.color-tools :as ct]
@@ -71,6 +72,12 @@
     ["convert" "#fff" "--precision" "x"] "--precision must be a whole number"
     ["convert" "#fff" "--format" "css"] "--format css is not available"
     ["convert" "-" "-"] "only one argument can be - (stdin)"
+    ["lighten" "-"] "missing AMOUNT\nUsage: color-tools lighten COLOR AMOUNT"
+    ["lighten" "-" "x"] "AMOUNT must be"
+    ["lighten" "-" "0.1" "extra"] "unexpected argument \"extra\""
+    ["interpolate" "red" "blue" "--at" ","] "--at must be from 0 to 1"
+    ["interpolate" "red" "blue" "--at" "0.5,"] "--at must be from 0 to 1"
+    ["interpolate" "red" "blue" "--at" ",0.5"] "--at must be from 0 to 1"
     ["convert" "#fff" "--json" "--edn"] "use only one of --format, --json"
     ["convert" "#fff" "-p" "2" "--significant" "2"]
     "use --precision or --significant, not both"))
@@ -110,7 +117,11 @@
            (out "convert" "#3498db" "--to" "oklch" "-p" "2")))
     (is (= "[0.653, 0.135, 243]\n"
            (out "convert" "#3498db" "--to" "oklch" "--significant" "3"
-                "--json"))))
+                "--json")))
+    (testing "scalar integers stay exact; RGB uses CSS rounding"
+      (is (= "255\n" (out "distance" "black" "red" "--significant" "1")))
+      (is (= "rgb(50, 200, 200)\n"
+             (out "convert" "#3498db" "--to" "rgb" "--significant" "1")))))
   (testing "--quiet prints nothing"
     (is (= "" (out "convert" "fff" "--quiet"))))
   (testing "--quiet does not hide a bad combination of output options"
@@ -154,7 +165,8 @@
            (out {:stdin "#fff\n\n  navy  \n"} "convert" "-")))
     (is (= "[\"#ffffff\"]\n" (out {:stdin "#fff\n"} "convert" "-" "--json")))
     (is (= "[]\n" (out {:stdin ""} "convert" "-" "--json")))
-    (is (= "" (out {:stdin ""} "convert" "-"))))
+    (is (= "" (out {:stdin ""} "convert" "-")))
+    (is (= "" (out {:stdin ""} "lighten" "-" "0.2"))))
   (testing "stdin colors join the ones on the command line"
     (is (= "#000000\n#ffffff\n#ff0000\n"
            (out {:stdin "#fff\n"} "convert" "black" "-" "red"))))
@@ -168,8 +180,8 @@
   (is (= ["input        #3498db"
           "hex          #3498db"
           "rgb          rgb(52, 152, 219)"
-          "hsl          hsl(204, 70%, 53%)"
-          "hsv          hsv(204, 76%, 86%)"
+          "hsl          hsl(204.0719, 69.8745%, 53.1373%)"
+          "hsv          hsv(204.0719, 76.2557%, 85.8824%)"
           "lab          lab(60.157 -6.096 -42.2295)"
           "oklab        oklab(0.6531 -0.0618 -0.1197)"
           "oklch        oklch(0.6531 0.1347 242.6867)"
@@ -197,8 +209,8 @@
     "#3498db" "hex" "#3498db"
     "#3498db" "rgb" "rgb(52, 152, 219)"
     "#3498db" "rgba" "rgba(52, 152, 219, 1)"
-    "#3498db" "hsl" "hsl(204, 70%, 53%)"
-    "#3498db" "hsv" "hsv(204, 76%, 86%)"
+    "#3498db" "hsl" "hsl(204.0719, 69.8745%, 53.1373%)"
+    "#3498db" "hsv" "hsv(204.0719, 76.2557%, 85.8824%)"
     "#3498db" "name" "teal"
     "white" "kelvin" "6503K"
     "red" "kelvin" "none"
@@ -233,6 +245,11 @@
       (is (= [1 ""] [exit err]))
       (is (str/includes? out "valid   false"))
       (is (str/includes? out "error   rgb channels must be from 0 to 255"))))
+  (testing "a channel too large for an integer is invalid, not wrapped"
+    (doseq [input ["rgb(4294967296,0,0)" "4294967296,0,0"]]
+      (let [{:keys [exit out err]} (run "validate" input)]
+        (is (= [1 ""] [exit err]) input)
+        (is (str/includes? out "valid   false") input))))
   (testing "one bad input fails the batch"
     (is (= 1 (:exit (run {:stdin "#fff\nnope\n"} "validate" "-"))))
     (is (= 0 (:exit (run {:stdin "#fff\nnavy\n"} "validate" "-")))))
@@ -277,8 +294,8 @@
       ["grayscale" "#3498db"] (ct/grayscale "#3498db")
       ["greyscale" "#3498db"] (ct/grayscale "#3498db")))
   (testing "known values"
-    (is (= ["#8ac4ea"] (lines "lighten" "#3498db" "0.2")))
-    (is (= ["#db7633"] (lines "rotate" "#3498db" "180")))
+    (is (= ["#8bc4ea"] (lines "lighten" "#3498db" "0.2")))
+    (is (= ["#db7734"] (lines "rotate" "#3498db" "180")))
     (is (= ["#828282" "#4c4c4c"] (lines "grayscale" "#3498db" "red"))))
   (testing "alpha"
     (is (= ["rgba(52, 152, 219, 0.5)"] (lines "alpha" "#3498db" "0.5")))
@@ -286,7 +303,7 @@
            (out "alpha" "#3498db" "50%" "--to" "rgba" "--json")))
     (is (= ["#3498db"] (lines "alpha" "rgba(52,152,219,0.5)" "1"))))
   (testing "adjustments keep the alpha of the input"
-    (is (= ["rgba(138, 196, 234, 0.5)"]
+    (is (= ["rgba(139, 196, 234, 0.5)"]
            (lines "lighten" "rgba(52,152,219,0.5)" "0.2")))
     (is (= ["rgba(203, 103, 36, 0.5)"]
            (lines "invert" "rgba(52,152,219,0.5)"))))
@@ -361,15 +378,15 @@
     (is (= (ct/monochromatic "#3498db" 3)
            (lines "palette" "#3498db" "--type" "monochromatic" "-n" "3"))))
   (testing "without --type, every harmony"
-    (is (= ["complementary        #db7633"
-            "triadic              #db3398 #98db33"
-            "tetradic             #ca33db #db7633 #44db33"
-            "analogous            #3344db #7633db #ca33db"
-            "split-complementary  #33a9db #6633db"
-            "monochromatic        #003d66 #066aad #1096ef #5db4ee #a6d4f2"]
+    (is (= ["complementary        #db7734"
+            "triadic              #db3498 #98db34"
+            "tetradic             #cb34db #db7734 #45db34"
+            "analogous            #3445db #7734db #cb34db"
+            "split-complementary  #db3445 #dbca34"
+            "monochromatic        #0f3a57 #1f6594 #318fce #73b0d9 #b1d1e7"]
            (lines "palette" "#3498db")))
     (is (str/includes? (out "palette" "#3498db" "--json")
-                       "\"triadic\": [\"#db3398\", \"#98db33\"],")))
+                       "\"triadic\": [\"#db3498\", \"#98db34\"],")))
   (testing "random needs no color"
     (let [colors (lines "palette" "--type" "random" "--count" "8")]
       (is (= 8 (count colors)))
@@ -381,13 +398,14 @@
                 (str/starts-with? err (str "color-tools: " message))))
       ["palette"] "missing COLOR\nOnly --type random works without a color."
       ["palette" "#fff" "--type" "nope"] "--type must be one of complementary"
-      ["palette" "#fff" "--type" "monochromatic" "-n" "1"]
-      "--count must be at least 2 for a monochromatic palette")))
+      ["palette" "#fff" "--type" "monochromatic" "-n" "0"]
+      "--count must be a whole number of at least 1")))
 
 (deftest random-test
   (is (ct/valid-hex? (str/trim (out "random"))))
   (is (= 5 (count (lines "random" "--count" "5"))))
-  (is (re-matches #"hsl\(\d+, \d+%, \d+%\)\n" (out "random" "--to" "hsl"))))
+  (is (ct/valid-hsl?
+       (reader/read-string (out "random" "--to" "hsl" "--json")))))
 
 (deftest gradient-test
   (is (= (ct/gradient ["#ff0000" "#0000ff"] 5)
@@ -412,8 +430,8 @@
       ["gradient" "red"]
       (str "expected at least 2 COLOR arguments\n"
            "Usage: color-tools gradient COLOR COLOR...")
-      ["gradient" "red" "blue" "--steps" "1"]
-      "--steps must be a whole number of at least 2"
+      ["gradient" "red" "blue" "--steps" "0"]
+      "--steps must be a whole number of at least 1"
       ["gradient" "red" "blue" "--space" "lab"]
       "--space must be one of rgb, hsl, hsv")))
 
@@ -473,7 +491,7 @@
   (testing "the check uses the unrounded ratio, like the library"
     (is (= 1 (:exit (run "contrast" "#006ffb" "#ffffff" "--level" "aa")))))
   (testing "translucent text is composited onto the background"
-    (is (= (lines "contrast" "#808080" "#ffffff")
+    (is (= (lines "contrast" "rgb(127.5,127.5,127.5)" "#ffffff")
            (lines "contrast" "rgba(0,0,0,0.5)" "#ffffff"))))
   (testing "a whole palette from stdin; one failure fails the run"
     (let [{:keys [exit out]} (run {:stdin "#000\n#3498db\n"}
@@ -561,12 +579,12 @@
               "on-muted       #374151"
               "primary        #3498db"
               "on-primary     #000000"
-              "secondary      #3336db"
+              "secondary      #3437db"
               "on-secondary   #ffffff"
-              "accent         #db7633"
+              "accent         #db7734"
               "on-accent      #000000"
               "border         #d9dde0"
-              "focus-ring     #8433db"
+              "focus-ring     #8534db"
               "scale"
               "  50   #f5fafd"
               "  100  #ebf5fb"
@@ -635,8 +653,8 @@
             :err (str "color-tools: warning: on-primary has 6.66:1 on"
                       " primary #3498db; no text color reaches aaa (7:1) on"
                       " it\n"
-                      "color-tools: warning: on-accent has 6.65:1 on accent"
-                      " #db7633; no text color reaches aaa (7:1) on it\n")}
+                      "color-tools: warning: on-accent has 6.7:1 on accent"
+                      " #db7734; no text color reaches aaa (7:1) on it\n")}
            (run "theme" "#3498db" "--level" "aaa" "--quiet")))
     (testing "once, not once per mode"
       (is (= (:err (run "theme" "#3498db" "--level" "aaa"))
@@ -751,3 +769,66 @@
                      "completions" "powershell"))
     (is (fails-with? 2 "unexpected argument \"zsh\""
                      "completions" "bash" "zsh"))))
+
+(deftest full-precision-integration-test
+  (let [json (fn [& args]
+               (reader/read-string (apply out (concat args ["--json"]))))]
+    (testing "fractional RGB and alpha survive parsing and alpha changes"
+      (is (= [0.25 1.5 2.75 0.1234567]
+             (json "convert" "rgba(0.25,1.5,2.75,0.1234567)"
+                   "--to" "rgba")))
+      (is (= [0.25 1.5 2.75 0.7]
+             (json "alpha" "rgb(0.25,1.5,2.75)" "0.7" "--to" "rgba"))))
+    (testing "HSL and HSV conversions opt into full precision"
+      (doseq [color ["hsl(0,0%,50%)" "hsv(0,0%,50%)"]]
+        (is (= [127.5 127.5 127.5] (json "convert" color "--to" "rgb"))))
+      (doseq [format ["hsl" "hsv"]]
+        (is (= [0 0 50]
+               (json "convert" "rgb(127.5,127.5,127.5)" "--to" format))))
+      (let [[h s l] (json "convert" "#3498db" "--to" "hsl")]
+        (is (< (Math/abs (- h 204.0718562874251)) 1.0E-10))
+        (is (< (Math/abs (- s 69.8744769874477)) 1.0E-10))
+        (is (< (Math/abs (- l 53.13725490196078)) 1.0E-10))))
+    (testing "Oklab round trips retain fractional sRGB coordinates"
+      (let [lab (json "convert" "rgb(10.7,20.2,30.9)" "--to" "oklab")
+            input (str "oklab(" (str/join " " lab) ")")
+            rgb (json "convert" input "--to" "rgb")]
+        (is (every? #(< (Math/abs %) 1.0E-7)
+                    (map - rgb [10.7 20.2 30.9])))))
+    (testing "mixing, compositing and interpolation retain fractions"
+      (is (= [0.625 1.25 1.875]
+             (json "mix" "rgb(0.25,1.5,2.75)" "rgb(1,1,1)"
+                   "--to" "rgb")))
+      (is (= [[127.5 127.5 127.5] [255 255 255]]
+             (json "tints" "black" "--count" "2" "--to" "rgb")))
+      (is (= [127.5 127.5 127.5 1]
+             (json "blend" "black" "rgba(255,255,255,0.5)"
+                   "--mode" "alpha" "--to" "rgba")))
+      (is (= [127.5 127.5 127.5]
+             (json "interpolate" "black" "white" "--to" "rgb")))
+      (is (= [[0 0 0] [127.5 127.5 127.5] [255 255 255]]
+             (json "gradient" "black" "white" "--steps" "3"
+                   "--to" "rgb"))))
+    (testing "CSS rounding keeps alpha precision and RGB in range"
+      (is (= [13 1 255 0.123]
+             (json "convert" "rgba(12.6,0.6,254.8,0.1234567)"
+                   "--to" "rgba" "--precision" "0")))
+      (is (= "rgba(255, 0, 100, 0.5)\n"
+             (out "convert" "rgba(255,0,96,0.5)" "--to" "rgba"
+                  "--significant" "1"))))
+    (testing "fractional luminance uses the current WCAG transfer cutoff"
+      (is (< (Math/abs (- (json "luminance" "rgb(10.1,10.1,10.1)")
+                          (/ 10.1 255 12.92)))
+             1.0E-15)))
+    (testing "Lab white is neutral and zero hue adjustments are identities"
+      (is (= [100 0 0] (json "convert" "white" "--to" "lab")))
+      (is (= "#123456\n" (out "rotate" "#123456" "0"))))
+    (testing "one-step gradients and neutral monochromatic palettes"
+      (is (= ["#ff0000"]
+             (json "gradient" "red" "blue" "--steps" "1")))
+      (is (= ["#333333"]
+             (json "palette" "#808080" "--type" "monochromatic"
+                   "--count" "1")))
+      (is (= ["#333333" "#808080" "#cccccc"]
+             (json "palette" "#808080" "--type" "monochromatic"
+                   "--count" "3"))))))
