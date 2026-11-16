@@ -756,7 +756,7 @@
   [color]
   (let [rgb (->rgb color)
         [r g b] (map #(let [val (/ % 255)]
-                        (if (<= val 0.03928)
+                        (if (<= val 0.04045)
                           (/ val 12.92)
                           (Math/pow (/ (+ val 0.055) 1.055) 2.4)))
                      rgb)]
