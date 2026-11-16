@@ -580,6 +580,10 @@ Checks whether two colors meet a WCAG threshold. `level` can be `:aa`,
 `:aa-large`, or `:aaa`; it defaults to `:aa`. The thresholds are 4.5, 3 and
 7. The check compares the unrounded contrast ratio.
 
+Any other level throws `ex-info`, here and in `find-accessible-color`,
+`get-contrast-text` and `accessible-theme`. A mistyped `:AAA` is an error,
+not a weaker check.
+
 ### `find-accessible-color`
 
 ```clojure
