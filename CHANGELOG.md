@@ -25,6 +25,15 @@ All notable changes to this project will be documented in this file. This change
   gradients may change where whole-coordinate rounding shifted a step.
 - `->rgb` and `->rgba` preserve fractional channels from vectors and CSS
   strings, including when used by luminance and Delta E calculations.
+- `lighten`, `darken`, `saturate`, `desaturate` and `adjust-hue` work on
+  full-precision HSL and round once, to 8-bit channels. They used to round
+  HSL to whole numbers first, which moved a color by up to 3 per channel
+  even at zero adjustment: `(adjust-hue "#123456" 0)` returned `"#123354"`.
+  Results can differ from 1.3 by that rounding error, so
+  `(complementary "#3498db")` is now `"#db7734"`, an exact channel swap,
+  instead of `"#db7633"`. `complementary`, `triadic`, `tetradic`,
+  `analogous`, `split-complementary` and the `:secondary`, `:accent` and
+  `:focus-ring` tokens of `accessible-theme` follow (#100).
 - CSS numeric output preserves fractional channels by default, and CSS
   parsers accept decimal channels and exponent notation for round trips.
 - `get-contrast-text` aims for `:aa` (4.5:1) by default, as `accessible?`

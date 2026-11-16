@@ -644,63 +644,54 @@
 ;; Color Manipulation
 ;; =============================================================================
 
+(defn- adjust-hsl
+  "Apply `f` to the HSL coordinates of `color` and return 8-bit RGB
+   channels. Works at full precision and rounds once at the end: rounding
+   HSL to whole numbers on the way would move the color even when `f`
+   changes nothing."
+  [color f]
+  (->> (->rgb color) rgb->hsl-coords f hsl->rgb-coords (mapv round-int)))
+
+(defn- like-input
+  "Return 8-bit `rgb` as a Color, hex string or vector, following `color`."
+  [color rgb]
+  (cond
+    (color? color) (color-from-rgb rgb)
+    (string? color) (rgb->hex rgb)
+    (vector? color) rgb))
+
 (defn lighten
   "Lighten a color by a percentage (0-1)"
   [color amount]
-  (let [color-record (normalize-color-input color)
-        hsl (->hsl color-record)
-        [h s l] hsl
-        new-l (clamp (+ l (* amount 100)) 0 100)
-        new-hsl [h s new-l]]
-    (cond
-      (color? color) (color-from-hsl new-hsl)
-      (string? color) (hsl->hex new-hsl)
-      (vector? color) (hsl->rgb new-hsl))))
+  (like-input color
+              (adjust-hsl color (fn [[h s l]]
+                                  [h s (clamp (+ l (* amount 100)) 0 100)]))))
 
 (defn darken
   "Darken a color by a percentage (0-1)"
   [color amount]
-  (let [color-record (normalize-color-input color)
-        hsl (->hsl color-record)
-        [h s l] hsl
-        new-l (clamp (- l (* amount 100)) 0 100)
-        new-hsl [h s new-l]]
-    (cond
-      (color? color) (color-from-hsl new-hsl)
-      (string? color) (hsl->hex new-hsl)
-      (vector? color) (hsl->rgb new-hsl))))
+  (lighten color (- amount)))
 
 (defn saturate
   "Increase saturation of a color by a percentage (0-1)"
   [color amount]
-  (let [color-record (normalize-color-input color)
-        [h s l] (->hsl color-record)
-        new-s (clamp (+ s (* amount 100)) 0 100)]
+  (let [rgb (adjust-hsl color (fn [[h s l]]
+                                [h (clamp (+ s (* amount 100)) 0 100) l]))]
     (if (string? color)
-      (hsl->hex [h new-s l])
-      (hsl->rgb [h new-s l]))))
+      (rgb->hex rgb)
+      rgb)))
 
 (defn desaturate
   "Decrease saturation of a color by a percentage (0-1)"
   [color amount]
-  (let [color-record (normalize-color-input color)
-        [h s l] (->hsl color-record)
-        new-s (clamp (- s (* amount 100)) 0 100)]
-    (if (string? color)
-      (hsl->hex [h new-s l])
-      (hsl->rgb [h new-s l]))))
+  (saturate color (- amount)))
 
 (defn adjust-hue
   "Adjust the hue of a color by degrees"
   [color degrees]
-  (let [color-record (normalize-color-input color)
-        [h s l] (->hsl color-record)
-        new-h (mod (+ h degrees) 360)
-        new-hsl [new-h s l]]
-    (cond
-      (color? color) (color-from-hsl new-hsl)
-      (string? color) (hsl->hex new-hsl)
-      (vector? color) (hsl->rgb new-hsl))))
+  (like-input color
+              (adjust-hsl color (fn [[h s l]]
+                                  [(mod (+ h degrees) 360) s l]))))
 
 (defn invert
   "Invert a color"

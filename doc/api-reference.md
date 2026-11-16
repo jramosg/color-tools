@@ -768,7 +768,7 @@ whichever has more contrast.
 ;=> {:background "#f7fbfe"
 ;    :primary "#3498db"
 ;    :on-primary "#000000"
-;    :focus-ring "#8433db"}
+;    :focus-ring "#8534db"}
 ```
 
 ### `theme->css-vars`
