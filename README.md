@@ -542,7 +542,7 @@ These projects influenced the API:
 
 ;; Alpha blending with source-over compositing
 (color/alpha-blend [255 0 0 0.8] [0 0 255 0.6])
-;=> [89 0 166 0.92]
+;=> [88.69565217391305 0.0 166.30434782608694 0.92]
 
 (color/with-alpha "#ff0000" 0.5)
 ;=> "rgba(255,0,0,0.5)"

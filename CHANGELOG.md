@@ -3,12 +3,30 @@ All notable changes to this project will be documented in this file. This change
 
 ## Unreleased
 ### Added
+- `rgb->hsl`, `rgb->hsv`, `hsl->rgb` and `hsv->rgb` accept
+  `{:full-precision? true}` in a second argument to preserve computed
+  doubles. `(color input options)` and `(->color r g b a options)` accept
+  the same flag to keep fractional RGB channels. Existing defaults stay
+  rounded or truncated until 2.0 (#38).
+- `->css` exports numeric CSS with per-call `:decimal-places` or
+  `:significant-digits` options. `with-alpha` and `alpha-blend` accept the
+  same options for translucent string output; passing both options throws.
+- A Precision section in the API reference explains output rounding and
+  how to adopt precise calculations and adapt exact comparisons from 1.3.
 - `get-contrast-text` takes a WCAG level: `(get-contrast-text bg :aa-large)`.
   It returns white when white meets the level, black when only black does,
   and the one with more contrast when neither does, the rule Material UI and
   Bootstrap use.
 
 ### Changed
+- `mix`, `interpolate`, `gradient` and `alpha-blend` retain fractional
+  vector channels. Hex and legacy `Color` results round once to 8-bit
+  channels. HSL and HSV interpolation uses full precision internally, so
+  gradients may change where whole-coordinate rounding shifted a step.
+- `->rgb` and `->rgba` preserve fractional channels from vectors and CSS
+  strings, including when used by luminance and Delta E calculations.
+- CSS numeric output preserves fractional channels by default, and CSS
+  parsers accept decimal channels and exponent notation for round trips.
 - `get-contrast-text` aims for `:aa` (4.5:1) by default, as `accessible?`
   does, instead of 3:1.
 - `accessible-theme` picks `:on-primary`, `:on-secondary` and `:on-accent`
@@ -21,6 +39,12 @@ All notable changes to this project will be documented in this file. This change
   level.
 
 ### Fixed
+- Accessibility checks continue to compare raw contrast, including for
+  fractional channels. Near a threshold, `accessible-theme` uses the
+  passing foreground: `#006ffb` gets black `:on-primary` text at AA, since
+  white's raw ratio is 4.499888 even though `contrast-ratio` displays 4.5.
+- Hex export no longer narrows channels to a 32-bit float before rounding,
+  which could round a channel just below a half-integer up instead of down.
 - `accessible-theme` could return a dark `:muted` surface on which no text
   color meets `:aaa`, so `:on-muted` missed the level it promises. `:muted`
   now darkens until the level is reachable.
@@ -51,6 +75,21 @@ All notable changes to this project will be documented in this file. This change
   reference values to 0.001. `delta-e` and `perceptually-similar?` build on
   it, so their results shift by a similar amount.
   `rgb->kelvin` uses the same matrix and can differ by 1 K.
+
+### Adapting from 1.3
+- Computed vectors can now contain fractions, such as
+  `[127.5 127.5 127.5]` instead of `[128 128 128]`. Exact comparisons can
+  change; Clojure's `=` also distinguishes integers from integral doubles.
+  Compare computed coordinates with a tolerance, or use `mapv round-int`
+  when an integration needs integer channels. Existing HSL/HSV conversion
+  and record-construction defaults are retained; full precision is opt-in.
+  See the [precision guide](doc/api-reference.md#precision).
+
+### Planned
+- In 2.0, make full precision the default for the HSL/HSV conversions and
+  RGB `Color` construction (#38). The explicit 1.4 options provide a
+  migration path. Keep typed values (#7), the CLI (#6) and later roadmap
+  features in their existing 1.x milestones.
 
 ## [1.3.0] - 2026-11-13
 ### Added
