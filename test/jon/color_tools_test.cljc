@@ -281,35 +281,6 @@
             mixed-75 (sut/mix red blue 0.75)]
         (is (not= mixed-25 mixed-75))))))
 
-(defn- ex-data-of
-  "The ex-data of the ex-info `f` throws, or nil when it does not throw one."
-  [f]
-  (try (f)
-       nil
-       (catch #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo) e
-         (ex-data e))))
-
-(deftest unknown-level-test
-  (testing "Unknown WCAG levels throw instead of being checked as :aa"
-    (doseq [level [:AAA "aaa" :a :aaa-large 7]
-            check [#(sut/accessible? "#767676" "#ffffff" level)
-                   #(sut/find-accessible-color "#ffffff" "#767676" level)
-                   #(sut/get-contrast-text "#767676" level)
-                   #(sut/accessible-theme "#3498db" {:level level})]]
-      (is (= {:level level :expected #{:aa :aa-large :aaa}}
-             (ex-data-of check))
-          (pr-str level))))
-  (testing "nil means the default level"
-    (is (true? (sut/accessible? "#767676" "#ffffff" nil)))
-    (is (false? (sut/accessible? "#777777" "#ffffff" nil)))
-    (is (= :aa (:level (sut/accessible-theme "#3498db" {:level nil})))))
-  (testing "Unknown theme modes throw; nil means :light"
-    (doseq [mode [:drak "dark" :Light]]
-      (is (= {:mode mode :expected #{:light :dark}}
-             (ex-data-of #(sut/accessible-theme "#3498db" {:mode mode})))))
-    (is (= (sut/accessible-theme "#3498db")
-           (sut/accessible-theme "#3498db" {:mode nil})))))
-
 (deftest test-contrast-and-accessibility
   (testing "Luminance calculation"
     (let [white-lum (sut/luminance "#ffffff")
@@ -598,6 +569,35 @@
            (sut/gradient ["#ff0000" "#0000ff"] 3 nil)))
     (is (= (sut/perceptually-similar? "#ff0000" "#fe0101")
            (sut/perceptually-similar? "#ff0000" "#fe0101" nil)))))
+
+(defn- ex-data-of
+  "The ex-data of the ex-info `f` throws, or nil when it does not throw one."
+  [f]
+  (try (f)
+       nil
+       (catch #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo) e
+         (ex-data e))))
+
+(deftest unknown-level-test
+  (testing "Unknown WCAG levels throw instead of being checked as :aa"
+    (doseq [level [:AAA "aaa" :a :aaa-large 7]
+            check [#(sut/accessible? "#767676" "#ffffff" level)
+                   #(sut/find-accessible-color "#ffffff" "#767676" level)
+                   #(sut/get-contrast-text "#767676" level)
+                   #(sut/accessible-theme "#3498db" {:level level})]]
+      (is (= {:level level :expected #{:aa :aa-large :aaa}}
+             (ex-data-of check))
+          (pr-str level))))
+  (testing "nil means the default level"
+    (is (true? (sut/accessible? "#767676" "#ffffff" nil)))
+    (is (false? (sut/accessible? "#777777" "#ffffff" nil)))
+    (is (= :aa (:level (sut/accessible-theme "#3498db" {:level nil})))))
+  (testing "Unknown theme modes throw; nil means :light"
+    (doseq [mode [:drak "dark" :Light]]
+      (is (= {:mode mode :expected #{:light :dark}}
+             (ex-data-of #(sut/accessible-theme "#3498db" {:mode mode})))))
+    (is (= (sut/accessible-theme "#3498db")
+           (sut/accessible-theme "#3498db" {:mode nil})))))
 
 (deftest test-accessible-theme
   (testing "Generates a complete light theme from a brand color"
