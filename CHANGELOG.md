@@ -11,6 +11,9 @@ All notable changes to this project will be documented in this file. This change
 - `->css` exports numeric CSS with per-call `:decimal-places` or
   `:significant-digits` options. `with-alpha` and `alpha-blend` accept the
   same options for translucent string output; passing both options throws.
+  `:decimal-places` rounds the RGB channels and leaves alpha at least 3
+  places, so `{:decimal-places 0}` gives whole channels without changing
+  the opacity, and rounded channels stay within 0 to 255 (#94).
 - A Precision section in the API reference explains output rounding and
   how to adopt precise calculations and adapt exact comparisons from 1.3.
 - `get-contrast-text` takes a WCAG level: `(get-contrast-text bg :aa-large)`.

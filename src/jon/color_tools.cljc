@@ -472,8 +472,25 @@
   #?(:clj (.toPlainString (.stripTrailingZeros (bigdec (double n))))
      :cljs (str n)))
 
+(def ^:private min-alpha-decimal-places
+  "Decimal places alpha keeps under :decimal-places. Alpha runs from 0 to
+   1, so rounding it like a 0 to 255 channel would change the opacity.
+   Browsers serialize alpha with up to 3 decimals too."
+  3)
+
+(defn- round-css-coords
+  "Round RGBA coordinates for CSS output. :decimal-places applies to the
+   RGB channels; alpha keeps at least min-alpha-decimal-places. Channels
+   stay within 0 to 255: 255 is 300 at one significant digit."
+  [rgba {:keys [decimal-places] :as options}]
+  (let [[r g b a] (round-coords rgba options)
+        alpha (if (some-> decimal-places (< min-alpha-decimal-places))
+                (round-places (nth rgba 3) min-alpha-decimal-places)
+                a)]
+    (conj (mapv #(clamp % 0.0 255.0) [r g b]) alpha)))
+
 (defn- css-rgba [rgba options]
-  (let [coords (if (seq options) (round-coords rgba options) rgba)
+  (let [coords (if (seq options) (round-css-coords rgba options) rgba)
         parts (map css-number coords)]
     (str "rgba(" (str/join "," parts) ")")))
 
@@ -605,7 +622,9 @@
 (defn ->css
   "Export a color as CSS rgba(), preserving fractional channels by default.
    Pass :decimal-places (0-15) or :significant-digits (1-17) to round only
-   this output. Passing both throws, as with round-coords."
+   this output. Passing both throws, as with round-coords. :decimal-places
+   rounds the RGB channels; alpha keeps at least 3 places, so whole-number
+   channels do not change the opacity."
   ([color] (->css color {}))
   ([color options]
    (css-rgba (->rgba color) options)))

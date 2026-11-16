@@ -66,9 +66,16 @@ accept the same options in a final map. By default they preserve all channel
 digits; rounding does not pad with trailing zeros. `theme->css-vars` exports
 hex tokens, so decimal places do not apply.
 
+`:decimal-places` rounds the RGB channels. Alpha runs from 0 to 1, so it
+keeps at least 3 decimal places: whole-number channels leave the opacity
+alone. `:significant-digits` applies to every coordinate.
+
 ```clojure
 (->css [12.34567 0 255 0.1234567] {:decimal-places 4})
 ;=> "rgba(12.3457,0,255,0.1235)"
+
+(->css [127.5 0 255 0.5] {:decimal-places 0})
+;=> "rgba(128,0,255,0.5)"
 
 (with-alpha "#ff0000" (/ 1.0 3) {:decimal-places 4})
 ;=> "rgba(255,0,0,0.3333)"
@@ -457,7 +464,8 @@ Converts any supported color input to hex.
 
 Exports CSS `rgba()` with fractional channels preserved. Pass
 `{:decimal-places n}` or `{:significant-digits n}` to round this string;
-passing both throws. See [Precision](#precision).
+passing both throws. `:decimal-places` rounds the RGB channels and leaves
+alpha at least 3 places. See [Precision](#precision).
 
 ### `->hsl`
 
