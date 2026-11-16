@@ -46,13 +46,19 @@
    Places may be negative to round to tens, hundreds and so on. Returns x
    unchanged when the scaled value has no fractional part, which also keeps
    Math/round from overflowing a long on the JVM, and when rounding up would
-   exceed the largest double."
+   exceed the largest double. NaN stays NaN: Math/round would turn it into
+   0 on the JVM."
   [x places]
   (let [x (double x)]
-    (if (neg? places)
+    (cond
+      (NaN? x) x
+
+      (neg? places)
       (let [factor (Math/pow 10 (- places))
             rounded (* (double (Math/round (/ x factor))) factor)]
         (if (infinite? rounded) x rounded))
+
+      :else
       (let [factor (Math/pow 10 places)
             scaled (* x factor)]
         (if (>= (Math/abs scaled) max-fractional-double)
@@ -368,6 +374,7 @@
      (not (:full-precision? options)) (mapv round-int))))
 
 (defn- hsv->rgb-coords [hsv]
+  {:pre [(valid-hsv? hsv)]}
   (let [[h s v] hsv
         h-norm (/ h 360)
         s-norm (/ s 100)
@@ -483,8 +490,25 @@ into a different Colorspace record -><colorspace>-space."
   #?(:clj (.toPlainString (.stripTrailingZeros (bigdec (double n))))
      :cljs (str n)))
 
+(def ^:private min-alpha-decimal-places
+  "Decimal places alpha keeps under :decimal-places. Alpha runs from 0 to
+   1, so rounding it like a 0 to 255 channel would change the opacity.
+   Browsers serialize alpha with up to 3 decimals too."
+  3)
+
+(defn- round-css-coords
+  "Round RGBA coordinates for CSS output. :decimal-places applies to the
+   RGB channels; alpha keeps at least min-alpha-decimal-places. Channels
+   stay within 0 to 255: 255 is 300 at one significant digit."
+  [rgba {:keys [decimal-places] :as options}]
+  (let [[r g b a] (round-coords rgba options)
+        alpha (if (some-> decimal-places (< min-alpha-decimal-places))
+                (round-places (nth rgba 3) min-alpha-decimal-places)
+                a)]
+    (conj (mapv #(clamp % 0.0 255.0) [r g b]) alpha)))
+
 (defn- css-rgba [rgba options]
-  (let [coords (if (seq options) (round-coords rgba options) rgba)
+  (let [coords (if (seq options) (round-css-coords rgba options) rgba)
         parts (map css-number coords)]
     (str "rgba(" (str/join "," parts) ")")))
 
@@ -494,7 +518,6 @@ into a different Colorspace record -><colorspace>-space."
     (if (= a 1.0)
       (rgb->hex [r g b])
       (css-rgba [r g b a] {}))))
-
 
 (defn color?
   "Check if value is a Color record"
@@ -617,7 +640,9 @@ into a different Colorspace record -><colorspace>-space."
 (defn ->css
   "Export a color as CSS rgba(), preserving fractional channels by default.
    Pass :decimal-places (0-15) or :significant-digits (1-17) to round only
-   this output. Passing both throws, as with round-coords."
+   this output. Passing both throws, as with round-coords. :decimal-places
+   rounds the RGB channels; alpha keeps at least 3 places, so whole-number
+   channels do not change the opacity."
   ([color] (->css color {}))
   ([color options]
    (css-rgba (->rgba color) options)))
@@ -636,63 +661,54 @@ into a different Colorspace record -><colorspace>-space."
 ;; Color Manipulation
 ;; =============================================================================
 
+(defn- adjust-hsl
+  "Apply `f` to the HSL coordinates of `color` and return 8-bit RGB
+   channels. Works at full precision and rounds once at the end: rounding
+   HSL to whole numbers on the way would move the color even when `f`
+   changes nothing."
+  [color f]
+  (->> (->rgb color) rgb->hsl-coords f hsl->rgb-coords (mapv round-int)))
+
+(defn- like-input
+  "Return 8-bit `rgb` as a Color, hex string or vector, following `color`."
+  [color rgb]
+  (cond
+    (color? color) (color-from-rgb rgb)
+    (string? color) (rgb->hex rgb)
+    (vector? color) rgb))
+
 (defn lighten
   "Lighten a color by a percentage (0-1)"
   [color amount]
-  (let [color-record (normalize-color-input color)
-        hsl (->hsl color-record)
-        [h s l] hsl
-        new-l (clamp (+ l (* amount 100)) 0 100)
-        new-hsl [h s new-l]]
-    (cond
-      (color? color) (color-from-hsl new-hsl)
-      (string? color) (hsl->hex new-hsl)
-      (vector? color) (hsl->rgb new-hsl))))
+  (like-input color
+              (adjust-hsl color (fn [[h s l]]
+                                  [h s (clamp (+ l (* amount 100)) 0 100)]))))
 
 (defn darken
   "Darken a color by a percentage (0-1)"
   [color amount]
-  (let [color-record (normalize-color-input color)
-        hsl (->hsl color-record)
-        [h s l] hsl
-        new-l (clamp (- l (* amount 100)) 0 100)
-        new-hsl [h s new-l]]
-    (cond
-      (color? color) (color-from-hsl new-hsl)
-      (string? color) (hsl->hex new-hsl)
-      (vector? color) (hsl->rgb new-hsl))))
+  (lighten color (- amount)))
 
 (defn saturate
   "Increase saturation of a color by a percentage (0-1)"
   [color amount]
-  (let [color-record (normalize-color-input color)
-        [h s l] (->hsl color-record)
-        new-s (clamp (+ s (* amount 100)) 0 100)]
+  (let [rgb (adjust-hsl color (fn [[h s l]]
+                                [h (clamp (+ s (* amount 100)) 0 100) l]))]
     (if (string? color)
-      (hsl->hex [h new-s l])
-      (hsl->rgb [h new-s l]))))
+      (rgb->hex rgb)
+      rgb)))
 
 (defn desaturate
   "Decrease saturation of a color by a percentage (0-1)"
   [color amount]
-  (let [color-record (normalize-color-input color)
-        [h s l] (->hsl color-record)
-        new-s (clamp (- s (* amount 100)) 0 100)]
-    (if (string? color)
-      (hsl->hex [h new-s l])
-      (hsl->rgb [h new-s l]))))
+  (saturate color (- amount)))
 
 (defn adjust-hue
   "Adjust the hue of a color by degrees"
   [color degrees]
-  (let [color-record (normalize-color-input color)
-        [h s l] (->hsl color-record)
-        new-h (mod (+ h degrees) 360)
-        new-hsl [new-h s l]]
-    (cond
-      (color? color) (color-from-hsl new-hsl)
-      (string? color) (hsl->hex new-hsl)
-      (vector? color) (hsl->rgb new-hsl))))
+  (like-input color
+              (adjust-hsl color (fn [[h s l]]
+                                  [(mod (+ h degrees) 360) s l]))))
 
 (defn invert
   "Invert a color"
@@ -720,13 +736,20 @@ into a different Colorspace record -><colorspace>-space."
 ;; Color Mixing and Blending
 ;; =============================================================================
 
+(defn- inexact
+  "Turn a JVM Ratio into a double and leave other numbers alone, so exact
+   rational arithmetic does not leak Ratios and BigInts into results."
+  [n]
+  #?(:clj (cond-> n (ratio? n) double)
+     :cljs n))
+
 (defn mix
   "Mix two colors with optional ratio (0-1, default 0.5).
    Vector results keep fractional channels; hex and Color results quantize
    once to the nearest 8-bit channel."
   ([color1 color2] (mix color1 color2 0.5))
   ([color1 color2 ratio]
-   (let [ratio (or ratio 0.5)
+   (let [ratio (inexact (or ratio 0.5))
          rgb1 (->rgb color1)
          rgb2 (->rgb color2)
          mixed (mapv #(+ %1 (* (- %2 %1) ratio)) rgb1 rgb2)]
@@ -744,7 +767,7 @@ into a different Colorspace record -><colorspace>-space."
   [color]
   (let [rgb (->rgb color)
         [r g b] (map #(let [val (/ % 255)]
-                        (if (<= val 0.03928)
+                        (if (<= val 0.04045)
                           (/ val 12.92)
                           (Math/pow (/ (+ val 0.055) 1.055) 2.4)))
                      rgb)]
@@ -768,18 +791,23 @@ into a different Colorspace record -><colorspace>-space."
   (round (raw-contrast-ratio color1 color2) 2))
 
 (defn- contrast-threshold
-  "Minimum WCAG contrast ratio for a level. Defaults to AA for normal text."
+  "Minimum WCAG contrast ratio for a level. nil means AA for normal text,
+   the default. Throws for any other unknown level: quietly checking a
+   mistyped :aaa as :aa would report colors as accessible that are not."
   [level]
   (case level
     :aaa 7
     :aa-large 3
-    4.5))
+    (:aa nil) 4.5
+    (throw (ex-info "Unknown WCAG level. Use :aa, :aa-large or :aaa"
+                    {:level level
+                     :expected #{:aa :aa-large :aaa}}))))
 
 (defn accessible?
   "Check if two colors meet a WCAG contrast level.
-   level is :aa (4.5, the default), :aa-large (3) or :aaa (7). Compares the
-   unrounded contrast ratio, so a pair at 4.4999 fails :aa even though
-   contrast-ratio displays 4.5."
+   level is :aa (4.5, the default), :aa-large (3) or :aaa (7); any other
+   level throws. Compares the unrounded contrast ratio, so a pair at 4.4999
+   fails :aa even though contrast-ratio displays 4.5."
   ([color1 color2] (accessible? color1 color2 :aa))
   ([color1 color2 level]
    (>= (raw-contrast-ratio color1 color2)
@@ -877,15 +905,18 @@ into a different Colorspace record -><colorspace>-space."
      (map #(adjust-hue color (* % angle)) (range 1 (inc count))))))
 
 (defn monochromatic
-  "Generate monochromatic palette by varying lightness and saturation"
+  "Generate a monochromatic palette: the hue of `color` at lightness from
+   20 to 80, dark to light. Saturation follows the base color, from its
+   own for the darkest step down to three quarters of it for the lightest,
+   so a gray gives grays and a muted color a muted palette."
   ([color] (monochromatic color 5))
   ([color count]
    (let [count (or count 5)
-         [h] (->hsl color)
+         [h s] (->hsl color)
          variations (for [i (range count)
                           :let [factor (/ i (max 1 (dec count)))
                                 new-l (+ 20 (* 60 factor))
-                                new-s (+ 50 (* 50 (- 1 (* 0.5 factor))))]]
+                                new-s (* s (- 1 (* 0.25 factor)))]]
                       (if (string? color)
                         (hsl->hex [h new-s new-l])
                         (hsl->rgb [h new-s new-l])))]
@@ -986,6 +1017,8 @@ into a different Colorspace record -><colorspace>-space."
   - `:mode`  `:light` or `:dark` (default `:light`)
   - `:level` `:aa`, `:aa-large`, or `:aaa` (default `:aa`)
 
+  Throws for any other mode or level.
+
   Returns a map of hex color tokens for app UIs. Each `:on-*` token is a
   foreground color for the token it is named after.
 
@@ -1000,8 +1033,12 @@ into a different Colorspace record -><colorspace>-space."
   Check a pair with `accessible?` when you need the guarantee."
   ([base-color] (accessible-theme base-color {}))
   ([base-color options]
-   (let [{:keys [mode level]
-          :or {mode :light level :aa}} options
+   (let [mode (or (:mode options) :light)
+         level (or (:level options) :aa)
+         _ (when-not (#{:light :dark} mode)
+             (throw (ex-info "Unknown theme mode. Use :light or :dark"
+                             {:mode mode
+                              :expected #{:light :dark}})))
          light? (= mode :light)
          base (->hex base-color)
          background (if light? (tint base 0.96) (shade base 0.88))
@@ -1262,8 +1299,8 @@ into a different Colorspace record -><colorspace>-space."
   ([base-color overlay-color options]
    (let [base-rgba (->rgba base-color)
          overlay-rgba (->rgba overlay-color)
-         [r1 g1 b1 a1] base-rgba
-         [r2 g2 b2 a2] overlay-rgba
+         [r1 g1 b1 a1] (mapv inexact base-rgba)
+         [r2 g2 b2 a2] (mapv inexact overlay-rgba)
          ;; Alpha compositing formula
          a-out (+ a2 (* a1 (- 1 a2)))
          blend-channel (fn [c1 c2]
@@ -1278,7 +1315,7 @@ into a different Colorspace record -><colorspace>-space."
        (color-from-rgba (conj (mapv round-int result) a-out))
 
        (string? base-color)
-       (if (= a-out 1.0)
+       (if (== a-out 1)
          (rgb->hex result)
          (css-rgba (conj result a-out) options))
 
@@ -1293,7 +1330,7 @@ into a different Colorspace record -><colorspace>-space."
    (let [[r g b] (->rgb color)]
      (cond
        (color? color) (->color r g b alpha)
-       (string? color) (if (= alpha 1.0)
+       (string? color) (if (== alpha 1)
                          (rgb->hex [r g b])
                          (css-rgba [r g b alpha] options))
        (vector? color) [r g b alpha]))))
@@ -1395,20 +1432,31 @@ into a different Colorspace record -><colorspace>-space."
      (+ (* 0.2126729 r) (* 0.7151522 g) (* 0.0721750 b))
      (+ (* 0.0193339 r) (* 0.1191920 g) (* 0.9503041 b))]))
 
+(def ^:private lab-white
+  "XYZ of sRGB white, the D65 reference for rgb->lab. Taken from rgb->xyz
+   instead of the published [0.95047 1.0 1.08883] so that white and grays
+   are exactly neutral: the Y row of the matrix sums to 1.0000001."
+  (rgb->xyz [255 255 255]))
+
+(def ^:private lab-epsilon
+  "Below this the Lab transfer function is linear. CIE's exact 216/24389;
+   the 1976 text printed 0.008856."
+  (/ 216.0 24389.0))
+
+(def ^:private lab-kappa
+  "Slope of the linear part. CIE's exact 24389/27; the 1976 text printed
+   903.3, which leaves a step where the two parts meet."
+  (/ 24389.0 27.0))
+
 (defn rgb->lab
   "Convert RGB to LAB color space (CIE L*a*b*), relative to the D65 white
    point. CSS lab() uses D50, so these are not CSS values."
   [rgb]
-  (let [[x y z] (rgb->xyz rgb)
-        ;; Normalize for D65 illuminant
-        x (/ x 0.95047)
-        z (/ z 1.08883)
-        ;; Convert to LAB
-        f (fn [t]
-            (if (> t 0.008856)
-              (Math/pow t (/ 1.0 3.0))
-              (+ (* 7.787 t) (/ 16.0 116.0))))
-        [fx fy fz] (map f [x y z])
+  (let [f (fn [t]
+            (if (> t lab-epsilon)
+              (Math/cbrt t)
+              (/ (+ (* lab-kappa t) 16.0) 116.0)))
+        [fx fy fz] (map #(f (/ %1 %2)) (rgb->xyz rgb) lab-white)
         l (- (* 116 fy) 16)
         a (* 500 (- fx fy))
         b (* 200 (- fy fz))]

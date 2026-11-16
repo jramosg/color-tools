@@ -142,13 +142,13 @@ Adjust lightness while preserving the input type:
 
 ;; Make it 20% lighter
 (color/lighten blue 0.2)         ; hex input -> hex output
-;=> "#8ac4ea"
+;=> "#8bc4ea"
 
 (color/lighten blue-css 0.2)     ; CSS RGB input -> hex output  
-;=> "#8ac4ea"
+;=> "#8bc4ea"
 
 (color/lighten [52 152 219] 0.2) ; RGB vector input -> RGB vector output
-;=> [138 196 234]
+;=> [139 196 234]
 
 ;; Make it 30% darker  
 (color/darken blue 0.3)
@@ -200,15 +200,15 @@ Rotate colors around the color wheel:
 
 ;; Shift 60 degrees toward orange
 (color/adjust-hue red 60)
-;=> "#d6e73c"
+;=> "#d7e73c"
 
 ;; Complement (180 degrees)
 (color/adjust-hue red 180)
-;=> "#3cd6e7"
+;=> "#3cd7e7"
 
 ;; Or use the convenience function
 (color/complementary red)
-;=> "#3cd6e7"
+;=> "#3cd7e7"
 ```
 
 ## Chapter 3: Accessibility and Contrast
@@ -323,19 +323,19 @@ Generate harmonious color combinations based on color theory:
 
 ;; Complementary (opposite on color wheel)
 (color/complementary base-color)
-;=> "#3cd6e7"
+;=> "#3cd7e7"
 
 ;; Triadic (three colors forming triangle)
 (color/triadic base-color)
-;=> ["#3ce74d" "#4d3ce7"]
+;=> ["#3ce74c" "#4c3ce7"]
 
 ;; Split complementary (base + two colors near complement)
 (color/split-complementary base-color)
-;=> ["#3ce7a2" "#3c80e7"]
+;=> ["#3ce7a2" "#3c82e7"]
 
 ;; Analogous (adjacent colors)
 (color/analogous base-color 4 30)  ; 4 colors, 30° apart
-;=> ["#e7a23c" "#d6e73c" "#80e73c" "#3ce74d"]
+;=> ["#e7a23c" "#d7e73c" "#82e73c" "#3ce74c"]
 ```
 
 ### Monochromatic Palettes
@@ -344,7 +344,7 @@ Create palettes using variations of a single hue:
 
 ```clojure
 (color/monochromatic "#3498db" 5)
-;=> ["#003d66" "#066aad" "#1096ef" "#5db4ee" "#a6d4f2"]
+;=> ["#0f3a57" "#1f6594" "#318fce" "#73b0d9" "#b1d1e7"]
 ```
 
 ### Theme Generation
@@ -354,11 +354,11 @@ Use the palette generator for different strategies:
 ```clojure
 ;; Generate a triadic theme
 (color/generate-palette :triadic "#e74c3c")
-;=> ["#3ce74d" "#4d3ce7"]
+;=> ["#3ce74c" "#4c3ce7"]
 
 ;; Generate analogous theme with custom options
 (color/generate-palette :analogous "#3498db" {:count 5 :angle 20})
-;=> ["#3360db" "#3e33db" "#7633db" "#ae33db" "#db33d0"]
+;=> ["#3460db" "#3f34db" "#7734db" "#af34db" "#db34d0"]
 
 ;; Random palette for experimentation
 (color/generate-palette :random nil {:count 3})

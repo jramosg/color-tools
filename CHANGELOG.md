@@ -25,6 +25,15 @@ All notable changes to this project will be documented in this file. This change
   gradients may change where whole-coordinate rounding shifted a step.
 - `->rgb` and `->rgba` preserve fractional channels from vectors and CSS
   strings, including when used by luminance and Delta E calculations.
+- `lighten`, `darken`, `saturate`, `desaturate` and `adjust-hue` work on
+  full-precision HSL and round once, to 8-bit channels. They used to round
+  HSL to whole numbers first, which moved a color by up to 3 per channel
+  even at zero adjustment: `(adjust-hue "#123456" 0)` returned `"#123354"`.
+  Results can differ from 1.3 by that rounding error, so
+  `(complementary "#3498db")` is now `"#db7734"`, an exact channel swap,
+  instead of `"#db7633"`. `complementary`, `triadic`, `tetradic`,
+  `analogous`, `split-complementary` and the `:secondary`, `:accent` and
+  `:focus-ring` tokens of `accessible-theme` follow (#100).
 - CSS numeric output preserves fractional channels by default, and CSS
   parsers accept decimal channels and exponent notation for round trips.
 - `get-contrast-text` aims for `:aa` (4.5:1) by default, as `accessible?`
@@ -39,12 +48,21 @@ All notable changes to this project will be documented in this file. This change
   level.
 
 ### Fixed
+- `accessible?`, `find-accessible-color`, `get-contrast-text` and
+  `accessible-theme` checked any unknown level, such as a mistyped `:AAA`,
+  as `:aa`, and could report a pair as accessible that is not. Unknown
+  levels now throw, as does a theme `:mode` other than `:light` or `:dark`.
+  `nil` still means the default (#99).
 - Accessibility checks continue to compare raw contrast, including for
   fractional channels. Near a threshold, `accessible-theme` uses the
   passing foreground: `#006ffb` gets black `:on-primary` text at AA, since
   white's raw ratio is 4.499888 even though `contrast-ratio` displays 4.5.
 - Hex export no longer narrows channels to a 32-bit float before rounding,
   which could round a channel just below a half-integer up instead of down.
+- On the JVM, `(with-alpha "#ff0000" 1)` returned `rgba(255,0,0,1)` for an
+  integer alpha of 1. It returns the hex string, as it does for `1.0` (#96).
+- On the JVM, `round` and `round-int` returned 0 for NaN. NaN now stays
+  NaN, as in ClojureScript and `round-coords` (#97).
 - `accessible-theme` could return a dark `:muted` surface on which no text
   color meets `:aaa`, so `:on-muted` missed the level it promises. `:muted`
   now darkens until the level is reachable.
@@ -54,12 +72,18 @@ All notable changes to this project will be documented in this file. This change
 - The documentation of `accessible-theme` said every `:on-*` token meets the
   requested level. On `:primary`, `:secondary` and `:accent` that can't hold
   at `:aaa` for mid-tone colors, and the documentation now says so.
+- `hsv->rgb` returned a color for out-of-range input, such as a hue of 400
+  or a saturation of 150. It now checks `valid-hsv?`, as `hsl->rgb` checks
+  `valid-hsl?` (#101).
 - `split-complementary` added the base hue twice, producing incorrect
   palettes for nonzero base hues. It now rotates by 180 degrees plus or
   minus the requested angle.
 - The demo converter rejected `rgba()` without an alpha, such as
   `rgba(52, 152, 219)`. CSS treats `rgba()` as an alias of `rgb()`, so it now
   reads it as RGBA with an alpha of 1.
+- `monochromatic` ignored the saturation of the base color, so a gray gave a
+  red palette and a muted color a vivid one. Saturation now follows the
+  base. Fully saturated colors give the same palette as before (#98).
 - One-step `gradient` and `monochromatic` calls divided by zero. They now
   return the first gradient stop unchanged or the first monochromatic
   variation, while zero steps still returns an empty sequence.
@@ -70,10 +94,16 @@ All notable changes to this project will be documented in this file. This change
 - The demo converter said "No valid color yet" for input that will never be
   valid. Empty input now says "Paste a color to convert" and anything else
   that fails to parse says "Not a valid color".
+- `luminance` used the obsolete sRGB cutoff of 0.03928 instead of WCAG's
+  current 0.04045. Fractional channels between the cutoffs now use the
+  correct linear branch.
 - `rgb->lab` converted with the sRGB matrix rounded to 4 digits, which put
   Lab values off by up to 0.02. It now uses the full matrix and matches
   reference values to 0.001. `delta-e` and `perceptually-similar?` build on
-  it, so their results shift by a similar amount.
+  it, so their results shift by a similar amount. It also uses CIE's exact
+  216/24389 and 24389/27 in place of the rounded 0.008856 and 7.787, and
+  white and grays are neutral: `(rgb->lab [255 255 255])` is
+  `[100.0 0.0 0.0]` (#102).
   `rgb->kelvin` uses the same matrix and can differ by 1 K.
 
 ### Adapting from 1.3
