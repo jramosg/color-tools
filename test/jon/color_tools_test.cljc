@@ -1785,7 +1785,7 @@
           full (sut/->css rgba)]
       (is (= "rgba(12.3457,0.0001,254.7654,0.1235)"
              (sut/->css rgba {:decimal-places 4})))
-      (is (= "rgba(12,0,255,0)"
+      (is (= "rgba(12,0,255,0.123)"
              (sut/->css rgba {:decimal-places 0})))
       (is (= full (sut/->css rgba)))
       (is (= rgba (sut/->rgba full))))
@@ -1794,6 +1794,25 @@
                       {:significant-digits 3})))
     (is (= [0.5 2.5 0 0.001]
            (sut/->rgba "rgba(.5,2.5,0,1e-3)"))))
+
+  (testing "Alpha keeps at least 3 decimal places under :decimal-places"
+    (is (= "rgba(255,0,0,0.5)"
+           (sut/->css [255 0 0 0.5] {:decimal-places 0})))
+    (is (= "rgba(127.5,0,0,0.333)"
+           (sut/->css [127.46 0 0 (/ 1.0 3)] {:decimal-places 1})))
+    (is (= "rgba(255,0,0,0.33333)"
+           (sut/->css [255 0 0 (/ 1.0 3)] {:decimal-places 5})))
+    (is (= "rgba(255,0,0,0.3)"
+           (sut/->css [255 0 0 (/ 1.0 3)] {:significant-digits 1})))
+    (is (= "rgba(255,0,0,0.5)"
+           (sut/with-alpha "#ff0000" 0.5 {:decimal-places 0})))
+    (is (= "rgba(70,0,185,0.55)"
+           (sut/alpha-blend "rgba(255,0,0,0.25)" "rgba(0,0,255,0.4)"
+                            {:decimal-places 0}))))
+
+  (testing "Rounding up does not push a channel past 255"
+    (is (= "rgba(255,0,100,0.5)"
+           (sut/->css [255 0 96 0.5] {:significant-digits 1}))))
 
   (testing "Existing numeric string exporters accept formatting options"
     (is (= "rgba(255,0,0,0.3333)"
