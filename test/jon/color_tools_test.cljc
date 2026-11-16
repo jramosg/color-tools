@@ -285,14 +285,20 @@
   (testing "WCAG luminance uses the current sRGB transfer cutoff"
     ;; https://www.w3.org/TR/WCAG22/#dfn-relative-luminance
     ;; Fractional channels can fall between the old and current cutoffs.
-    (doseq [channel [0.0 1.0 10.0 10.1 10.2 10.3147]]
-      (is (< (Math/abs (- (sut/luminance (sut/->Color channel channel channel 1.0))
-                          (/ channel 255 12.92)))
-             1.0E-15)
-          (str channel)))
-    (is (< (Math/abs (- (sut/luminance [11 11 11])
-                        (Math/pow (/ (+ (/ 11 255.0) 0.055) 1.055) 2.4)))
-           1.0E-15))))
+    ;; Generated ->Color preserves fractions without precision options.
+    (testing "Channels at or below 10.31475 use the linear branch"
+      (doseq [channel [0.0 1.0 10.0 10.1 10.2 10.3147 10.31475]]
+        (let [color (sut/->Color channel channel channel 1.0)]
+          (is (< (Math/abs (- (sut/luminance color)
+                              (/ channel 255 12.92)))
+                 1.0E-15)
+              (str channel)))))
+    (testing "Fractional channels above 10.31475 use the nonlinear branch"
+      (doseq [channel [10.3148 10.5 11.0]]
+        (let [color (sut/->Color channel channel channel 1.0)
+              expected (Math/pow (/ (+ (/ channel 255) 0.055) 1.055) 2.4)]
+          (is (< (Math/abs (- (sut/luminance color) expected)) 1.0E-15)
+              (str channel)))))))
 
 (deftest test-contrast-and-accessibility
   (testing "Luminance calculation"
