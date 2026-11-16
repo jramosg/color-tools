@@ -756,18 +756,23 @@
   (round (raw-contrast-ratio color1 color2) 2))
 
 (defn- contrast-threshold
-  "Minimum WCAG contrast ratio for a level. Defaults to AA for normal text."
+  "Minimum WCAG contrast ratio for a level. nil means AA for normal text,
+   the default. Throws for any other unknown level: quietly checking a
+   mistyped :aaa as :aa would report colors as accessible that are not."
   [level]
   (case level
     :aaa 7
     :aa-large 3
-    4.5))
+    (:aa nil) 4.5
+    (throw (ex-info "Unknown WCAG level. Use :aa, :aa-large or :aaa"
+                    {:level level
+                     :expected #{:aa :aa-large :aaa}}))))
 
 (defn accessible?
   "Check if two colors meet a WCAG contrast level.
-   level is :aa (4.5, the default), :aa-large (3) or :aaa (7). Compares the
-   unrounded contrast ratio, so a pair at 4.4999 fails :aa even though
-   contrast-ratio displays 4.5."
+   level is :aa (4.5, the default), :aa-large (3) or :aaa (7); any other
+   level throws. Compares the unrounded contrast ratio, so a pair at 4.4999
+   fails :aa even though contrast-ratio displays 4.5."
   ([color1 color2] (accessible? color1 color2 :aa))
   ([color1 color2 level]
    (>= (raw-contrast-ratio color1 color2)
@@ -974,6 +979,8 @@
   - `:mode`  `:light` or `:dark` (default `:light`)
   - `:level` `:aa`, `:aa-large`, or `:aaa` (default `:aa`)
 
+  Throws for any other mode or level.
+
   Returns a map of hex color tokens for app UIs. Each `:on-*` token is a
   foreground color for the token it is named after.
 
@@ -988,8 +995,12 @@
   Check a pair with `accessible?` when you need the guarantee."
   ([base-color] (accessible-theme base-color {}))
   ([base-color options]
-   (let [{:keys [mode level]
-          :or {mode :light level :aa}} options
+   (let [mode (or (:mode options) :light)
+         level (or (:level options) :aa)
+         _ (when-not (#{:light :dark} mode)
+             (throw (ex-info "Unknown theme mode. Use :light or :dark"
+                             {:mode mode
+                              :expected #{:light :dark}})))
          light? (= mode :light)
          base (->hex base-color)
          background (if light? (tint base 0.96) (shade base 0.88))

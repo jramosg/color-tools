@@ -39,6 +39,11 @@ All notable changes to this project will be documented in this file. This change
   level.
 
 ### Fixed
+- `accessible?`, `find-accessible-color`, `get-contrast-text` and
+  `accessible-theme` checked any unknown level, such as a mistyped `:AAA`,
+  as `:aa`, and could report a pair as accessible that is not. Unknown
+  levels now throw, as does a theme `:mode` other than `:light` or `:dark`.
+  `nil` still means the default (#99).
 - Accessibility checks continue to compare raw contrast, including for
   fractional channels. Near a threshold, `accessible-theme` uses the
   passing foreground: `#006ffb` gets black `:on-primary` text at AA, since

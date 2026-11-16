@@ -281,6 +281,35 @@
             mixed-75 (sut/mix red blue 0.75)]
         (is (not= mixed-25 mixed-75))))))
 
+(defn- ex-data-of
+  "The ex-data of the ex-info `f` throws, or nil when it does not throw one."
+  [f]
+  (try (f)
+       nil
+       (catch #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo) e
+         (ex-data e))))
+
+(deftest unknown-level-test
+  (testing "Unknown WCAG levels throw instead of being checked as :aa"
+    (doseq [level [:AAA "aaa" :a :aaa-large 7]
+            check [#(sut/accessible? "#767676" "#ffffff" level)
+                   #(sut/find-accessible-color "#ffffff" "#767676" level)
+                   #(sut/get-contrast-text "#767676" level)
+                   #(sut/accessible-theme "#3498db" {:level level})]]
+      (is (= {:level level :expected #{:aa :aa-large :aaa}}
+             (ex-data-of check))
+          (pr-str level))))
+  (testing "nil means the default level"
+    (is (true? (sut/accessible? "#767676" "#ffffff" nil)))
+    (is (false? (sut/accessible? "#777777" "#ffffff" nil)))
+    (is (= :aa (:level (sut/accessible-theme "#3498db" {:level nil})))))
+  (testing "Unknown theme modes throw; nil means :light"
+    (doseq [mode [:drak "dark" :Light]]
+      (is (= {:mode mode :expected #{:light :dark}}
+             (ex-data-of #(sut/accessible-theme "#3498db" {:mode mode})))))
+    (is (= (sut/accessible-theme "#3498db")
+           (sut/accessible-theme "#3498db" {:mode nil})))))
+
 (deftest test-contrast-and-accessibility
   (testing "Luminance calculation"
     (let [white-lum (sut/luminance "#ffffff")
@@ -318,10 +347,6 @@
   (testing "Identical colors fail every level"
     (doseq [level [:aa :aa-large :aaa]]
       (is (not (sut/accessible? "#808080" "#808080" level)) (pr-str level))))
-
-  (testing "Unknown levels fall back to AA"
-    (is (= (sut/accessible? [0 120 215] [255 255 255] :aa)
-           (sut/accessible? [0 120 215] [255 255 255] :unknown))))
 
   (testing "find-accessible-color results meet the unrounded threshold"
     (doseq [bg ["#ffffff" "#000000" "#3498db" "#f0f0f0"]
