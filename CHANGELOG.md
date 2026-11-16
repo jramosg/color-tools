@@ -54,6 +54,9 @@ All notable changes to this project will be documented in this file. This change
 - The documentation of `accessible-theme` said every `:on-*` token meets the
   requested level. On `:primary`, `:secondary` and `:accent` that can't hold
   at `:aaa` for mid-tone colors, and the documentation now says so.
+- `hsv->rgb` returned a color for out-of-range input, such as a hue of 400
+  or a saturation of 150. It now checks `valid-hsv?`, as `hsl->rgb` checks
+  `valid-hsl?` (#101).
 - `split-complementary` added the base hue twice, producing incorrect
   palettes for nonzero base hues. It now rotates by 180 degrees plus or
   minus the requested angle.

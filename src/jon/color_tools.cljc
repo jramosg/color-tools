@@ -367,6 +367,7 @@
      (not (:full-precision? options)) (mapv round-int))))
 
 (defn- hsv->rgb-coords [hsv]
+  {:pre [(valid-hsv? hsv)]}
   (let [[h s v] hsv
         h-norm (/ h 360)
         s-norm (/ s 100)
