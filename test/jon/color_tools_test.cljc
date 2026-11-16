@@ -1311,6 +1311,31 @@
     (is (= 7 (count (sut/shades "#ff0000" 7))))
     (is (= 10 (count (sut/tones "#ff0000" 10))))))
 
+(deftest plain-number-results-test
+  (testing "Ratio arithmetic does not leak Ratios or BigInts into results"
+    (let [half #?(:clj 1/2 :cljs 0.5)
+          plain? #(or (int? %) (double? %))
+          results (concat (sut/tints [255 0 0] 2)
+                          (sut/shades [255 0 0] 2)
+                          (sut/tones [255 0 0] 2)
+                          [(sut/mix [0 0 0] [255 255 255] half)
+                           (sut/tint [255 0 0] half)
+                           (sut/alpha-blend [0 0 0 1] [255 255 255 half])])]
+      (doseq [result results]
+        (is (every? plain? result) (pr-str result)))
+      (is (= [[255.0 127.5 127.5] [255.0 255.0 255.0]]
+             (mapv #(mapv double %) (sut/tints [255 0 0] 2))))
+      (is (= [127.5 127.5 127.5 1.0]
+             (mapv double
+                   (sut/alpha-blend [0 0 0 1] [255 255 255 half]))))))
+  (testing "Whole-number ratios keep whole-number channels"
+    (is (= [255 255 255] (sut/mix [0 0 0] [255 255 255] 1)))
+    (is (= [0 0 0] (sut/mix [0 0 0] [255 255 255] 0))))
+  (testing "An integer alpha of 1 is opaque, as 1.0 is"
+    (is (= "#ff0000" (sut/with-alpha "#ff0000" 1)))
+    (is (= "#ff0000" (sut/with-alpha "#ff0000" 1.0)))
+    (is (= "rgba(255,0,0,0)" (sut/with-alpha "#ff0000" 0)))))
+
 (deftest test-alpha-blending
   (testing "Alpha blend with full opacity"
     (let [red [255 0 0 1.0]
@@ -1631,6 +1656,10 @@
       1.005     2 1.0))
   (testing "Return an integer at 0 places"
     (is (int? (sut/round 2.7))))
+  (testing "NaN stays NaN instead of becoming 0"
+    (is (NaN? (sut/round ##NaN)))
+    (is (NaN? (sut/round ##NaN 2)))
+    (is (NaN? (sut/round-int ##NaN))))
   (testing "Zero decimal places do not overflow a 32-bit integer"
     (doseq [n [4.0E9 -4.0E9 1.0E20 -1.0E300]]
       (is (= n (sut/round n)) (str n))

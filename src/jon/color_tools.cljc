@@ -46,13 +46,19 @@
    Places may be negative to round to tens, hundreds and so on. Returns x
    unchanged when the scaled value has no fractional part, which also keeps
    Math/round from overflowing a long on the JVM, and when rounding up would
-   exceed the largest double."
+   exceed the largest double. NaN stays NaN: Math/round would turn it into
+   0 on the JVM."
   [x places]
   (let [x (double x)]
-    (if (neg? places)
+    (cond
+      (NaN? x) x
+
+      (neg? places)
       (let [factor (Math/pow 10 (- places))
             rounded (* (double (Math/round (/ x factor))) factor)]
         (if (infinite? rounded) x rounded))
+
+      :else
       (let [factor (Math/pow 10 places)
             scaled (* x factor)]
         (if (>= (Math/abs scaled) max-fractional-double)
@@ -719,13 +725,20 @@
 ;; Color Mixing and Blending
 ;; =============================================================================
 
+(defn- inexact
+  "Turn a JVM Ratio into a double and leave other numbers alone, so exact
+   rational arithmetic does not leak Ratios and BigInts into results."
+  [n]
+  #?(:clj (cond-> n (ratio? n) double)
+     :cljs n))
+
 (defn mix
   "Mix two colors with optional ratio (0-1, default 0.5).
    Vector results keep fractional channels; hex and Color results quantize
    once to the nearest 8-bit channel."
   ([color1 color2] (mix color1 color2 0.5))
   ([color1 color2 ratio]
-   (let [ratio (or ratio 0.5)
+   (let [ratio (inexact (or ratio 0.5))
          rgb1 (->rgb color1)
          rgb2 (->rgb color2)
          mixed (mapv #(+ %1 (* (- %2 %1) ratio)) rgb1 rgb2)]
@@ -1275,8 +1288,8 @@
   ([base-color overlay-color options]
    (let [base-rgba (->rgba base-color)
          overlay-rgba (->rgba overlay-color)
-         [r1 g1 b1 a1] base-rgba
-         [r2 g2 b2 a2] overlay-rgba
+         [r1 g1 b1 a1] (mapv inexact base-rgba)
+         [r2 g2 b2 a2] (mapv inexact overlay-rgba)
          ;; Alpha compositing formula
          a-out (+ a2 (* a1 (- 1 a2)))
          blend-channel (fn [c1 c2]
@@ -1291,7 +1304,7 @@
        (color-from-rgba (conj (mapv round-int result) a-out))
 
        (string? base-color)
-       (if (= a-out 1.0)
+       (if (== a-out 1)
          (rgb->hex result)
          (css-rgba (conj result a-out) options))
 
@@ -1306,7 +1319,7 @@
    (let [[r g b] (->rgb color)]
      (cond
        (color? color) (->color r g b alpha)
-       (string? color) (if (= alpha 1.0)
+       (string? color) (if (== alpha 1)
                          (rgb->hex [r g b])
                          (css-rgba [r g b alpha] options))
        (vector? color) [r g b alpha]))))
