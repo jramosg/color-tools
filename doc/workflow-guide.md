@@ -188,7 +188,7 @@ Alpha blending controls how transparent colors stack.
 ```clojure
 ;; Blend semi-transparent blue over opaque red
 (color/alpha-blend [255 0 0 1.0] [0 0 255 0.5])
-;=> [128 0 128 1.0]
+;=> [127.5 0.0 127.5 1.0]
 
 ;; The formula: 
 ;; a_out = a_overlay + a_base * (1 - a_overlay)

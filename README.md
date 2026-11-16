@@ -113,14 +113,14 @@ Or for Leiningen, add to your `project.clj`:
 
 ;; Manipulate colors
 (color/lighten "#ff5733" 0.2)
-;=> "#ffac99"
+;=> "#ffab99"
 
 (color/darken [255 87 51] 0.3)
-;=> [153 28 0]
+;=> [153 27 0]
 
 ;; Generate palettes
 (color/triadic "#ff5733")
-;=> ["#33ff58" "#5833ff"]
+;=> ["#33ff57" "#5733ff"]
 
 ;; Check accessibility
 (color/accessible? "#000000" "#ffffff")
@@ -297,7 +297,7 @@ The parser accepts common CSS color string formats:
 
 ;; Lighten and darken, preserving the input type
 (color/lighten blue 0.2)               ;=> Color record (lighter blue)
-(color/lighten "#3498db" 0.2)          ;=> "#8ac4ea"
+(color/lighten "#3498db" 0.2)          ;=> "#8bc4ea"
 (color/darken [52 152 219] 0.3)        ;=> [18 67 100]
 
 ;; Adjust saturation
@@ -314,26 +314,26 @@ The parser accepts common CSS color string formats:
 ```clojure
 ;; Complementary colors
 (color/complementary "#3498db")
-;=> "#db7633"
+;=> "#db7734"
 
 ;; Triadic harmony
 (color/triadic "#3498db")
-;=> ["#db3398" "#98db33"]
+;=> ["#db3498" "#98db34"]
 
 ;; Analogous colors
 (color/analogous "#3498db" 4 20)  ; 4 colors, 20° apart
-;=> ["#3360db" "#3e33db" "#7633db" "#ae33db"]
+;=> ["#3460db" "#3f34db" "#7734db" "#af34db"]
 
 ;; Monochromatic palette
 (color/monochromatic "#3498db" 5)
-;=> ["#003d66" "#066aad" "#1096ef" "#5db4ee" "#a6d4f2"]
+;=> ["#0f3a57" "#1f6594" "#318fce" "#73b0d9" "#b1d1e7"]
 
 ;; Generate palettes by strategy
 (color/generate-palette :triadic "#e74c3c")
-;=> ["#3ce74d" "#4d3ce7"]
+;=> ["#3ce74c" "#4c3ce7"]
 
 (color/generate-palette :split-complementary "#2ecc71" {:angle 25})
-;=> ["#8acc2e" "#2ecc56"]
+;=> ["#cc2ecb" "#cc2e47"]
 ```
 
 ### Accessibility and Contrast
@@ -377,7 +377,7 @@ The parser accepts common CSS color string formats:
 (:background theme)    ;=> "#f7fbfe"
 (:primary theme)       ;=> "#3498db"
 (:on-primary theme)    ;=> "#000000"
-(:focus-ring theme)    ;=> "#8433db"
+(:focus-ring theme)    ;=> "#8534db"
 
 ;; Use dark mode or stricter contrast
 (color/accessible-theme "#ff7a59" {:mode :dark :level :aaa})
@@ -612,7 +612,7 @@ These projects influenced the API:
 
 ;; Alpha blending with source-over compositing
 (color/alpha-blend [255 0 0 0.8] [0 0 255 0.6])
-;=> [89 0 166 0.92]
+;=> [88.69565217391305 0.0 166.30434782608694 0.92]
 
 (color/with-alpha "#ff0000" 0.5)
 ;=> "rgba(255,0,0,0.5)"

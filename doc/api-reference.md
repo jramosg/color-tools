@@ -17,6 +17,109 @@ Manipulation functions generally preserve the input shape. A hex string returns
 a hex string, an RGB vector returns a vector, and a `Color` record returns a
 `Color` record.
 
+## Precision
+
+Keep computed coordinates at full precision and round the values you display.
+`round-coords` accepts exactly one of `{:decimal-places n}` (0 to 15 places)
+or `{:significant-digits n}` (1 to 17 digits). Passing both throws.
+There is no global precision setting; formatting affects only that call.
+
+```clojure
+(round-coords [123.456 0.001234] {:decimal-places 2})
+;=> [123.46 0.0]
+
+(round-coords [123.456 0.001234] {:significant-digits 3})
+;=> [123.0 0.00123]
+```
+
+`->rgb` and `->rgba` preserve fractional channels from vectors and CSS input.
+`mix`, `interpolate`, `gradient` and `alpha-blend` keep intermediate precision
+and return fractional vector channels. HSL and HSV interpolation uses
+unrounded working coordinates, including hue wrapping. Keep results as vectors
+when chaining calculations. Hex and legacy `Color` results quantize once to
+8-bit channels; decimal places do not apply to hex output.
+
+```clojure
+(mix [0 0 0] [1 1 1])
+;=> [0.5 0.5 0.5]
+
+(->hex (mix [0 0 0] [1 1 1]))
+;=> "#010101"
+```
+
+`luminance`, Lab and Oklab conversions, and `delta-e` retain full precision.
+Accessibility decisions use the unrounded contrast ratio. `contrast-ratio`
+still rounds to two decimal places for compatibility: use `accessible?` for
+threshold decisions rather than comparing its displayed return value.
+
+```clojure
+(contrast-ratio [0 111 251] [255 255 255])
+;=> 4.5
+
+(accessible? [0 111 251] [255 255 255] :aa)
+;=> false
+```
+
+`->css` exports numeric CSS with optional `:decimal-places` or
+`:significant-digits`. The string outputs of `with-alpha` and `alpha-blend`
+accept the same options in a final map. By default they preserve all channel
+digits; rounding does not pad with trailing zeros. `theme->css-vars` exports
+hex tokens, so decimal places do not apply.
+
+`:decimal-places` rounds the RGB channels. Alpha runs from 0 to 1, so it
+keeps at least 3 decimal places: whole-number channels leave the opacity
+alone. `:significant-digits` applies to every coordinate.
+
+```clojure
+(->css [12.34567 0 255 0.1234567] {:decimal-places 4})
+;=> "rgba(12.3457,0,255,0.1235)"
+
+(->css [127.5 0 255 0.5] {:decimal-places 0})
+;=> "rgba(128,0,255,0.5)"
+
+(with-alpha "#ff0000" (/ 1.0 3) {:decimal-places 4})
+;=> "rgba(255,0,0,0.3333)"
+```
+
+### Full precision without changing existing defaults
+
+In 1.4, `rgb->hsl`, `rgb->hsv`, `hsl->rgb` and `hsv->rgb` accept
+`{:full-precision? true}` as a second argument to return unrounded doubles.
+Their one-argument defaults still return rounded integers. The new
+`(color input options)` and `(->color r g b a options)` arities accept the
+same flag to preserve fractional RGB channels; existing constructor arities
+still truncate channels for compatibility.
+
+The change to full-precision defaults is planned for 2.0 (#38). You can
+adopt the explicit options in 1.4 and compare computed coordinates with a
+tolerance. Clojure's `=` also distinguishes integers from integral doubles.
+
+```clojure
+(hsl->rgb [0 0 50])
+;=> [128 128 128]
+
+(hsl->rgb [0 0 50] {:full-precision? true})
+;=> [127.5 127.5 127.5]
+
+(->rgb (color [10.7 20.2 30.9] {:full-precision? true}))
+;=> [10.7 20.2 30.9]
+
+(->hex (color [10.7 20.2 30.9] {:full-precision? true}))
+;=> "#0b141f"
+```
+
+### Changes in 1.4
+
+Vector results of `mix`, `interpolate`, `gradient` and `alpha-blend`, and
+fractional inputs to `->rgb` and `->rgba`, retain precision instead of
+rounding or truncating. Results can change from `128` to `127.5`, including
+colors produced by HSL/HSV interpolation. This corrects premature rounding,
+but can affect callers that compare exact results or require integer channels.
+Use `mapv round-int` at an integration boundary when integers are required.
+CSS parsers now accept decimal channels. Hex and legacy record results keep
+their 8-bit output behavior. Coordinate ranges and vector/record shapes stay
+the same.
+
 ## Validation
 
 ### `color-names`
@@ -160,17 +263,21 @@ Converts an RGBA vector to hex, ignoring alpha.
 
 ```clojure
 (rgb->hsl rgb) => [h s l]
+(rgb->hsl rgb {:full-precision? true}) => [h s l]
 ```
 
-Converts RGB to HSL.
+Converts RGB to HSL, rounded to integers by default. The options form
+preserves full precision and returns doubles.
 
 ### `hsl->rgb`
 
 ```clojure
 (hsl->rgb hsl) => [r g b]
+(hsl->rgb hsl {:full-precision? true}) => [r g b]
 ```
 
-Converts HSL to RGB.
+Converts HSL to RGB on the 0–255 scale, rounded to integers by default.
+The options form preserves fractional channels.
 
 ### `hex->hsl`
 
@@ -192,17 +299,21 @@ Converts HSL to hex.
 
 ```clojure
 (rgb->hsv rgb) => [h s v]
+(rgb->hsv rgb {:full-precision? true}) => [h s v]
 ```
 
-Converts RGB to HSV.
+Converts RGB to HSV, rounded to integers by default. The options form
+preserves full precision and returns doubles.
 
 ### `hsv->rgb`
 
 ```clojure
 (hsv->rgb hsv) => [r g b]
+(hsv->rgb hsv {:full-precision? true}) => [r g b]
 ```
 
-Converts HSV to RGB.
+Converts HSV to RGB on the 0–255 scale, rounded to integers by default.
+The options form preserves fractional channels.
 
 ### `normalize-css-color-string`
 
@@ -244,12 +355,14 @@ Parses a valid CSS `rgba()` string.
 
 ```clojure
 (color input) => Color
+(color input {:full-precision? true}) => Color
 (color r g b) => Color
 (color r g b a) => Color
 ```
 
 Creates a `Color` record from any supported input, RGB channels, or RGBA
-channels.
+channels. Existing arities truncate RGB channels. The two-argument options
+form can preserve fractions with `:full-precision? true`.
 
 ```clojure
 (color "#ff0000")
@@ -270,10 +383,13 @@ Returns true when `x` is a `Color` record.
 ```clojure
 (->color r g b) => Color
 (->color r g b a) => Color
+(->color r g b a {:full-precision? true}) => Color
 ```
 
 Low-level constructor for `Color` records. Prefer `color` when accepting user
-input because it validates and normalizes supported formats.
+input because it validates and normalizes supported formats. Existing arities
+truncate RGB channels; the five-argument form can preserve fractions with
+`:full-precision? true`.
 
 ### `color-from-hex`
 
@@ -338,6 +454,18 @@ Converts any supported color input to RGBA.
 ```
 
 Converts any supported color input to hex.
+
+### `->css`
+
+```clojure
+(->css color) => string
+(->css color options) => string
+```
+
+Exports CSS `rgba()` with fractional channels preserved. Pass
+`{:decimal-places n}` or `{:significant-digits n}` to round this string;
+passing both throws. `:decimal-places` rounds the RGB channels and leaves
+alpha at least 3 places. See [Precision](#precision).
 
 ### `->hsl`
 
@@ -460,6 +588,10 @@ Checks whether two colors meet a WCAG threshold. `level` can be `:aa`,
 `:aa-large`, or `:aaa`; it defaults to `:aa`. The thresholds are 4.5, 3 and
 7. The check compares the unrounded contrast ratio.
 
+Any other level throws `ex-info`, here and in `find-accessible-color`,
+`get-contrast-text` and `accessible-theme`. A mistyped `:AAA` is an error,
+not a weaker check.
+
 ### `find-accessible-color`
 
 ```clojure
@@ -563,7 +695,8 @@ Generates adjacent colors. `count` defaults to `3`; `angle` defaults to `30`.
 (monochromatic color count) => [color ...]
 ```
 
-Generates one-hue variations. `count` defaults to `5`.
+Generates one-hue variations from dark (lightness 20) to light (80). `count`
+defaults to `5`. Saturation follows the base color, so a gray gives grays.
 
 ### `split-complementary`
 
@@ -636,7 +769,7 @@ whichever has more contrast.
 ;=> {:background "#f7fbfe"
 ;    :primary "#3498db"
 ;    :on-primary "#000000"
-;    :focus-ring "#8433db"}
+;    :focus-ring "#8534db"}
 ```
 
 ### `theme->css-vars`
@@ -667,7 +800,8 @@ to `"--ct-"`.
 ```
 
 Linearly mixes two colors. `ratio` defaults to `0.5`; `0` returns `color1`
-and `1` returns `color2`.
+and `1` returns `color2`. Vector results retain fractional channels. Hex and
+`Color` results round once to 8-bit channels.
 
 ### `blend-multiply`
 
@@ -748,17 +882,24 @@ Generates tone steps. `count` defaults to `5`.
 
 ```clojure
 (alpha-blend base-color overlay-color) => color
+(alpha-blend base-color overlay-color options) => color
 ```
 
 Composites `overlay-color` over `base-color` using source-over alpha blending.
+Vector results retain fractional RGB channels and the output alpha.
+Translucent string output uses CSS `rgba()` and accepts `:decimal-places` or
+`:significant-digits` in `options`. Opaque hex output ignores decimal places.
 
 ### `with-alpha`
 
 ```clojure
 (with-alpha color alpha) => color
+(with-alpha color alpha options) => color
 ```
 
-Sets the alpha channel for a color.
+Sets the alpha channel for a color. Translucent string output accepts
+`:decimal-places` or `:significant-digits` in `options`. These options affect
+only the exported string; vector and record results keep their alpha.
 
 ## Interpolation and Gradients
 
@@ -771,8 +912,13 @@ Sets the alpha channel for a color.
 
 Interpolates through two or more colors at `position` from 0 to 1. Color space
 defaults to `:rgb`; `:hsl` and `:hsv` are also supported.
+Working coordinates and vector results retain full precision. Hex and `Color`
+results round once to 8-bit channels.
 
 ### `gradient`
+
+One step returns the first stop unchanged; zero steps returns an empty
+sequence.
 
 ```clojure
 (gradient colors steps) => [color ...]
@@ -780,6 +926,8 @@ defaults to `:rgb`; `:hsl` and `:hsv` are also supported.
 ```
 
 Generates a gradient with `steps` colors. Color space defaults to `:rgb`.
+Each step is interpolated directly from the input stops at full precision;
+vector gradients retain fractional channels.
 
 ## Color Difference and Similarity
 
@@ -880,8 +1028,9 @@ gamut produce channels below `0` or above `255`; check them with
 
 `->hex` and `color` reject channels outside `0` to `255`, including float
 noise such as `-1e-12`. Use [`oklab->hex`](#oklab-hex) for hex
-output, or [`clamp-rgb`](#clamp-rgb) before `color`. `color`
-truncates fractional channels, so round them first.
+output, or [`clamp-rgb`](#clamp-rgb) before `color`. Pass
+`{:full-precision? true}` to `color` to preserve fractional channels;
+its existing one-argument form still truncates RGB channels.
 
 The function checks that the input is a vector of three finite numbers with
 an assertion precondition.
@@ -1170,6 +1319,8 @@ Clamps `value` into the inclusive range.
 ```
 
 Rounds `n` to `decimals` places. `decimals` defaults to `0`.
+At zero places, results within the 32-bit integer range are integers and
+larger results remain doubles to avoid overflow.
 
 ### `round-int`
 

@@ -46,13 +46,19 @@
    Places may be negative to round to tens, hundreds and so on. Returns x
    unchanged when the scaled value has no fractional part, which also keeps
    Math/round from overflowing a long on the JVM, and when rounding up would
-   exceed the largest double."
+   exceed the largest double. NaN stays NaN: Math/round would turn it into
+   0 on the JVM."
   [x places]
   (let [x (double x)]
-    (if (neg? places)
+    (cond
+      (NaN? x) x
+
+      (neg? places)
       (let [factor (Math/pow 10 (- places))
             rounded (* (double (Math/round (/ x factor))) factor)]
         (if (infinite? rounded) x rounded))
+
+      :else
       (let [factor (Math/pow 10 places)
             scaled (* x factor)]
         (if (>= (Math/abs scaled) max-fractional-double)
@@ -60,14 +66,15 @@
           (/ (double (Math/round scaled)) factor))))))
 
 (defn round
-  "Round a number to specified decimal places. Returns an integer at 0
-   places and a double otherwise. Large values that have no fractional
-   digit at the requested precision come back unchanged."
+  "Round a number to specified decimal places. Returns a 32-bit integer
+   at 0 places when it fits, and a double otherwise. Large values that
+   have no fractional digit at the requested precision come back unchanged."
   ([n] (round n 0))
   ([n decimals]
-   (let [decimals (or decimals 0)]
-     (cond-> (round-places n decimals)
-       (= decimals 0) int))))
+   (let [decimals (or decimals 0)
+         rounded (round-places n decimals)]
+     (cond-> rounded
+       (and (= decimals 0) (<= -2147483648 rounded 2147483647)) int))))
 
 (defn round-int [n]
   (round n 0))
@@ -186,19 +193,34 @@
               (number? s) (<= 0 s 100)
               (number? v) (<= 0 v 100)))))
 
+(def ^:private css-number-pattern
+  "(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?")
+
+(defn- css-color-pattern [function-name channels]
+  (re-pattern
+   (str "^\\s*" function-name "\\s*\\(\\s*"
+        (str/join "(?:\\s*,\\s*|\\s+)"
+                  (repeat channels (str "(" css-number-pattern ")")))
+        "\\s*\\)\\s*$")))
+
+(def ^:private css-rgb-pattern (css-color-pattern "rgb" 3))
+(def ^:private css-rgba-pattern (css-color-pattern "rgba" 4))
+
 (defn valid-css-rgb?
   "Check if string is a valid CSS rgb() color"
   [css-str]
   (and (string? css-str)
-       (boolean (re-matches #"^\s*rgb\s*\(\s*\d+\s*(?:,\s*|\s+)\s*\d+\s*(?:,\s*|\s+)\s*\d+\s*\)\s*$"
+       (boolean (re-matches css-rgb-pattern
                             (str/lower-case css-str)))))
 
 (defn valid-css-rgba?
   "Check if string is a valid CSS rgba() color"
   [css-str]
   (and (string? css-str)
-       (boolean (re-matches #"^\s*rgba\s*\(\s*\d+\s*(?:,\s*|\s+)\s*\d+\s*(?:,\s*|\s+)\s*\d+\s*(?:,\s*|\s+)\s*(?:0(?:\.\d+)?|1(?:\.0+)?|\.\d+)\s*\)\s*$"
-                            (str/lower-case css-str)))))
+       (boolean
+        (when-let [matches (re-matches css-rgba-pattern
+                                       (str/lower-case css-str))]
+          (<= 0 (parse-double (last matches)) 1)))))
 
 ;; =============================================================================
 ;; Color Format Conversions
@@ -227,7 +249,7 @@
   [rgb]
   {:pre [(valid-rgb? rgb)]}
   (let [[r g b] rgb
-        to-hex #(let [n (-> % (clamp 0 255) float Math/round int)
+        to-hex #(let [n (-> % (clamp 0 255) double Math/round int)
                       hex-str #?(:clj (Integer/toString n 16)
                                  :cljs (.toString n 16))]
                   (if (= 1 (count hex-str))
@@ -260,9 +282,7 @@
   {:pre [(valid-rgba? rgba)]}
   (rgb->hex (into [] (take 3 rgba))))
 
-(defn rgb->hsl
-  "Convert RGB to HSL"
-  [rgb]
+(defn- rgb->hsl-coords [rgb]
   {:pre [(valid-rgb? rgb)]}
   (let [[r g b] (map #(/ % 255) rgb)
         max-val (max r g b)
@@ -279,13 +299,17 @@
             (= max-val r) (mod (/ (- g b) diff) 6)
             (= max-val g) (+ (/ (- b r) diff) 2)
             (= max-val b) (+ (/ (- r g) diff) 4))]
-    [(round (* h 60))
-     (round (* s 100))
-     (round (* l 100))]))
+    (mapv double [(* h 60) (* s 100) (* l 100)])))
 
-(defn hsl->rgb
-  "Convert HSL to RGB"
-  [hsl]
+(defn rgb->hsl
+  "Convert RGB to HSL, rounded to whole coordinates by default.
+   Pass {:full-precision? true} to preserve the computed doubles."
+  ([rgb] (rgb->hsl rgb {}))
+  ([rgb options]
+   (cond->> (rgb->hsl-coords rgb)
+     (not (:full-precision? options)) (mapv round-int))))
+
+(defn- hsl->rgb-coords [hsl]
   {:pre [(valid-hsl? hsl)]}
   (let [[h s l] hsl
         h-norm (/ h 360)
@@ -302,9 +326,16 @@
                      (< h-norm (/ 4 6)) [0 x c]
                      (< h-norm (/ 5 6)) [x 0 c]
                      :else [c 0 x])]
-    [(round-int (* (+ r' m) 255))
-     (round-int (* (+ g' m) 255))
-     (round-int (* (+ b' m) 255))]))
+    (clamp-rgb
+     (mapv double [(* (+ r' m) 255) (* (+ g' m) 255) (* (+ b' m) 255)]))))
+
+(defn hsl->rgb
+  "Convert HSL to RGB, rounded to 8-bit channels by default.
+   Pass {:full-precision? true} to preserve fractional channels."
+  ([hsl] (hsl->rgb hsl {}))
+  ([hsl options]
+   (cond->> (hsl->rgb-coords hsl)
+     (not (:full-precision? options)) (mapv round-int))))
 
 (defn hex->hsl
   "Convert hex to HSL"
@@ -318,9 +349,7 @@
   {:pre [(valid-hsl? hsl)]}
   (-> hsl hsl->rgb rgb->hex))
 
-(defn rgb->hsv
-  "Convert RGB to HSV"
-  [rgb]
+(defn- rgb->hsv-coords [rgb]
   {:pre [(valid-rgb? rgb)]}
   (let [[r g b] (map #(/ % 255) rgb)
         max-val (max r g b)
@@ -333,11 +362,18 @@
             (= max-val r) (mod (/ (- g b) diff) 6)
             (= max-val g) (+ (/ (- b r) diff) 2)
             (= max-val b) (+ (/ (- r g) diff) 4))]
-    [(round (* h 60)) (round (* s 100)) (round (* v 100))]))
+    (mapv double [(* h 60) (* s 100) (* v 100)])))
 
-(defn hsv->rgb
-  "Convert HSV to RGB"
-  [hsv]
+(defn rgb->hsv
+  "Convert RGB to HSV, rounded to whole coordinates by default.
+   Pass {:full-precision? true} to preserve the computed doubles."
+  ([rgb] (rgb->hsv rgb {}))
+  ([rgb options]
+   (cond->> (rgb->hsv-coords rgb)
+     (not (:full-precision? options)) (mapv round-int))))
+
+(defn- hsv->rgb-coords [hsv]
+  {:pre [(valid-hsv? hsv)]}
   (let [[h s v] hsv
         h-norm (/ h 360)
         s-norm (/ s 100)
@@ -353,9 +389,16 @@
                      (< h-norm (/ 4 6)) [0 x c]
                      (< h-norm (/ 5 6)) [x 0 c]
                      :else [c 0 x])]
-    [(round-int (* (+ r' m) 255))
-     (round-int (* (+ g' m) 255))
-     (round-int (* (+ b' m) 255))]))
+    (clamp-rgb
+     (mapv double [(* (+ r' m) 255) (* (+ g' m) 255) (* (+ b' m) 255)]))))
+
+(defn hsv->rgb
+  "Convert HSV to RGB, rounded to 8-bit channels by default.
+   Pass {:full-precision? true} to preserve fractional channels."
+  ([hsv] (hsv->rgb hsv {}))
+  ([hsv options]
+   (cond->> (hsv->rgb-coords hsv)
+     (not (:full-precision? options)) (mapv round-int))))
 
 (defn normalize-css-color-string
   "Normalize CSS color string by removing extra spaces and standardizing separators"
@@ -382,8 +425,8 @@
               - Case insensitive, flexible whitespace
   
   Returns:
-    - For rgb(): [r g b] where r, g, b are integers 0-255
-    - For rgba(): [r g b a] where r, g, b are integers 0-255 and a is float 0.0-1.0
+    - For rgb(): [r g b] where r, g, b are numbers 0-255
+    - For rgba(): [r g b a] with RGB numbers 0-255 and alpha 0.0-1.0
     - nil if the string doesn't match expected format or values are out of range
   
   Examples:
@@ -394,18 +437,22 @@
   [css-str]
   (let [normalized (normalize-css-color-string css-str)
         rgba? (str/starts-with? normalized "rgba")
-        [_ & matches] (if rgba?
-                        (re-find #"rgba\((\d+)(?:,| )(\d+)(?:,| )(\d+)(?:,| )((?:0(?:\.\d+)?|1(?:\.0+)?|\.\d+))\)" normalized)
-                        (re-find #"rgb\((\d+)(?:,| )(\d+)(?:,| )(\d+)\)" normalized))]
+        [_ & matches] (re-matches (if rgba?
+                                    css-rgba-pattern
+                                    css-rgb-pattern)
+                                  normalized)
+        parse-channel #(if (re-matches #"\d+" %)
+                         (parse-long %)
+                         (parse-double %))]
     (when (and matches
                (->> matches
                     (take 3)
-                    (every? #(<= 0 (parse-int %) 255)))
+                    (every? #(<= 0 (parse-double %) 255)))
                (or (not rgba?)
                    (<= 0 (parse-double (last matches)) 1)))
-      (cond-> [(parse-int (nth matches 0))
-               (parse-int (nth matches 1))
-               (parse-int (nth matches 2))]
+      (cond-> [(parse-channel (nth matches 0))
+               (parse-channel (nth matches 1))
+               (parse-channel (nth matches 2))]
         rgba? (conj (parse-double (nth matches 3)))))))
 
 (defn parse-css-rgb
@@ -428,12 +475,38 @@
 ;; Color Record Type
 ;; =============================================================================
 
+(defn- css-number [n]
+  #?(:clj (.toPlainString (.stripTrailingZeros (bigdec (double n))))
+     :cljs (str n)))
+
+(def ^:private min-alpha-decimal-places
+  "Decimal places alpha keeps under :decimal-places. Alpha runs from 0 to
+   1, so rounding it like a 0 to 255 channel would change the opacity.
+   Browsers serialize alpha with up to 3 decimals too."
+  3)
+
+(defn- round-css-coords
+  "Round RGBA coordinates for CSS output. :decimal-places applies to the
+   RGB channels; alpha keeps at least min-alpha-decimal-places. Channels
+   stay within 0 to 255: 255 is 300 at one significant digit."
+  [rgba {:keys [decimal-places] :as options}]
+  (let [[r g b a] (round-coords rgba options)
+        alpha (if (some-> decimal-places (< min-alpha-decimal-places))
+                (round-places (nth rgba 3) min-alpha-decimal-places)
+                a)]
+    (conj (mapv #(clamp % 0.0 255.0) [r g b]) alpha)))
+
+(defn- css-rgba [rgba options]
+  (let [coords (if (seq options) (round-css-coords rgba options) rgba)
+        parts (map css-number coords)]
+    (str "rgba(" (str/join "," parts) ")")))
+
 (defrecord Color [r g b a]
   Object
   (toString [_]
     (if (= a 1.0)
       (rgb->hex [r g b])
-      (str "rgba(" r "," g "," b "," a ")"))))
+      (css-rgba [r g b a] {}))))
 
 (defn color?
   "Check if value is a Color record"
@@ -441,14 +514,18 @@
   (instance? Color x))
 
 (defn ->color
-  "Create a Color record from RGB values with optional alpha"
+  "Create a Color record, truncating RGB channels by default.
+   The five-argument form accepts {:full-precision? true} to keep fractions."
   ([r g b] (->color r g b 1.0))
-  ([r g b a]
+  ([r g b a] (->color r g b a {}))
+  ([r g b a options]
    {:pre [(and (>= r 0) (<= r 255))
           (and (>= g 0) (<= g 255))
           (and (>= b 0) (<= b 255))
           (and (>= a 0) (<= a 1))]}
-   (->Color (int r) (int g) (int b) (double a))))
+   (let [[r g b] (cond->> [r g b]
+                   (not (:full-precision? options)) (mapv int))]
+     (->Color r g b (double a)))))
 
 (defn color-from-hex
   "Create a Color record from hex string"
@@ -502,6 +579,19 @@
     :else (throw (ex-info "Invalid color input" {:input color-input
                                                  :reason :unknown-format}))))
 
+(defn- rgba-coords
+  "Read RGB or RGBA channels, supplying opaque alpha for RGB input."
+  [input]
+  (let [coords (if (and (string? input)
+                        (or (valid-css-rgb? input) (valid-css-rgba? input)))
+                 (parse-css-color-components input)
+                 input)]
+    (cond
+      (valid-rgb? coords) (conj coords 1.0)
+      (valid-rgba? coords) coords
+      :else (let [{:keys [r g b a]} (normalize-color-input input)]
+              [r g b a]))))
+
 ;; Convenient factory function
 (defn color
   "Create a Color record from various input formats.
@@ -512,27 +602,39 @@
    (color \"#ff0000\")         ; Hex string
    (color [255 0 0])         ; RGB vector
    (color [255 0 0 0.8])     ; RGBA vector
-   (color (color 255 0 0))   ; From another Color record"
+   (color (color 255 0 0))   ; From another Color record
+   (color [10.7 20.2 30.9] {:full-precision? true}) ; Keep RGB fractions"
   ([input] (normalize-color-input input))
+  ([input options]
+   (let [[r g b a] (rgba-coords input)]
+     (->color r g b a options)))
   ([r g b] (->color r g b))
   ([r g b a] (->color r g b a)))
 
 (defn ->rgb
-  "Convert a color to RGB vector"
+  "Convert a color to an RGB vector, preserving fractional channels."
   [color]
-  (let [color-record (normalize-color-input color)]
-    ((juxt :r :g :b) color-record)))
+  (subvec (rgba-coords color) 0 3))
 
 (defn ->rgba
-  "Convert Color to RGBA vector"
+  "Convert a color to an RGBA vector, preserving fractional channels."
   [color]
-  (let [color-record (normalize-color-input color)]
-    [(:r color-record) (:g color-record) (:b color-record) (:a color-record)]))
+  (rgba-coords color))
 
 (defn ->hex
   "Convert Color to hex string"
   [color]
   (rgb->hex (->rgb color)))
+
+(defn ->css
+  "Export a color as CSS rgba(), preserving fractional channels by default.
+   Pass :decimal-places (0-15) or :significant-digits (1-17) to round only
+   this output. Passing both throws, as with round-coords. :decimal-places
+   rounds the RGB channels; alpha keeps at least 3 places, so whole-number
+   channels do not change the opacity."
+  ([color] (->css color {}))
+  ([color options]
+   (css-rgba (->rgba color) options)))
 
 (defn ->hsl
   "Convert Color to HSL vector"
@@ -548,63 +650,54 @@
 ;; Color Manipulation
 ;; =============================================================================
 
+(defn- adjust-hsl
+  "Apply `f` to the HSL coordinates of `color` and return 8-bit RGB
+   channels. Works at full precision and rounds once at the end: rounding
+   HSL to whole numbers on the way would move the color even when `f`
+   changes nothing."
+  [color f]
+  (->> (->rgb color) rgb->hsl-coords f hsl->rgb-coords (mapv round-int)))
+
+(defn- like-input
+  "Return 8-bit `rgb` as a Color, hex string or vector, following `color`."
+  [color rgb]
+  (cond
+    (color? color) (color-from-rgb rgb)
+    (string? color) (rgb->hex rgb)
+    (vector? color) rgb))
+
 (defn lighten
   "Lighten a color by a percentage (0-1)"
   [color amount]
-  (let [color-record (normalize-color-input color)
-        hsl (->hsl color-record)
-        [h s l] hsl
-        new-l (clamp (+ l (* amount 100)) 0 100)
-        new-hsl [h s new-l]]
-    (cond
-      (color? color) (color-from-hsl new-hsl)
-      (string? color) (hsl->hex new-hsl)
-      (vector? color) (hsl->rgb new-hsl))))
+  (like-input color
+              (adjust-hsl color (fn [[h s l]]
+                                  [h s (clamp (+ l (* amount 100)) 0 100)]))))
 
 (defn darken
   "Darken a color by a percentage (0-1)"
   [color amount]
-  (let [color-record (normalize-color-input color)
-        hsl (->hsl color-record)
-        [h s l] hsl
-        new-l (clamp (- l (* amount 100)) 0 100)
-        new-hsl [h s new-l]]
-    (cond
-      (color? color) (color-from-hsl new-hsl)
-      (string? color) (hsl->hex new-hsl)
-      (vector? color) (hsl->rgb new-hsl))))
+  (lighten color (- amount)))
 
 (defn saturate
   "Increase saturation of a color by a percentage (0-1)"
   [color amount]
-  (let [color-record (normalize-color-input color)
-        [h s l] (->hsl color-record)
-        new-s (clamp (+ s (* amount 100)) 0 100)]
+  (let [rgb (adjust-hsl color (fn [[h s l]]
+                                [h (clamp (+ s (* amount 100)) 0 100) l]))]
     (if (string? color)
-      (hsl->hex [h new-s l])
-      (hsl->rgb [h new-s l]))))
+      (rgb->hex rgb)
+      rgb)))
 
 (defn desaturate
   "Decrease saturation of a color by a percentage (0-1)"
   [color amount]
-  (let [color-record (normalize-color-input color)
-        [h s l] (->hsl color-record)
-        new-s (clamp (- s (* amount 100)) 0 100)]
-    (if (string? color)
-      (hsl->hex [h new-s l])
-      (hsl->rgb [h new-s l]))))
+  (saturate color (- amount)))
 
 (defn adjust-hue
   "Adjust the hue of a color by degrees"
   [color degrees]
-  (let [color-record (normalize-color-input color)
-        [h s l] (->hsl color-record)
-        new-h (mod (+ h degrees) 360)
-        new-hsl [new-h s l]]
-    (cond
-      (color? color) (color-from-hsl new-hsl)
-      (string? color) (hsl->hex new-hsl)
-      (vector? color) (hsl->rgb new-hsl))))
+  (like-input color
+              (adjust-hsl color (fn [[h s l]]
+                                  [(mod (+ h degrees) 360) s l]))))
 
 (defn invert
   "Invert a color"
@@ -632,18 +725,25 @@
 ;; Color Mixing and Blending
 ;; =============================================================================
 
+(defn- inexact
+  "Turn a JVM Ratio into a double and leave other numbers alone, so exact
+   rational arithmetic does not leak Ratios and BigInts into results."
+  [n]
+  #?(:clj (cond-> n (ratio? n) double)
+     :cljs n))
+
 (defn mix
-  "Mix two colors with optional ratio (0-1, default 0.5)"
+  "Mix two colors with optional ratio (0-1, default 0.5).
+   Vector results keep fractional channels; hex and Color results quantize
+   once to the nearest 8-bit channel."
   ([color1 color2] (mix color1 color2 0.5))
   ([color1 color2 ratio]
-   (let [ratio (or ratio 0.5)
-         [r1 g1 b1] (->rgb (normalize-color-input color1))
-         [r2 g2 b2] (->rgb (normalize-color-input color2))
-         mixed [(round-int (+ r1 (* (- r2 r1) ratio)))
-                (round-int (+ g1 (* (- g2 g1) ratio)))
-                (round-int (+ b1 (* (- b2 b1) ratio)))]]
+   (let [ratio (inexact (or ratio 0.5))
+         rgb1 (->rgb color1)
+         rgb2 (->rgb color2)
+         mixed (mapv #(+ %1 (* (- %2 %1) ratio)) rgb1 rgb2)]
      (cond
-       (color? color1) (color-from-rgb mixed)
+       (color? color1) (color-from-rgb (mapv round-int mixed))
        (string? color1) (rgb->hex mixed)
        (vector? color1) mixed))))
 
@@ -654,7 +754,7 @@
 (defn luminance
   "Calculate relative luminance of a color"
   [color]
-  (let [rgb (->rgb (normalize-color-input color))
+  (let [rgb (->rgb color)
         [r g b] (map #(let [val (/ % 255)]
                         (if (<= val 0.03928)
                           (/ val 12.92)
@@ -680,18 +780,23 @@
   (round (raw-contrast-ratio color1 color2) 2))
 
 (defn- contrast-threshold
-  "Minimum WCAG contrast ratio for a level. Defaults to AA for normal text."
+  "Minimum WCAG contrast ratio for a level. nil means AA for normal text,
+   the default. Throws for any other unknown level: quietly checking a
+   mistyped :aaa as :aa would report colors as accessible that are not."
   [level]
   (case level
     :aaa 7
     :aa-large 3
-    4.5))
+    (:aa nil) 4.5
+    (throw (ex-info "Unknown WCAG level. Use :aa, :aa-large or :aaa"
+                    {:level level
+                     :expected #{:aa :aa-large :aaa}}))))
 
 (defn accessible?
   "Check if two colors meet a WCAG contrast level.
-   level is :aa (4.5, the default), :aa-large (3) or :aaa (7). Compares the
-   unrounded contrast ratio, so a pair at 4.4999 fails :aa even though
-   contrast-ratio displays 4.5."
+   level is :aa (4.5, the default), :aa-large (3) or :aaa (7); any other
+   level throws. Compares the unrounded contrast ratio, so a pair at 4.4999
+   fails :aa even though contrast-ratio displays 4.5."
   ([color1 color2] (accessible? color1 color2 :aa))
   ([color1 color2 level]
    (>= (raw-contrast-ratio color1 color2)
@@ -722,8 +827,7 @@
                      (hsl->hex [h s lightness])
                      (hsl->rgb [h s lightness])))]
      (if (passes? target-color)
-       ;; Not the variant at its own lightness: HSL is rounded to whole
-       ;; numbers, so that could be a slightly different color.
+       ;; Keep a passing target unchanged instead of searching the grid.
        (if (string? target-color)
          (->hex target-color)
          (->rgb target-color))
@@ -790,15 +894,18 @@
      (map #(adjust-hue color (* % angle)) (range 1 (inc count))))))
 
 (defn monochromatic
-  "Generate monochromatic palette by varying lightness and saturation"
+  "Generate a monochromatic palette: the hue of `color` at lightness from
+   20 to 80, dark to light. Saturation follows the base color, from its
+   own for the darkest step down to three quarters of it for the lightest,
+   so a gray gives grays and a muted color a muted palette."
   ([color] (monochromatic color 5))
   ([color count]
    (let [count (or count 5)
-         [h] (->hsl color)
+         [h s] (->hsl color)
          variations (for [i (range count)
-                          :let [factor (/ i (dec count))
+                          :let [factor (/ i (max 1 (dec count)))
                                 new-l (+ 20 (* 60 factor))
-                                new-s (+ 50 (* 50 (- 1 (* 0.5 factor))))]]
+                                new-s (* s (- 1 (* 0.25 factor)))]]
                       (if (string? color)
                         (hsl->hex [h new-s new-l])
                         (hsl->rgb [h new-s new-l])))]
@@ -808,11 +915,9 @@
   "Get split-complementary colors"
   ([color] (split-complementary color 30))
   ([color angle]
-   (let [angle (or angle 30)
-         [h] (->hsl color)
-         comp-hue (+ h 180)]
-     [(adjust-hue color (- comp-hue angle))
-      (adjust-hue color (+ comp-hue angle))])))
+   (let [angle (or angle 30)]
+     [(adjust-hue color (- 180 angle))
+      (adjust-hue color (+ 180 angle))])))
 
 ;; =============================================================================
 ;; Advanced Palette Generation
@@ -901,6 +1006,8 @@
   - `:mode`  `:light` or `:dark` (default `:light`)
   - `:level` `:aa`, `:aa-large`, or `:aaa` (default `:aa`)
 
+  Throws for any other mode or level.
+
   Returns a map of hex color tokens for app UIs. Each `:on-*` token is a
   foreground color for the token it is named after.
 
@@ -915,8 +1022,12 @@
   Check a pair with `accessible?` when you need the guarantee."
   ([base-color] (accessible-theme base-color {}))
   ([base-color options]
-   (let [{:keys [mode level]
-          :or {mode :light level :aa}} options
+   (let [mode (or (:mode options) :light)
+         level (or (:level options) :aa)
+         _ (when-not (#{:light :dark} mode)
+             (throw (ex-info "Unknown theme mode. Use :light or :dark"
+                             {:mode mode
+                              :expected #{:light :dark}})))
          light? (= mode :light)
          base (->hex base-color)
          background (if light? (tint base 0.96) (shade base 0.88))
@@ -1169,46 +1280,49 @@
 ;; =============================================================================
 
 (defn alpha-blend
-  "Blend two colors with alpha compositing (overlay on top of base)"
-  [base-color overlay-color]
-  (let [base-rgba (->rgba base-color)
-        overlay-rgba (->rgba overlay-color)
-        [r1 g1 b1 a1] base-rgba
-        [r2 g2 b2 a2] overlay-rgba
-        ;; Alpha compositing formula
-        a-out (+ a2 (* a1 (- 1 a2)))
-        blend-channel (fn [c1 c2]
-                        (if (zero? a-out)
-                          0
-                          (round-int (/ (+ (* c2 a2) (* c1 a1 (- 1 a2))) a-out))))
-        result [(blend-channel r1 r2)
-                (blend-channel g1 g2)
-                (blend-channel b1 b2)]]
-    (cond
-      (or (color? base-color) (color? overlay-color))
-      (->color (nth result 0) (nth result 1) (nth result 2) a-out)
-      ;;
-      (string? base-color)
-      (if (= a-out 1.0)
-        (rgb->hex result)
-        (str "rgba(" (result 0) "," (result 1) "," (result 2) "," a-out ")"))
-      ;;
-      (vector? base-color)
-      (if (= 4 (count base-rgba))
-        (conj result a-out)
-        result))))
+  "Blend two colors with alpha compositing (overlay on top of base).
+   Vectors keep fractional channels. Hex and Color results quantize once
+   to 8 bits. Translucent strings use CSS rgba(); options may contain
+   :decimal-places or :significant-digits to format those strings."
+  ([base-color overlay-color] (alpha-blend base-color overlay-color {}))
+  ([base-color overlay-color options]
+   (let [base-rgba (->rgba base-color)
+         overlay-rgba (->rgba overlay-color)
+         [r1 g1 b1 a1] (mapv inexact base-rgba)
+         [r2 g2 b2 a2] (mapv inexact overlay-rgba)
+         ;; Alpha compositing formula
+         a-out (+ a2 (* a1 (- 1 a2)))
+         blend-channel (fn [c1 c2]
+                         (if (zero? a-out)
+                           0
+                           (/ (+ (* c2 a2) (* c1 a1 (- 1 a2))) a-out)))
+         result [(blend-channel r1 r2)
+                 (blend-channel g1 g2)
+                 (blend-channel b1 b2)]]
+     (cond
+       (or (color? base-color) (color? overlay-color))
+       (color-from-rgba (conj (mapv round-int result) a-out))
+
+       (string? base-color)
+       (if (== a-out 1)
+         (rgb->hex result)
+         (css-rgba (conj result a-out) options))
+
+       (vector? base-color) (conj result a-out)))))
 
 (defn with-alpha
-  "Set alpha channel of a color"
-  [color alpha]
-  {:pre [(and (>= alpha 0) (<= alpha 1))]}
-  (let [[r g b] (->rgb color)]
-    (cond
-      (color? color) (->color r g b alpha)
-      (string? color) (if (= alpha 1.0)
-                        (rgb->hex [r g b])
-                        (str "rgba(" r "," g "," b "," alpha ")"))
-      (vector? color) [r g b alpha])))
+  "Set alpha channel of a color. For translucent string output, options
+   accepts :decimal-places or :significant-digits as with ->css."
+  ([color alpha] (with-alpha color alpha {}))
+  ([color alpha options]
+   {:pre [(and (>= alpha 0) (<= alpha 1))]}
+   (let [[r g b] (->rgb color)]
+     (cond
+       (color? color) (->color r g b alpha)
+       (string? color) (if (== alpha 1)
+                         (rgb->hex [r g b])
+                         (css-rgba [r g b alpha] options))
+       (vector? color) [r g b alpha]))))
 
 ;; =============================================================================
 ;; Color Interpolation
@@ -1216,7 +1330,9 @@
 
 (defn interpolate
   "Interpolate between multiple colors at given position (0-1).
-   Can use different color spaces: :rgb (default), :hsl, or :hsv"
+   Can use different color spaces: :rgb (default), :hsl, or :hsv.
+   Working coordinates and vector results keep full precision. Hex and
+   Color results quantize once to 8-bit channels."
   ([colors position] (interpolate colors position :rgb))
   ([colors position color-space]
    (let [color-space (or color-space :rgb)
@@ -1233,14 +1349,16 @@
 
          ;; Convert to working color space
          [c1 c2] (case color-space
-                   :hsl [(->hsl color1) (->hsl color2)]
-                   :hsv [(->hsv color1) (->hsv color2)]
+                   :hsl [(rgb->hsl-coords (->rgb color1))
+                         (rgb->hsl-coords (->rgb color2))]
+                   :hsv [(rgb->hsv-coords (->rgb color1))
+                         (rgb->hsv-coords (->rgb color2))]
                    :rgb [(->rgb color1) (->rgb color2)])
 
          ;; Interpolate each component
-         interpolated (map (fn [v1 v2]
-                             (+ v1 (* (- v2 v1) segment-pos)))
-                           c1 c2)
+         interpolated (mapv (fn [v1 v2]
+                              (+ v1 (* (- v2 v1) segment-pos)))
+                            c1 c2)
 
          ;; Handle hue interpolation specially (shortest path around circle)
          interpolated (if (#{:hsl :hsv} color-space)
@@ -1253,19 +1371,21 @@
                                      (< diff -180) (+ diff 360)
                                      :else diff)
                               h-interp (mod (+ h1 (* diff segment-pos)) 360)]
-                          [(round h-interp)
-                           (round (nth interpolated 1))
-                           (round (nth interpolated 2))])
-                        (mapv round-int interpolated))
+                          [h-interp
+                           (nth interpolated 1)
+                           (nth interpolated 2)])
+                        interpolated)
 
          ;; Convert back to original format
-         result (case color-space
-                  :hsl (hsl->rgb interpolated)
-                  :hsv (hsv->rgb interpolated)
-                  :rgb interpolated)]
+         ;; These spaces stay in sRGB; clamp floating-point boundary noise.
+         result (clamp-rgb
+                 (case color-space
+                   :hsl (hsl->rgb-coords interpolated)
+                   :hsv (hsv->rgb-coords interpolated)
+                   :rgb interpolated))]
 
      (cond
-       (every? color? colors) (color-from-rgb result)
+       (every? color? colors) (color-from-rgb (mapv round-int result))
        (every? string? colors) (rgb->hex result)
        :else result))))
 
@@ -1274,8 +1394,10 @@
   ([colors steps] (gradient colors steps :rgb))
   ([colors steps color-space]
    (let [color-space (or color-space :rgb)]
-     (for [i (range steps)]
-       (interpolate colors (/ i (dec steps)) color-space)))))
+     (if (= steps 1)
+       (take 1 colors)
+       (for [i (range steps)]
+         (interpolate colors (/ i (dec steps)) color-space))))))
 
 ;; =============================================================================
 ;; Perceptual Color Difference (Delta E)
@@ -1299,20 +1421,31 @@
      (+ (* 0.2126729 r) (* 0.7151522 g) (* 0.0721750 b))
      (+ (* 0.0193339 r) (* 0.1191920 g) (* 0.9503041 b))]))
 
+(def ^:private lab-white
+  "XYZ of sRGB white, the D65 reference for rgb->lab. Taken from rgb->xyz
+   instead of the published [0.95047 1.0 1.08883] so that white and grays
+   are exactly neutral: the Y row of the matrix sums to 1.0000001."
+  (rgb->xyz [255 255 255]))
+
+(def ^:private lab-epsilon
+  "Below this the Lab transfer function is linear. CIE's exact 216/24389;
+   the 1976 text printed 0.008856."
+  (/ 216.0 24389.0))
+
+(def ^:private lab-kappa
+  "Slope of the linear part. CIE's exact 24389/27; the 1976 text printed
+   903.3, which leaves a step where the two parts meet."
+  (/ 24389.0 27.0))
+
 (defn rgb->lab
   "Convert RGB to LAB color space (CIE L*a*b*), relative to the D65 white
    point. CSS lab() uses D50, so these are not CSS values."
   [rgb]
-  (let [[x y z] (rgb->xyz rgb)
-        ;; Normalize for D65 illuminant
-        x (/ x 0.95047)
-        z (/ z 1.08883)
-        ;; Convert to LAB
-        f (fn [t]
-            (if (> t 0.008856)
-              (Math/pow t (/ 1.0 3.0))
-              (+ (* 7.787 t) (/ 16.0 116.0))))
-        [fx fy fz] (map f [x y z])
+  (let [f (fn [t]
+            (if (> t lab-epsilon)
+              (Math/cbrt t)
+              (/ (+ (* lab-kappa t) 16.0) 116.0)))
+        [fx fy fz] (map #(f (/ %1 %2)) (rgb->xyz rgb) lab-white)
         l (- (* 116 fy) 16)
         a (* 500 (- fx fy))
         b (* 200 (- fy fz))]
@@ -1480,8 +1613,9 @@
    255 scale. The inverse of rgb->oklab.
 
    Returns unrounded floats and does not clamp. Colors outside the sRGB
-   gamut produce channels below 0 or above 255; check with in-gamut?. ->hex
-   and color round and clamp as usual.
+   gamut produce channels below 0 or above 255; check with in-gamut?. Use
+   clamp-rgb before ->hex or color. The full-precision option on color
+   preserves fractional channels; its default still truncates them.
 
    The matrices are the exact inverses of the ones rgb->oklab uses, so
    (oklab->rgb (rgb->oklab rgb)) returns rgb to within float error. Checks

@@ -26,7 +26,18 @@
     (is (= [255 255 0] (sut/hsv->rgb [60 100 100]))) ; yellow
     (is (= [0 255 255] (sut/hsv->rgb [180 100 100]))) ; cyan
     (is (= [255 0 255] (sut/hsv->rgb [300 100 100]))) ; magenta
-    (is (= [128 128 128] (sut/hsv->rgb [0 0 50]))))) ; gray
+    (is (= [128 128 128] (sut/hsv->rgb [0 0 50])))) ; gray
+
+  (testing "hsv->rgb rejects out-of-range input, as hsl->rgb does"
+    (doseq [hsv [[400 50 50] [-30 50 50] [0 150 50] [0 50 -1] [0 50]
+                 '(0 50 50) nil "hsv(0, 50%, 50%)"]
+            options [nil {:full-precision? true}]]
+      (is (thrown? #?(:clj AssertionError :cljs js/Error)
+                   (if options
+                     (sut/hsv->rgb hsv options)
+                     (sut/hsv->rgb hsv)))
+          (pr-str hsv)))
+    (is (= [255 0 0] (sut/hsv->rgb [360 100 100])))))
 
 (deftest test-color-validation
   (testing "Hex color validation"
@@ -107,7 +118,9 @@
   (is (not (sut/valid-css-rgb? "rgb(255, 0)")))      ; missing component
   (is (not (sut/valid-css-rgb? "rgb(255, 0, 0, 0)"))) ; extra component
   (is (not (sut/valid-css-rgb? "rgba(255, 0, 0, 1)"))) ; rgba format
-  (is (not (sut/valid-css-rgb? "rgb(255.5, 0, 0)")))   ; decimal numbers
+  (is (sut/valid-css-rgb? "rgb(254.5, 0, 0)"))
+  (is (sut/valid-css-rgb? "rgb(255.5, 0, 0)"))
+  (is (nil? (sut/parse-css-color-components "rgb(255.5, 0, 0)")))
   (is (not (sut/valid-css-rgb? "rgb(-1, 0, 0)")))      ; negative numbers
   (is (not (sut/valid-css-rgb? "#ff0000")))            ; hex format
   (is (not (sut/valid-css-rgb? "red"))))                ; color name
@@ -130,7 +143,9 @@
   (is (not (sut/valid-css-rgba? "rgba(255, 0, 0, 2)"))) ; alpha > 1
   (is (not (sut/valid-css-rgba? "rgba(255, 0, 0, -0.5)"))) ; negative alpha
   (is (not (sut/valid-css-rgba? "rgb(255, 0, 0)")))     ; rgb format
-  (is (not (sut/valid-css-rgba? "rgba(255.5, 0, 0, 1)"))) ; decimal RGB values
+  (is (sut/valid-css-rgba? "rgba(254.5, 0, 0, 1)"))
+  (is (sut/valid-css-rgba? "rgba(255.5, 0, 0, 1)"))
+  (is (nil? (sut/parse-css-color-components "rgba(255.5, 0, 0, 1)")))
   (is (not (sut/valid-css-rgba? "#ff0000")))             ; hex format
   (is (not (sut/valid-css-rgba? "red"))))                ; color name
 
@@ -218,6 +233,36 @@
     ;; Edge cases
     (is (= [0 0 0 0.0] (sut/parse-css-rgba "rgba(0, 0, 0, 0)")))
     (is (= [255 255 255 1.0] (sut/parse-css-rgba "rgba(255, 255, 255, 1)")))))
+
+(deftest hsl-adjustment-precision-test
+  (let [colors (for [r (range 0 256 51) g (range 0 256 51) b (range 0 256 51)]
+                 [r g b])]
+    (testing "Zero adjustments return every color unchanged"
+      (doseq [rgb colors
+              :let [hex (sut/rgb->hex rgb)]
+              f [#(sut/lighten % 0) #(sut/darken % 0) #(sut/saturate % 0)
+                 #(sut/desaturate % 0) #(sut/adjust-hue % 0)
+                 #(sut/adjust-hue % 360) #(sut/adjust-hue % -360)]]
+        (is (= rgb (f rgb)))
+        (is (= hex (f hex)))))
+    ;; Multiples of 60 degrees map 8-bit channels to 8-bit channels, so
+    ;; nothing is lost between the two rotations.
+    (testing "Opposite hue rotations cancel out"
+      (doseq [rgb colors
+              degrees [60 120 180 240 300]]
+        (is (= rgb (-> rgb
+                       (sut/adjust-hue degrees)
+                       (sut/adjust-hue (- degrees))))))))
+  (testing "Rotating by a third of the wheel permutes the channels"
+    (is (= "#561234" (sut/adjust-hue "#123456" 120)))
+    (is (= ["#33ff57" "#5733ff"] (sut/triadic "#ff5733")))
+    (is (= "#db7734" (sut/complementary "#3498db"))))
+  (testing "Results keep their format and whole-number channels"
+    (is (= [255 171 153] (sut/lighten [255 87 51] 0.2)))
+    (is (every? int? (sut/saturate [200.5 100.25 50.75] 0.1)))
+    (is (sut/color? (sut/darken (sut/color 255 87 51) 0.2)))
+    (is (= "#ffffff" (sut/lighten "#3498db" 2)))
+    (is (= "#000000" (sut/darken "#3498db" 2)))))
 
 (deftest test-color-manipulation
   (testing "Lighten color"
@@ -314,10 +359,6 @@
   (testing "Identical colors fail every level"
     (doseq [level [:aa :aa-large :aaa]]
       (is (not (sut/accessible? "#808080" "#808080" level)) (pr-str level))))
-
-  (testing "Unknown levels fall back to AA"
-    (is (= (sut/accessible? [0 120 215] [255 255 255] :aa)
-           (sut/accessible? [0 120 215] [255 255 255] :unknown))))
 
   (testing "find-accessible-color results meet the unrounded threshold"
     (doseq [bg ["#ffffff" "#000000" "#3498db" "#f0f0f0"]
@@ -505,11 +546,35 @@
           mono-3 (sut/monochromatic red 3)]
       (is (= 3 (count mono-3)))))
 
+  (testing "Monochromatic palettes follow the saturation of the base"
+    (is (= ["#660000" "#ad0606" "#ef1010" "#ee5d5d" "#f2a6a6"]
+           (vec (sut/monochromatic "#ff0000"))))
+    (doseq [gray ["#000000" "#808080" "#ffffff" [128 128 128]]
+            [r g b] (map sut/->rgb (sut/monochromatic gray))]
+      (is (= r g b) (str gray)))
+    (is (= ["#333333" "#808080" "#cccccc"]
+           (vec (sut/monochromatic "#808080" 3))))
+    (let [saturation #(second (sut/->hsl %))]
+      (is (every? #(<= (saturation %) 30)
+                  (sut/monochromatic "#6b7f8c")))))
+
   (testing "Split complementary colors"
     (let [red "#ff0000"
           split (sut/split-complementary red)]
       (is (= 2 (count split)))
       (is (every? string? split)))))
+
+(deftest split-complementary-base-hue-test
+  (testing "Split complements rotate around the base's complementary hue"
+    (doseq [hue [30 90 210 350]
+            :let [base (sut/hsl->rgb [hue 100 50])
+                  [left right] (sut/split-complementary base)]]
+      (is (< (Math/abs (- (mod (+ hue 150) 360)
+                          (first (sut/->hsl left))))
+             1.0E-10))
+      (is (< (Math/abs (- (mod (+ hue 210) 360)
+                          (first (sut/->hsl right))))
+             1.0E-10)))))
 
 (deftest test-palette-generation
   (testing "Generate different palette types"
@@ -557,6 +622,35 @@
            (sut/gradient ["#ff0000" "#0000ff"] 3 nil)))
     (is (= (sut/perceptually-similar? "#ff0000" "#fe0101")
            (sut/perceptually-similar? "#ff0000" "#fe0101" nil)))))
+
+(defn- ex-data-of
+  "The ex-data of the ex-info `f` throws, or nil when it does not throw one."
+  [f]
+  (try (f)
+       nil
+       (catch #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo) e
+         (ex-data e))))
+
+(deftest unknown-level-test
+  (testing "Unknown WCAG levels throw instead of being checked as :aa"
+    (doseq [level [:AAA "aaa" :a :aaa-large 7]
+            check [#(sut/accessible? "#767676" "#ffffff" level)
+                   #(sut/find-accessible-color "#ffffff" "#767676" level)
+                   #(sut/get-contrast-text "#767676" level)
+                   #(sut/accessible-theme "#3498db" {:level level})]]
+      (is (= {:level level :expected #{:aa :aa-large :aaa}}
+             (ex-data-of check))
+          (pr-str level))))
+  (testing "nil means the default level"
+    (is (true? (sut/accessible? "#767676" "#ffffff" nil)))
+    (is (false? (sut/accessible? "#777777" "#ffffff" nil)))
+    (is (= :aa (:level (sut/accessible-theme "#3498db" {:level nil})))))
+  (testing "Unknown theme modes throw; nil means :light"
+    (doseq [mode [:drak "dark" :Light]]
+      (is (= {:mode mode :expected #{:light :dark}}
+             (ex-data-of #(sut/accessible-theme "#3498db" {:mode mode})))))
+    (is (= (sut/accessible-theme "#3498db")
+           (sut/accessible-theme "#3498db" {:mode nil})))))
 
 (deftest test-accessible-theme
   (testing "Generates a complete light theme from a brand color"
@@ -1217,6 +1311,31 @@
     (is (= 7 (count (sut/shades "#ff0000" 7))))
     (is (= 10 (count (sut/tones "#ff0000" 10))))))
 
+(deftest plain-number-results-test
+  (testing "Ratio arithmetic does not leak Ratios or BigInts into results"
+    (let [half #?(:clj 1/2 :cljs 0.5)
+          plain? #(or (int? %) (double? %))
+          results (concat (sut/tints [255 0 0] 2)
+                          (sut/shades [255 0 0] 2)
+                          (sut/tones [255 0 0] 2)
+                          [(sut/mix [0 0 0] [255 255 255] half)
+                           (sut/tint [255 0 0] half)
+                           (sut/alpha-blend [0 0 0 1] [255 255 255 half])])]
+      (doseq [result results]
+        (is (every? plain? result) (pr-str result)))
+      (is (= [[255.0 127.5 127.5] [255.0 255.0 255.0]]
+             (mapv #(mapv double %) (sut/tints [255 0 0] 2))))
+      (is (= [127.5 127.5 127.5 1.0]
+             (mapv double
+                   (sut/alpha-blend [0 0 0 1] [255 255 255 half]))))))
+  (testing "Whole-number ratios keep whole-number channels"
+    (is (= [255 255 255] (sut/mix [0 0 0] [255 255 255] 1)))
+    (is (= [0 0 0] (sut/mix [0 0 0] [255 255 255] 0))))
+  (testing "An integer alpha of 1 is opaque, as 1.0 is"
+    (is (= "#ff0000" (sut/with-alpha "#ff0000" 1)))
+    (is (= "#ff0000" (sut/with-alpha "#ff0000" 1.0)))
+    (is (= "rgba(255,0,0,0)" (sut/with-alpha "#ff0000" 0)))))
+
 (deftest test-alpha-blending
   (testing "Alpha blend with full opacity"
     (let [red [255 0 0 1.0]
@@ -1228,7 +1347,7 @@
       ;; Formula: a-out = a2 + a1 * (1 - a2) = 0.5 + 1.0 * 0.5 = 1.0
       (let [[r _g b a] result]
         (is (> r 0))
-        (is (= b 128))
+        (is (= b 127.5))
         (is (= a 1.0)))))
 
   (testing "Alpha blend with transparency"
@@ -1316,6 +1435,15 @@
     (is (= 10 (count (sut/gradient ["#ff0000" "#0000ff"] 10 :hsl))))
     (is (= 10 (count (sut/gradient ["#ff0000" "#0000ff"] 10 :hsv))))))
 
+(deftest single-step-palette-test
+  (testing "One-step gradients return the first stop"
+    (doseq [space [:rgb :hsl :hsv]]
+      (is (= ["#3498db"] (vec (sut/gradient ["#3498db" "#e74c3c"]
+                                            1 space)))))
+    (is (= ["#000066"] (vec (sut/monochromatic "#0000ff" 1))))
+    (is (empty? (sut/gradient ["#000000" "#ffffff"] 0)))
+    (is (empty? (sut/monochromatic "#0000ff" 0)))))
+
 (deftest test-perceptual-color-difference
   (testing "RGB to LAB conversion"
     (let [[l a b] (sut/rgb->lab [255 0 0])]
@@ -1335,6 +1463,21 @@
                              [[0 0 0] [0.0 0.0 0.0]]]
             [actual expected] (map vector (sut/rgb->lab rgb) reference)]
       (is (< (Math/abs (- actual expected)) 0.001) (pr-str rgb))))
+
+  (testing "White and grays are exactly neutral"
+    (is (= [100.0 0.0 0.0] (sut/rgb->lab [255 255 255])))
+    (doseq [gray (range 0 256)
+            :let [[l a b] (sut/rgb->lab [gray gray gray])]]
+      (is (<= 0.0 l 100.0))
+      (is (< (Math/abs a) 1.0E-9) (str gray))
+      (is (< (Math/abs b) 1.0E-9) (str gray))))
+
+  (testing "Dark colors use CIE's exact slope, 24389/27"
+    ;; In the linear part L* is the slope times Y, and Y of gray 1 is
+    ;; 1/255/12.92. The rounded 7.787 put this off in the sixth digit.
+    (let [[l] (sut/rgb->lab [1 1 1])]
+      (is (< (Math/abs (- l (* (/ 24389.0 27.0) (/ 1.0 255.0 12.92))))
+             1.0E-12))))
 
   (testing "Delta E calculation"
     (let [red "#ff0000"
@@ -1513,6 +1656,16 @@
       1.005     2 1.0))
   (testing "Return an integer at 0 places"
     (is (int? (sut/round 2.7))))
+  (testing "NaN stays NaN instead of becoming 0"
+    (is (NaN? (sut/round ##NaN)))
+    (is (NaN? (sut/round ##NaN 2)))
+    (is (NaN? (sut/round-int ##NaN))))
+  (testing "Zero decimal places do not overflow a 32-bit integer"
+    (doseq [n [4.0E9 -4.0E9 1.0E20 -1.0E300]]
+      (is (= n (sut/round n)) (str n))
+      (is (= n (sut/round-int n)) (str n)))
+    (is (= 2147483648.0 (sut/round 2147483647.7)))
+    (is (= -2147483649.0 (sut/round -2147483648.7))))
   (testing "Keep large values instead of overflowing a long"
     (is (= 40000.0 (sut/round 40000.0 15)))
     (is (= 1.0E10 (sut/round 1.0E10 10)))
@@ -1579,6 +1732,206 @@
 
 (defn- max-channel-error [expected actual]
   (apply max (map #(Math/abs (double (- %1 %2))) expected actual)))
+
+(deftest full-precision-conversions-test
+  (let [options {:full-precision? true}]
+    (testing "Opt-in conversions retain fractions and return doubles"
+      (is (= [127.5 127.5 127.5] (sut/hsl->rgb [0 0 50] options)))
+      (is (= [127.5 127.5 127.5] (sut/hsv->rgb [0 0 50] options)))
+      (is (= [0.0 0.0 50.19607843137255]
+             (sut/rgb->hsl [128 128 128] options)))
+      (doseq [convert [sut/rgb->hsl sut/rgb->hsv]
+              x (convert [52 152 219] options)]
+        (is (double? x))))
+
+    (testing "Opt-in RGB round trips through HSL and HSV keep precision"
+      (doseq [rgb (concat [[0.0 0.0 0.001] [52.25 152.75 219.125]
+                           [255.0 254.999 255.0]]
+                          (for [r (range 0 256 51)
+                                g (range 0 256 51)
+                                b (range 0 256 51)]
+                            [r g b]))
+              [to-space to-rgb] [[sut/rgb->hsl sut/hsl->rgb]
+                                 [sut/rgb->hsv sut/hsv->rgb]]]
+        (is (< (max-channel-error rgb (to-rgb (to-space rgb options)
+                                              options))
+               1.0E-10)
+            (pr-str rgb))))
+
+    (testing "Opt-in record construction preserves fractional channels"
+      (let [rgb [10.7 20.2 30.9]
+            rgba (conj rgb 0.4)]
+        (doseq [record [(sut/->color 10.7 20.2 30.9 0.4 options)
+                        (sut/color rgb options)
+                        (sut/color rgba options)
+                        (sut/color "rgba(10.7,20.2,30.9,0.4)" options)]]
+          (is (= rgb (sut/->rgb record))))
+        (is (= "#0b141f" (sut/->hex (sut/color rgb options)))))
+      (doseq [convert [sut/hsl->rgb sut/hsv->rgb]]
+        (is (= [127.5 127.5 127.5]
+               (sut/->rgb (sut/color (convert [0 0 50] options)
+                                     options))))))
+
+    (testing "Opt-in Oklab round trips through Color do not truncate RGB"
+      (let [rgb [10.7 20.2 30.9]
+            restored (sut/->rgb (sut/color (sut/oklab->rgb
+                                            (sut/rgb->oklab rgb))
+                                           options))]
+        (is (< (max-channel-error rgb restored) 1.0E-9))))
+
+    (testing "Chain vector calculations before opt-in record construction"
+      (let [mixed (sut/mix (sut/mix [0 0 0] [1 1 1]) [1 1 1])
+            interpolated (sut/interpolate [[0 0 0] [1 1 1]] 0.25)]
+        (is (= [0.75 0.75 0.75] (sut/->rgb (sut/color mixed options))))
+        (is (= [0.25 0.25 0.25]
+               (sut/->rgb (sut/color interpolated options))))
+        (is (= "#010101" (sut/->hex (sut/color mixed options)))))))
+
+  (testing "Existing HSL, HSV and record defaults stay compatible"
+    (is (= [0 0 50] (sut/rgb->hsl [128 128 128])))
+    (is (= [0 0 50] (sut/rgb->hsv [128 128 128])))
+    (is (= [128 128 128] (sut/hsl->rgb [0 0 50])))
+    (is (= [128 128 128] (sut/hsv->rgb [0 0 50])))
+    (doseq [record [(sut/->color 10.7 20.2 30.9)
+                    (sut/color [10.7 20.2 30.9])
+                    (sut/color [10.7 20.2 30.9] {})
+                    (sut/color [10.7 20.2 30.9]
+                               {:full-precision? false})]]
+      (is (= [10 20 30] (sut/->rgb record))))))
+
+(deftest precision-pipeline-test
+  (testing "Fractional inputs survive conversion and repeated mixing"
+    (let [rgb [0.25 1.5 2.75]]
+      (is (= rgb (sut/->rgb rgb)))
+      (is (= (conj rgb 1.0) (sut/->rgba rgb)))
+      (is (= [0.625 1.25 1.875] (sut/mix rgb [1 1 1]))))
+    (is (= [0.75 0.75 0.75]
+           (sut/mix (sut/mix [0 0 0] [1 1 1]) [1 1 1]))))
+
+  (testing "Hex and legacy record output quantize channels"
+    (is (= "#000203" (sut/rgb->hex [0.49999999 1.5 2.5])))
+    (is (= "#000203" (sut/->hex [0.49999999 1.5 2.5])))
+    (is (= "#808080" (sut/mix "#000000" "#ffffff")))
+    (is (= [128 128 128]
+           (sut/->rgb (sut/mix (sut/color "#000000") "#ffffff")))))
+
+  (testing "Vector gradients retain every fractional step"
+    (let [colors [[0 0 0] [1 1 1]]]
+      (is (= [[0.0 0.0 0.0] [0.25 0.25 0.25] [0.5 0.5 0.5]
+              [0.75 0.75 0.75] [1.0 1.0 1.0]]
+             (vec (sut/gradient colors 5))))))
+
+  (testing "HSL and HSV interpolate unrounded working coordinates"
+    (is (< (max-channel-error
+            [63.75 127.5 191.25]
+            (sut/interpolate [[51 102 153] [102 153 204]] 0.5 :hsl))
+           1.0E-10))
+    (is (< (max-channel-error
+            [74.375 126.4375 178.5]
+            (sut/interpolate [[51 102 153] [102 153 204]] 0.5 :hsv))
+           1.0E-10))
+    (doseq [space [:hsl :hsv]]
+      (is (< (max-channel-error
+              [255 0 0.5]
+              (sut/interpolate [[255 0 0] [255 0 1]] 0.5 space))
+             1.0E-10)
+          (name space))
+      (doseq [position [0.0 1.0]
+              :let [colors [[52.25 152.75 219.125] [231.5 19.75 37.25]]]]
+        (is (< (max-channel-error
+                (nth colors (int position))
+                (sut/interpolate colors position space))
+               1.0E-10)
+            (pr-str space position)))))
+
+  (testing "Boundary noise does not put interpolated colors outside sRGB"
+    (doseq [space [:hsl :hsv]
+            rgb [[0.0 0.0 0.001] [0.0 0.001 0.0] [0.001 0.0 0.0]
+                 [255.0 254.999 255.0] [255.0 0.001 0.0]]
+            position [0.0 0.37 1.0]]
+      (is (sut/valid-rgb? (sut/interpolate [rgb rgb] position space))
+          (pr-str space rgb position))))
+
+  (testing "Compositing keeps fractions for the next layer"
+    (let [layer (sut/alpha-blend [255 0 0 1.0] [0 0 255 0.5])]
+      (is (= [127.5 0.0 127.5 1.0] layer))
+      (is (= [63.75 127.5 63.75 1.0]
+             (sut/alpha-blend layer [0 255 0 0.5]))))
+    (is (= [128 0 128 1.0]
+           (sut/->rgba (sut/alpha-blend (sut/color "#ff0000")
+                                        [0 0 255 0.5]))))
+    (is (= [0 0 0 0.0] (sut/alpha-blend [255 0 0 0.0] [0 0 255 0.0]))))
+
+  (testing "Analysis does not truncate fractional channels"
+    (is (< (Math/abs (- (sut/luminance [0.5 0.5 0.5])
+                        (/ 0.5 255 12.92)))
+           1.0E-15))
+    (is (not (sut/accessible? [118.9 118.9 118.9] "#ffffff" :aa)))
+    (is (pos? (sut/delta-e [100.1 100.1 100.1] [100.2 100.2 100.2]))))
+
+  (testing "Themes reject white just below AA despite the displayed ratio"
+    (doseq [mode [:light :dark]
+            :let [theme (sut/accessible-theme "#006ffb" {:mode mode})]]
+      (is (= 4.5 (sut/contrast-ratio (:primary theme) "#ffffff")))
+      (is (not (sut/accessible? (:primary theme) "#ffffff" :aa)))
+      (is (= "#000000" (:on-primary theme))))))
+
+(deftest css-precision-test
+  (testing "CSS output rounds per call and reads back fractional channels"
+    (let [rgba [12.34567 0.0001234 254.76543 0.1234567]
+          full (sut/->css rgba)]
+      (is (= "rgba(12.3457,0.0001,254.7654,0.1235)"
+             (sut/->css rgba {:decimal-places 4})))
+      (is (= "rgba(12,0,255,0.123)"
+             (sut/->css rgba {:decimal-places 0})))
+      (is (= full (sut/->css rgba)))
+      (is (= rgba (sut/->rgba full))))
+    (is (= "rgba(123,0.00123,0,0.123)"
+           (sut/->css [123.456 0.001234 0 0.123456]
+                      {:significant-digits 3})))
+    (is (= [0.5 2.5 0 0.001]
+           (sut/->rgba "rgba(.5,2.5,0,1e-3)"))))
+
+  (testing "Alpha keeps at least 3 decimal places under :decimal-places"
+    (is (= "rgba(255,0,0,0.5)"
+           (sut/->css [255 0 0 0.5] {:decimal-places 0})))
+    (is (= "rgba(127.5,0,0,0.333)"
+           (sut/->css [127.46 0 0 (/ 1.0 3)] {:decimal-places 1})))
+    (is (= "rgba(255,0,0,0.33333)"
+           (sut/->css [255 0 0 (/ 1.0 3)] {:decimal-places 5})))
+    (is (= "rgba(255,0,0,0.3)"
+           (sut/->css [255 0 0 (/ 1.0 3)] {:significant-digits 1})))
+    (is (= "rgba(255,0,0,0.5)"
+           (sut/with-alpha "#ff0000" 0.5 {:decimal-places 0})))
+    (is (= "rgba(70,0,185,0.55)"
+           (sut/alpha-blend "rgba(255,0,0,0.25)" "rgba(0,0,255,0.4)"
+                            {:decimal-places 0}))))
+
+  (testing "Rounding up does not push a channel past 255"
+    (is (= "rgba(255,0,100,0.5)"
+           (sut/->css [255 0 96 0.5] {:significant-digits 1}))))
+
+  (testing "Existing numeric string exporters accept formatting options"
+    (is (= "rgba(255,0,0,0.3333)"
+           (sut/with-alpha "#ff0000" (/ 1.0 3) {:decimal-places 4})))
+    (is (= "rgba(69.55,0,185.45,0.55)"
+           (sut/alpha-blend "rgba(255,0,0,0.25)" "rgba(0,0,255,0.4)"
+                            {:decimal-places 2})))
+    (let [result (sut/alpha-blend "rgba(255,0,0,0.25)"
+                                  "rgba(0,0,255,0.4)")]
+      (is (< (max-channel-error
+              [(/ 38.25 0.55) 0 (/ 102 0.55) 0.55]
+              (sut/->rgba result))
+             1.0E-10))))
+
+  (testing "Ambiguous precision options throw at the export boundary"
+    (let [options {:decimal-places 4 :significant-digits 3}]
+      (doseq [export [#(sut/->css [1 2 3] options)
+                      #(sut/with-alpha "#ff0000" 0.5 options)
+                      #(sut/alpha-blend "rgba(1,2,3,0.5)"
+                                        "rgba(4,5,6,0.5)" options)]]
+        (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo)
+                     (export)))))))
 
 (def ^:private oklab-reference-rgb
   [[0 0 0] [255 255 255] [128 128 128] [255 0 0] [0 255 0] [0 0 255]
