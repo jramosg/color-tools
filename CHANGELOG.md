@@ -73,12 +73,10 @@ All notable changes to this project will be documented in this file. This change
 - `rgb->lab` converted with the sRGB matrix rounded to 4 digits, which put
   Lab values off by up to 0.02. It now uses the full matrix and matches
   reference values to 0.001. `delta-e` and `perceptually-similar?` build on
-  it, so their results shift by a similar amount.
-- `rgb->lab` used the rounded constants 0.008856 and 7.787 where CIE defines
-  216/24389 and 24389/27, and a white point that left white at
-  `[100.0000039 -0.0000167 0.0000067]`. It now uses the exact constants, and
+  it, so their results shift by a similar amount. It also uses CIE's exact
+  216/24389 and 24389/27 in place of the rounded 0.008856 and 7.787, and
   white and grays are neutral: `(rgb->lab [255 255 255])` is
-  `[100.0 0.0 0.0]`. Other values move by less than 0.0001 (#102).
+  `[100.0 0.0 0.0]` (#102).
   `rgb->kelvin` uses the same matrix and can differ by 1 K.
 
 ### Adapting from 1.3
