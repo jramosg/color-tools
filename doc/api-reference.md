@@ -695,7 +695,8 @@ Generates adjacent colors. `count` defaults to `3`; `angle` defaults to `30`.
 (monochromatic color count) => [color ...]
 ```
 
-Generates one-hue variations. `count` defaults to `5`.
+Generates one-hue variations from dark (lightness 20) to light (80). `count`
+defaults to `5`. Saturation follows the base color, so a gray gives grays.
 
 ### `split-complementary`
 
