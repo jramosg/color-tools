@@ -207,6 +207,7 @@
        (boolean (re-matches css-rgb-pattern
                             (str/lower-case css-str)))))
 
+
 (defn valid-css-rgba?
   "Check if string is a valid CSS rgba() color"
   [css-str]
@@ -470,9 +471,9 @@
 
 (defprotocol Colorspace
 "Protocol to convert a record into different Colorspace impls 
-into a vector of a different Colorspace, -><colorspace>."
-  (->rgb [c])
-  (->oklab [c]))
+into a different Colorspace record -><colorspace>-space."
+  (->rgb-space   [c])
+  (->oklab-space [c]))
 
 ;; =============================================================================
 ;; Color Record Type
@@ -1696,19 +1697,21 @@ into a vector of a different Colorspace, -><colorspace>."
 ;; =============================================================================
 (defrecord Oklab [L a b] 
     Colorspace
-    (->rgb [this] 
-        (oklab->rgb [L a b]))
-    (->oklab [_] [L a b]))
+    (->rgb-space [this]
+        "a conversion can go outside of valid range. Check if the given oklab coordinates are 
+         in-gamut? prior to conversion."
+        (color (oklab->rgb [L a b])))
+    (->oklab-space [ths] ths))
 
 
 (extend-protocol Colorspace
     Color 
-    (->rgb [c] ((juxt :r :g :b) c)) ; gets overriden by ->rgb intentionally maybe?
-    (->oklab [c] 
-        (rgb->oklab (->rgb c))))
+    (->rgb-space [ths] ths) 
+    (->oklab-space [c] 
+        (apply ->Oklab (rgb->oklab (->rgb c)))) 
 
-(defn ->rgb
-    "Convert a color-ish to RGB vector"
-    [color]
-    (let [color-record (normalize-color-input color)]
-      ((juxt :r :g :b) color-record)))
+   #?(:clj String :cljs string) 
+    (->rgb-space [ths]
+        (normalize-color-input ths)) ;Color
+    (->oklab-space [c]
+         (->oklab-space (normalize-color-input c))))
