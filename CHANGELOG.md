@@ -45,9 +45,6 @@ All notable changes to this project will be documented in this file. This change
   white's raw ratio is 4.499888 even though `contrast-ratio` displays 4.5.
 - Hex export no longer narrows channels to a 32-bit float before rounding,
   which could round a channel just below a half-integer up instead of down.
-- On the JVM, `mix`, `tint`, `shade`, `tone`, `tints`, `shades`, `tones` and
-  `alpha-blend` could return Ratios and BigInts, such as `255/2`, in vector
-  results. They now return longs and doubles, as in ClojureScript (#95).
 - On the JVM, `(with-alpha "#ff0000" 1)` returned `rgba(255,0,0,1)` for an
   integer alpha of 1. It returns the hex string, as it does for `1.0` (#96).
 - On the JVM, `round` and `round-int` returned 0 for NaN. NaN now stays
