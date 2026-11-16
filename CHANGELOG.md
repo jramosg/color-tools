@@ -60,6 +60,9 @@ All notable changes to this project will be documented in this file. This change
 - The demo converter rejected `rgba()` without an alpha, such as
   `rgba(52, 152, 219)`. CSS treats `rgba()` as an alias of `rgb()`, so it now
   reads it as RGBA with an alpha of 1.
+- `monochromatic` ignored the saturation of the base color, so a gray gave a
+  red palette and a muted color a vivid one. Saturation now follows the
+  base. Fully saturated colors give the same palette as before (#98).
 - One-step `gradient` and `monochromatic` calls divided by zero. They now
   return the first gradient stop unchanged or the first monochromatic
   variation, while zero steps still returns an empty sequence.

@@ -865,15 +865,18 @@
      (map #(adjust-hue color (* % angle)) (range 1 (inc count))))))
 
 (defn monochromatic
-  "Generate monochromatic palette by varying lightness and saturation"
+  "Generate a monochromatic palette: the hue of `color` at lightness from
+   20 to 80, dark to light. Saturation follows the base color, from its
+   own for the darkest step down to three quarters of it for the lightest,
+   so a gray gives grays and a muted color a muted palette."
   ([color] (monochromatic color 5))
   ([color count]
    (let [count (or count 5)
-         [h] (->hsl color)
+         [h s] (->hsl color)
          variations (for [i (range count)
                           :let [factor (/ i (max 1 (dec count)))
                                 new-l (+ 20 (* 60 factor))
-                                new-s (+ 50 (* 50 (- 1 (* 0.5 factor))))]]
+                                new-s (* s (- 1 (* 0.25 factor)))]]
                       (if (string? color)
                         (hsl->hex [h new-s new-l])
                         (hsl->rgb [h new-s new-l])))]

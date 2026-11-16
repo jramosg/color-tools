@@ -509,6 +509,18 @@
           mono-3 (sut/monochromatic red 3)]
       (is (= 3 (count mono-3)))))
 
+  (testing "Monochromatic palettes follow the saturation of the base"
+    (is (= ["#660000" "#ad0606" "#ef1010" "#ee5d5d" "#f2a6a6"]
+           (vec (sut/monochromatic "#ff0000"))))
+    (doseq [gray ["#000000" "#808080" "#ffffff" [128 128 128]]
+            [r g b] (map sut/->rgb (sut/monochromatic gray))]
+      (is (= r g b) (str gray)))
+    (is (= ["#333333" "#808080" "#cccccc"]
+           (vec (sut/monochromatic "#808080" 3))))
+    (let [saturation #(second (sut/->hsl %))]
+      (is (every? #(<= (saturation %) 30)
+                  (sut/monochromatic "#6b7f8c")))))
+
   (testing "Split complementary colors"
     (let [red "#ff0000"
           split (sut/split-complementary red)]
