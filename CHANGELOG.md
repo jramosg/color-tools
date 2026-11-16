@@ -74,6 +74,11 @@ All notable changes to this project will be documented in this file. This change
   Lab values off by up to 0.02. It now uses the full matrix and matches
   reference values to 0.001. `delta-e` and `perceptually-similar?` build on
   it, so their results shift by a similar amount.
+- `rgb->lab` used the rounded constants 0.008856 and 7.787 where CIE defines
+  216/24389 and 24389/27, and a white point that left white at
+  `[100.0000039 -0.0000167 0.0000067]`. It now uses the exact constants, and
+  white and grays are neutral: `(rgb->lab [255 255 255])` is
+  `[100.0 0.0 0.0]`. Other values move by less than 0.0001 (#102).
   `rgb->kelvin` uses the same matrix and can differ by 1 K.
 
 ### Adapting from 1.3

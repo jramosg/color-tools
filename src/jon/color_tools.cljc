@@ -1383,20 +1383,31 @@
      (+ (* 0.2126729 r) (* 0.7151522 g) (* 0.0721750 b))
      (+ (* 0.0193339 r) (* 0.1191920 g) (* 0.9503041 b))]))
 
+(def ^:private lab-white
+  "XYZ of sRGB white, the D65 reference for rgb->lab. Taken from rgb->xyz
+   instead of the published [0.95047 1.0 1.08883] so that white and grays
+   are exactly neutral: the Y row of the matrix sums to 1.0000001."
+  (rgb->xyz [255 255 255]))
+
+(def ^:private lab-epsilon
+  "Below this the Lab transfer function is linear. CIE's exact 216/24389;
+   the 1976 text printed 0.008856."
+  (/ 216.0 24389.0))
+
+(def ^:private lab-kappa
+  "Slope of the linear part. CIE's exact 24389/27; the 1976 text printed
+   903.3, which leaves a step where the two parts meet."
+  (/ 24389.0 27.0))
+
 (defn rgb->lab
   "Convert RGB to LAB color space (CIE L*a*b*), relative to the D65 white
    point. CSS lab() uses D50, so these are not CSS values."
   [rgb]
-  (let [[x y z] (rgb->xyz rgb)
-        ;; Normalize for D65 illuminant
-        x (/ x 0.95047)
-        z (/ z 1.08883)
-        ;; Convert to LAB
-        f (fn [t]
-            (if (> t 0.008856)
-              (Math/pow t (/ 1.0 3.0))
-              (+ (* 7.787 t) (/ 16.0 116.0))))
-        [fx fy fz] (map f [x y z])
+  (let [f (fn [t]
+            (if (> t lab-epsilon)
+              (Math/cbrt t)
+              (/ (+ (* lab-kappa t) 16.0) 116.0)))
+        [fx fy fz] (map #(f (/ %1 %2)) (rgb->xyz rgb) lab-white)
         l (- (* 116 fy) 16)
         a (* 500 (- fx fy))
         b (* 200 (- fy fz))]

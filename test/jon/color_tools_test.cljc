@@ -1361,6 +1361,21 @@
             [actual expected] (map vector (sut/rgb->lab rgb) reference)]
       (is (< (Math/abs (- actual expected)) 0.001) (pr-str rgb))))
 
+  (testing "White and grays are exactly neutral"
+    (is (= [100.0 0.0 0.0] (sut/rgb->lab [255 255 255])))
+    (doseq [gray (range 0 256)
+            :let [[l a b] (sut/rgb->lab [gray gray gray])]]
+      (is (<= 0.0 l 100.0))
+      (is (< (Math/abs a) 1.0E-9) (str gray))
+      (is (< (Math/abs b) 1.0E-9) (str gray))))
+
+  (testing "Dark colors use CIE's exact slope, 24389/27"
+    ;; In the linear part L* is the slope times Y, and Y of gray 1 is
+    ;; 1/255/12.92. The rounded 7.787 put this off in the sixth digit.
+    (let [[l] (sut/rgb->lab [1 1 1])]
+      (is (< (Math/abs (- l (* (/ 24389.0 27.0) (/ 1.0 255.0 12.92))))
+             1.0E-12))))
+
   (testing "Delta E calculation"
     (let [red "#ff0000"
           red2 "#fe0000"
