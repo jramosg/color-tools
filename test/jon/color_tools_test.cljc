@@ -223,6 +223,36 @@
     (is (= [0 0 0 0.0] (sut/parse-css-rgba "rgba(0, 0, 0, 0)")))
     (is (= [255 255 255 1.0] (sut/parse-css-rgba "rgba(255, 255, 255, 1)")))))
 
+(deftest hsl-adjustment-precision-test
+  (let [colors (for [r (range 0 256 51) g (range 0 256 51) b (range 0 256 51)]
+                 [r g b])]
+    (testing "Zero adjustments return every color unchanged"
+      (doseq [rgb colors
+              :let [hex (sut/rgb->hex rgb)]
+              f [#(sut/lighten % 0) #(sut/darken % 0) #(sut/saturate % 0)
+                 #(sut/desaturate % 0) #(sut/adjust-hue % 0)
+                 #(sut/adjust-hue % 360) #(sut/adjust-hue % -360)]]
+        (is (= rgb (f rgb)))
+        (is (= hex (f hex)))))
+    ;; Multiples of 60 degrees map 8-bit channels to 8-bit channels, so
+    ;; nothing is lost between the two rotations.
+    (testing "Opposite hue rotations cancel out"
+      (doseq [rgb colors
+              degrees [60 120 180 240 300]]
+        (is (= rgb (-> rgb
+                       (sut/adjust-hue degrees)
+                       (sut/adjust-hue (- degrees))))))))
+  (testing "Rotating by a third of the wheel permutes the channels"
+    (is (= "#561234" (sut/adjust-hue "#123456" 120)))
+    (is (= ["#33ff57" "#5733ff"] (sut/triadic "#ff5733")))
+    (is (= "#db7734" (sut/complementary "#3498db"))))
+  (testing "Results keep their format and whole-number channels"
+    (is (= [255 171 153] (sut/lighten [255 87 51] 0.2)))
+    (is (every? int? (sut/saturate [200.5 100.25 50.75] 0.1)))
+    (is (sut/color? (sut/darken (sut/color 255 87 51) 0.2)))
+    (is (= "#ffffff" (sut/lighten "#3498db" 2)))
+    (is (= "#000000" (sut/darken "#3498db" 2)))))
+
 (deftest test-color-manipulation
   (testing "Lighten color"
     (let [red "#ff0000"
