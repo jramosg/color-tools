@@ -19,10 +19,10 @@
 
 (deftest process-test
   (testing "success: result on stdout, nothing on stderr, exit 0"
-    (is (= {:exit 0 :out "hsl(204, 70%, 53%)\n" :err ""}
+    (is (= {:exit 0 :out "hsl(204.0719, 69.8745%, 53.1373%)\n" :err ""}
            (color-tools nil "convert" "#3498db" "--to" "hsl"))))
   (testing "no swatches when stdout is not a terminal"
-    (is (= {:exit 0 :out "#db3398\n#98db33\n" :err ""}
+    (is (= {:exit 0 :out "#db3498\n#98db34\n" :err ""}
            (color-tools nil "palette" "#3498db" "--type" "triadic"))))
   (testing "colors piped in on stdin"
     (is (= {:exit 0 :out "[\"#ff6666\", \"#6666ff\"]\n" :err ""}

@@ -26,6 +26,10 @@ All notable changes to this project will be documented in this file. This change
     colors from stdin
   - Prints text with terminal swatches, pretty-printed JSON and EDN, or CSS
     custom properties for themes; `--to` picks the color format
+  - Keeps fractional channels in input, conversions, mixing and gradients;
+    JSON and EDN retain precision, while text rounds at the output boundary
+  - RGB/RGBA formatting uses the CSS exporter: decimal rounding keeps at
+    least 3 alpha places, and rounded RGB channels stay within 0 to 255
   - `theme --mode both --format css` writes a light theme and a dark one
     that follows `prefers-color-scheme`, or a selector of your choice
   - `color-tools completions bash|zsh|fish` prints a shell completion script

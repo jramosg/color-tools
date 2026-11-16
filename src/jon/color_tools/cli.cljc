@@ -37,10 +37,10 @@
    {:id :edn :long "--edn" :doc "Same as --format edn"}
    {:id :precision :long "--precision" :short "-p" :arg "N"
     :parse #(parse/parse-integer "--precision" 0 15 %)
-    :doc "Round fractional numbers to N decimal places"}
+    :doc "Round to N decimals; RGB/RGBA alpha keeps at least 3"}
    {:id :significant :long "--significant" :arg "N"
     :parse #(parse/parse-integer "--significant" 1 17 %)
-    :doc "Round fractional numbers to N significant digits"}
+    :doc "Round to N significant digits; RGB channels stay in range"}
    {:id :color :long "--color" :arg "WHEN"
     :choices [:auto :always :never]
     :doc "Show color swatches: auto (default), always or never"}
@@ -65,14 +65,14 @@
     :parse #(parse/parse-number "--angle" %)
     :doc "Hue step in degrees (default 30)"}
    {:id :steps :long "--steps" :arg "N"
-    :parse #(parse/parse-integer "--steps" 2 nil %)
-    :doc "How many colors in the gradient, at least 2 (default 5)"}
+    :parse #(parse/parse-integer "--steps" 1 nil %)
+    :doc "How many colors in the gradient, at least 1 (default 5)"}
    {:id :space :long "--space" :arg "SPACE"
     :choices [:rgb :hsl :hsv]
     :doc "Interpolate in rgb (default), hsl or hsv"}
    {:id :at :long "--at" :arg "POSITION" :multi? true
     :parse (fn [s]
-             (mapv #(parse/parse-fraction "--at" %) (str/split s #",")))
+             (mapv #(parse/parse-fraction "--at" %) (str/split s #"," -1)))
     :doc "Position from 0 to 1 (default 0.5); repeatable"}
    {:id :level :long "--level" :short "-l" :arg "LEVEL"
     :choices [:aa :aa-large :aaa]
@@ -359,6 +359,8 @@
 ;; Binding arguments
 ;; =============================================================================
 
+(declare bind)
+
 (defn- stdin-entries
   "The non-blank lines of stdin, each tagged with its line number."
   [stdin]
@@ -390,8 +392,12 @@
             before (subvec entries 0 i)
             after (subvec entries (inc i))]
         (if (< i fixed-count)
-          {:stdin :per-line
-           :runs (mapv #(into (conj before %) after) lines)}
+          (do
+            ;; With no lines there is no run to check the other arguments.
+            (when (empty? lines)
+              (bind command (assoc entries i {:stdin? true}) :per-line))
+            {:stdin :per-line
+             :runs (mapv #(into (conj before %) after) lines)})
           {:stdin :inline
            :runs [(into (into before lines) after)]})))))
 
@@ -406,9 +412,8 @@
                                   (:hint (ex-data e))))
         (throw e)))))
 
-(defn- bind
-  "Match the entries of one run to the command's parameters. Returns the
-   fixed arguments as a map and the variadic ones as a vector."
+(defn- check-arity
+  "Reject a run with too few or too many entries for the command."
   [command entries stdin-mode]
   (let [fixed (remove :rest? (:params command))
         rest-param (first (filter :rest? (:params command)))
@@ -431,10 +436,21 @@
                 (str "missing " (:label rest-param))
                 (str "expected at least " (:min rest-param) " "
                      (:label rest-param) " arguments"))
-              usage)))
-    [(into {} (map (fn [param entry]
-                     [(:key param) (parse-entry param entry)])
-                   fixed entries))
+              usage)))))
+
+(defn- bind
+  "Match the entries of one run to the command's parameters. Returns the
+   fixed arguments as a map and the variadic ones as a vector. An entry
+   marked :stdin? stands for stdin lines that never came and is skipped."
+  [command entries stdin-mode]
+  (check-arity command entries stdin-mode)
+  (let [fixed (remove :rest? (:params command))
+        rest-param (first (filter :rest? (:params command)))
+        extra (drop (count fixed) entries)]
+    [(into {} (keep (fn [[param entry]]
+                      (when-not (:stdin? entry)
+                        [(:key param) (parse-entry param entry)])))
+           (map vector fixed entries))
      (when rest-param
        (mapv #(parse-entry rest-param %) extra))]))
 

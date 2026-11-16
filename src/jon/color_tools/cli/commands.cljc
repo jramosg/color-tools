@@ -21,6 +21,9 @@
 (defn verdict? [x]
   (instance? Verdict x))
 
+(defn- precise-color [input]
+  (ct/color input {:full-precision? true}))
+
 (def groups
   [[:inspect "Inspect and convert"]
    [:adjust "Adjust"]
@@ -124,16 +127,18 @@
     :group :inspect
     :summary "Convert colors between formats"
     :doc (str "Reads any accepted color and prints it in the --to format.\n"
+              "Fractional channels and HSL/HSV precision are preserved.\n"
               "--to kelvin prints none for colors with no meaningful\n"
               "temperature. lab uses the D65 white point, unlike CSS lab().")
     :params [(variadic color-param 1)]
     :each? true
     :examples ["convert '#3498db' --to hsl"
+               "convert 'rgb(10.7,20.2,30.9)' --to rgb --json"
                "convert 'rgb(52,152,219)' --to oklch --precision 3"
                "convert - --to hex < colors.txt"]
     :api '[color ->color ->Color map->Color color? color-from-hex
            color-from-rgb color-from-rgba color-from-hsl color-from-hsv
-           ->hex ->rgb ->rgba ->hsl ->hsv ->name rgb->lab rgb->oklab
+           ->hex ->css ->rgb ->rgba ->hsl ->hsv ->name rgb->lab rgb->oklab
            rgb->oklch rgb->kelvin hex->rgb rgb->hex hex->rgba rgba->hex
            rgb->hsl hsl->rgb
            hex->hsl hsl->hex rgb->hsv hsv->rgb parse-css-rgb parse-css-rgba
@@ -205,7 +210,7 @@
   "Carry the alpha of `source` over to `result`. The library's adjustments
    work on the RGB channels and return an opaque color."
   [result source]
-  (ct/with-alpha (ct/color result) (:a source)))
+  (assoc (precise-color result) :a (:a source)))
 
 (defn- adjust-command
   "A command that changes one color by an amount with library function `f`."
@@ -219,7 +224,7 @@
               (str command-name " - 20% < colors.txt")]
    :api [(symbol command-name)]
    :run (fn [{:keys [color amount]} _]
-          (keep-alpha (f color amount) color))})
+          (keep-alpha (f (ct/->rgb color) amount) color))})
 
 (def ^:private adjust-commands
   [(adjust-command :adjust "lighten" ct/lighten
@@ -272,7 +277,8 @@
               :parse #(parse/parse-fraction "ALPHA" %)}]
     :examples ["alpha '#3498db' 0.5" "alpha '#3498db' 50% --to rgba --json"]
     :api '[with-alpha]
-    :run (fn [{:keys [color alpha]} _] (ct/with-alpha color alpha))}])
+    :run (fn [{:keys [color alpha]} _]
+           (precise-color (ct/with-alpha (ct/->rgb color) alpha)))}])
 
 ;; =============================================================================
 ;; Mix and blend
@@ -297,7 +303,7 @@
               (str command-name " '#3498db' --count 9 --json")]
    :api [(symbol command-name)]
    :run (fn [{:keys [color]} {:keys [count]}]
-          (mapv ct/color (f color count)))})
+          (mapv precise-color (f (ct/->rgb color) count)))})
 
 (def ^:private mix-commands
   [{:name "mix"
@@ -311,7 +317,7 @@
                "mix '#ff0000' '#0000ff' --ratio 0.25"]
     :api '[mix]
     :run (fn [{:keys [color other]} {:keys [ratio]}]
-           (ct/mix color other ratio))}
+           (precise-color (ct/mix (ct/->rgb color) (ct/->rgb other) ratio)))}
 
    {:name "blend"
     :group :mix
@@ -328,7 +334,8 @@
     :run (fn [{:keys [base overlay]} {:keys [mode]}]
            (let [mode (parse/parse-choice "--mode" (keys blend-modes)
                                           (or mode "multiply"))]
-             ((blend-modes mode) base overlay)))}
+             (precise-color
+              ((blend-modes mode) (ct/->rgba base) (ct/->rgba overlay)))))}
 
    (adjust-command :mix "tint" ct/tint "Mix a color with white")
    (adjust-command :mix "shade" ct/shade "Mix a color with black")
@@ -350,9 +357,6 @@
   (conj harmonies :random))
 
 (defn- palette-of [type color {:keys [count angle]}]
-  (when (and (= :monochromatic type) (some-> count (< 2)))
-    (throw (parse/usage-error
-            "--count must be at least 2 for a monochromatic palette")))
   (mapv ct/color
         (ct/generate-palette type color (cond-> {}
                                           count (assoc :count count)
@@ -381,7 +385,8 @@
       (random))))
 
 (defn- interpolate [{:keys [colors]} {:keys [at space]}]
-  (let [results (mapv #(ct/color (ct/interpolate colors % space))
+  (let [colors (mapv ct/->rgb colors)
+        results (mapv #(precise-color (ct/interpolate colors % space))
                       (or at [0.5]))]
     (if (next results)
       results
@@ -395,7 +400,8 @@
               "triadic, tetradic, analogous, split-complementary,\n"
               "monochromatic and random. --count applies to analogous (3),\n"
               "monochromatic (5) and random (5); --angle to analogous and\n"
-              "split-complementary. The base color is not in the result.")
+              "split-complementary. Monochromatic follows the base\n"
+              "saturation, from dark to light; --count 1 gives one step.")
     :params [(assoc color-param :optional? true)]
     :opts [:type :count :angle]
     :examples ["palette '#3498db'"
@@ -426,7 +432,8 @@
                "gradient red yellow green --steps 7 --json"]
     :api '[gradient]
     :run (fn [{:keys [colors]} {:keys [steps space]}]
-           (mapv ct/color (ct/gradient colors (or steps 5) space)))}
+           (mapv precise-color
+                 (ct/gradient (mapv ct/->rgb colors) (or steps 5) space)))}
 
    {:name "interpolate"
     :group :generate
@@ -466,7 +473,8 @@
   (when (< (:a background) 1)
     (*warn* "the alpha of the background is ignored"))
   (let [text (if (< (:a color) 1)
-               (ct/alpha-blend (ct/with-alpha background 1) color)
+               (ct/alpha-blend (conj (ct/->rgb background) 1.0)
+                               (ct/->rgba color))
                color)
         result (concat [:ratio (ct/contrast-ratio text background)]
                        (mapcat (fn [l] [l (ct/accessible? text background l)])
@@ -779,4 +787,4 @@
   {'clamp "Number helper; commands validate ranges instead of clamping"
    'parse-int "String helper used inside the library's own parsers"
    'round "Number helper; --precision and --significant round output"
-   'round-int "Number helper; channels are whole numbers in every output"})
+   'round-int "Number helper; hex and terminal swatches use 8-bit channels"})
