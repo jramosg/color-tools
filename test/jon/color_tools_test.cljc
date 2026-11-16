@@ -26,7 +26,18 @@
     (is (= [255 255 0] (sut/hsv->rgb [60 100 100]))) ; yellow
     (is (= [0 255 255] (sut/hsv->rgb [180 100 100]))) ; cyan
     (is (= [255 0 255] (sut/hsv->rgb [300 100 100]))) ; magenta
-    (is (= [128 128 128] (sut/hsv->rgb [0 0 50]))))) ; gray
+    (is (= [128 128 128] (sut/hsv->rgb [0 0 50])))) ; gray
+
+  (testing "hsv->rgb rejects out-of-range input, as hsl->rgb does"
+    (doseq [hsv [[400 50 50] [-30 50 50] [0 150 50] [0 50 -1] [0 50]
+                 '(0 50 50) nil "hsv(0, 50%, 50%)"]
+            options [nil {:full-precision? true}]]
+      (is (thrown? #?(:clj AssertionError :cljs js/Error)
+                   (if options
+                     (sut/hsv->rgb hsv options)
+                     (sut/hsv->rgb hsv)))
+          (pr-str hsv)))
+    (is (= [255 0 0] (sut/hsv->rgb [360 100 100])))))
 
 (deftest test-color-validation
   (testing "Hex color validation"
