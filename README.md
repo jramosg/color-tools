@@ -306,7 +306,7 @@ The parser accepts common CSS color string formats:
 
 ;; Monochromatic palette
 (color/monochromatic "#3498db" 5)
-;=> ["#0f3a57" "#1f6594" "#318fce" "#73b0d9" "#b1d1e7"]
+;=> ["#0f3a57" "#1f6594" "#328fcd" "#73b0d8" "#b1d1e7"]
 
 ;; Generate palettes by strategy
 (color/generate-palette :triadic "#e74c3c")

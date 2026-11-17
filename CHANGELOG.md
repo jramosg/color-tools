@@ -93,6 +93,12 @@ All notable changes to this project will be documented in this file. This change
 - `hsv->rgb` returned a color for out-of-range input, such as a hue of 400
   or a saturation of 150. It now checks `valid-hsv?`, as `hsl->rgb` checks
   `valid-hsl?` ([#101](https://github.com/jramosg/color-tools/issues/101)).
+- On ClojureScript, `rgb->hsl`, `rgb->hsv`, `hsl->rgb` and `hsv->rgb` rounded
+  a value that is exactly halfway down whenever floating point landed a hair
+  under it, while the JVM rounded it up. That affects about one color in 300:
+  `(rgb->hsl [0 24 1])` was `[122 100 5]` there and `[123 100 5]` on the JVM.
+  Both platforms now round halves up, as the JVM always did
+  ([#134](https://github.com/jramosg/color-tools/issues/134)).
 - `split-complementary` added the base hue twice, producing incorrect
   palettes for nonzero base hues. It now rotates by 180 degrees plus or
   minus the requested angle
@@ -102,8 +108,13 @@ All notable changes to this project will be documented in this file. This change
   reads it as RGBA with an alpha of 1.
 - `monochromatic` ignored the saturation of the base color, so a gray gave a
   red palette and a muted color a vivid one. Saturation now follows the
-  base. Fully saturated colors give the same palette as before
-  ([#98](https://github.com/jramosg/color-tools/issues/98)).
+  base ([#98](https://github.com/jramosg/color-tools/issues/98)).
+- `vibrant?`, `muted?`, `warm?`, `cool?`, `temperature` and `monochromatic`
+  read hue and saturation after rounding them to whole numbers, so a color
+  at 60.24% saturation was not vibrant at the default threshold of 60, and
+  one at hue 60.24 degrees counted as warm. They now use the exact values.
+  `monochromatic` steps can differ from 1.3 by one channel level
+  ([#128](https://github.com/jramosg/color-tools/issues/128)).
 - One-step `gradient` and `monochromatic` calls divided by zero. They now
   return the first gradient stop unchanged or the first monochromatic
   variation, while zero steps still returns an empty sequence

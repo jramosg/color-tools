@@ -613,9 +613,8 @@ Finds the variant of `target-color` nearest to it in lightness that meets the
 requested contrast level against `background`. `level` defaults to `:aa`.
 
 It keeps the hue and saturation of the target and tries each whole HSL
-lightness from 0 to 100, starting at the target's own and moving outward.
-When a darker and a lighter variant are equally near, it tries the darker one
-first.
+lightness from 0 to 100, nearest the target's own lightness first. When a
+darker and a lighter variant are equally near, it tries the darker one first.
 
 ```clojure
 (find-accessible-color "#ffffff" "#3498db")
