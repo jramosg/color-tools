@@ -841,7 +841,7 @@
          (->hex target-color)
          (->rgb target-color))
        (->> (range 0 101)
-            (sort-by #(Math/abs (- % l)))
+            (sort-by #(Math/abs (double (- % l))))
             (map variant)
             (filter passes?)
             first)))))
