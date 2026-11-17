@@ -476,15 +476,13 @@
 ;; =============================================================================
 
 (defprotocol Colorspace
-  "Protocol to convert a record into different Colorspace impls 
-into a different Colorspace record -><colorspace>-space."
+  "Protocol to convert a record into different Colorspace impls into a different Colorspace record -><colorspace>-space."
   (->rgb-space [c]
     "Convert c to a Color record, keeping fractional channels.
 
      Different colorspaces, including Oklab can describe colors outside the sRGB gamut, and Color cannot hold
      channels below 0 or above 255. Oklab input is clamped per channel with
-     clamp-rgb, which shifts the hue and lightness of out-of-gamut colors.
-     Check in-gamut? first when that matters.")
+     clamp-rgb, which shifts the hue and lightness of out-of-gamut colors.")
   (->oklab-space [c]
     "Convert c to an Oklab record."))
 
@@ -1574,6 +1572,10 @@ into a different Colorspace record -><colorspace>-space."
       (when (and (<= duv max-duv) (<= 1000 cct 40000))
         (round cct 0)))))
 
+;; =============================================================================
+;; Oklab
+;; =============================================================================
+
 (defn rgb->oklab
   "Convert an sRGB vector [r g b], with channels from 0 to 255, to Oklab.
    Returns [l a b] without rounding: l uses a 0-1 lightness scale;
@@ -1616,7 +1618,6 @@ into a different Colorspace record -><colorspace>-space."
         (neg? c) -))))
 
 (defn- valid-oklab?
-  "Either oklab record or record of L a b"
   [oklab]
   (and (vector? oklab)
        (= 3 (count oklab))
@@ -1742,8 +1743,9 @@ into a different Colorspace record -><colorspace>-space."
   (oklab->hex (oklch->oklab oklch)))
 
 ;; =============================================================================
-;; Oklab
+;; Colorspace implementations
 ;; =============================================================================
+
 (defrecord Oklab [L a b alpha]
   Colorspace
   (->rgb-space [_]
