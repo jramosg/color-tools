@@ -216,14 +216,18 @@
 (def ^:private css-rgba-pattern (css-color-pattern "rgba" 4))
 
 (defn valid-css-rgb?
-  "Check if string is a valid CSS rgb() color"
+  "Check if string is a CSS rgb() color in a supported format. Checks the
+   format only: \"rgb(300,0,0)\" is valid, and parse-css-color-components
+   returns nil for it."
   [css-str]
   (and (string? css-str)
        (boolean (re-matches css-rgb-pattern
                             (str/lower-case css-str)))))
 
 (defn valid-css-rgba?
-  "Check if string is a valid CSS rgba() color"
+  "Check if string is a CSS rgba() color in a supported format, with an
+   alpha from 0 to 1. Does not check the channels: \"rgba(300,0,0,0.5)\" is
+   valid, and parse-css-color-components returns nil for it."
   [css-str]
   (and (string? css-str)
        (boolean
@@ -476,7 +480,8 @@
         rgba? (conj (parse-double (nth matches 3)))))))
 
 (defn parse-css-rgb
-  "Parse CSS rgb() string to RGB vector"
+  "Parse CSS rgb() string to RGB vector. Throws ex-info for a channel above
+   255, which valid-css-rgb? accepts."
   [css-str]
   {:pre [(valid-css-rgb? css-str)]}
   (if-let [rgb (parse-css-color-components css-str)]
@@ -484,7 +489,8 @@
     (throw (ex-info "Invalid CSS RGB format" {:input css-str}))))
 
 (defn parse-css-rgba
-  "Parse CSS rgba() string to RGBA vector"
+  "Parse CSS rgba() string to RGBA vector. Throws ex-info for a channel above
+   255, which valid-css-rgba? accepts."
   [css-str]
   {:pre [(valid-css-rgba? css-str)]}
   (if-let [rgba (parse-css-color-components css-str)]
