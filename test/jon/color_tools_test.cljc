@@ -1,4 +1,5 @@
-;; copyright (c) 2025 -- Jon Ramos, all rights reserved.
+;; Copyright (c) 2025 Jon Ramos
+;; SPDX-License-Identifier: EPL-1.0
 
 (ns jon.color-tools-test
   (:require [clojure.test :refer [deftest is testing are]]
@@ -396,10 +397,10 @@
     (is (= "#207ab6" (sut/find-accessible-color "#ffffff" "#3498db" :aa)))
     (is (= "#52110a" (sut/find-accessible-color "#3498db" "#e74c3c" :aa)))
     (testing "a lower level allows a nearer color"
-      (is (= "#841c10"
+      (is (= "#841b10"
              (sut/find-accessible-color "#3498db" "#e74c3c" :aa-large))))
     (testing "on a dark background it goes lighter"
-      (is (= "#409fdd"
+      (is (= "#409edd"
              (sut/find-accessible-color "#000000" "#3498db" :aaa)))))
 
   (testing "find-accessible-color keeps hue and saturation"
@@ -424,6 +425,21 @@
             :when (< (Math/abs (- l nearer)) (dec distance))]
       (is (not (sut/accessible? bg (sut/hsl->hex [h s nearer]) level))
           (pr-str [bg target level found nearer]))))
+
+  (testing "find-accessible-color measures from the unrounded lightness"
+    ;; [10 136 184] has lightness 38.04, which ->hsl rounds to 38.
+    (is (= [120 212 248] (sut/find-accessible-color [45 90 103] [10 136 184])))
+    (doseq [bg [[45 90 103] [186 182 109] [255 255 255] [0 0 0]]
+            target [[10 136 184] [54 161 102] [199 122 222] [233 90 33]]
+            :when (not (sut/accessible? bg target))
+            :let [[h s l] (sut/rgb->hsl target {:full-precision? true})
+                  nearest (->> (range 0 101)
+                               (sort-by #(Math/abs (double (- % l))))
+                               (map #(sut/hsl->rgb [h s %]))
+                               (filter #(sut/accessible? bg %))
+                               first)]]
+      (is (= nearest (sut/find-accessible-color bg target))
+          (pr-str [bg target]))))
 
   (testing "find-accessible-color returns a passing target unchanged"
     ;; #3498db is hsl(204, 70%, 53%), which converts back to #3398db.
@@ -577,23 +593,31 @@
       (is (every? #(<= (saturation %) 30)
                   (sut/monochromatic "#6b7f8c")))))
 
+  (testing "Monochromatic palettes start from the unrounded hue and saturation"
+    (doseq [base [[199 122 222] [52 152 219] [233 90 33]]
+            :let [[h s] (sut/rgb->hsl base {:full-precision? true})]]
+      (is (= (sut/hsl->rgb [h s 20]) (first (sut/monochromatic base)))
+          (pr-str base))))
+
   (testing "Split complementary colors"
     (let [red "#ff0000"
           split (sut/split-complementary red)]
       (is (= 2 (count split)))
       (is (every? string? split)))))
 
+(defn- hue-distance
+  "Distance between two hues in degrees; 0 and 360 are the same hue."
+  [a b]
+  (let [d (mod (Math/abs (- a b)) 360)]
+    (min d (- 360 d))))
+
 (deftest split-complementary-base-hue-test
   (testing "Split complements rotate around the base's complementary hue"
     (doseq [hue [30 90 210 350]
             :let [base (sut/hsl->rgb [hue 100 50])
                   [left right] (sut/split-complementary base)]]
-      (is (< (Math/abs (- (mod (+ hue 150) 360)
-                          (first (sut/->hsl left))))
-             1.0E-10))
-      (is (< (Math/abs (- (mod (+ hue 210) 360)
-                          (first (sut/->hsl right))))
-             1.0E-10)))))
+      (is (< (hue-distance (+ hue 150) (first (sut/->hsl left))) 1.0E-10))
+      (is (< (hue-distance (+ hue 210) (first (sut/->hsl right))) 1.0E-10)))))
 
 (deftest test-palette-generation
   (testing "Generate different palette types"
@@ -795,8 +819,10 @@
     (let [theme (sut/accessible-theme "#9988ee")
           [ring-hue] (sut/->hsl (:focus-ring theme))
           [wanted-hue] (sut/->hsl (sut/adjust-hue "#9988ee" 65))]
-      (is (= "#e75ac4" (:focus-ring theme)))
-      (is (= wanted-hue ring-hue))
+      (is (= "#e75ac5" (:focus-ring theme)))
+      ;; Hex quantization moves the hue by under a degree: 314.7 and 314.5
+      ;; here, which round to 315 and 314.
+      (is (<= (Math/abs (- wanted-hue ring-hue)) 1))
       (is (sut/accessible? (:background theme) (:focus-ring theme)
                            :aa-large))))
 
@@ -823,6 +849,14 @@
     (is (sut/warm? "#ffff00"))  ; Yellow
     (is (not (sut/warm? "#0000ff")))  ; Blue
     (is (not (sut/warm? "#00ff00"))))  ; Green
+
+  (testing "Hue is compared unrounded at the edges of the warm range"
+    ;; Hues 60.24 and 299.76 round to 60 and 300, but lie outside the range.
+    (is (sut/warm? [255 255 0]))  ; hue 60
+    (is (sut/warm? [255 0 255]))  ; hue 300
+    (is (not (sut/warm? [254 255 0])))
+    (is (not (sut/warm? [254 0 255])))
+    (is (= :cool (sut/temperature [254 255 0]))))
 
   (testing "Cool color detection"
     (is (sut/cool? "#0000ff"))  ; Blue
@@ -870,7 +904,14 @@
     (is (sut/vibrant? "#ff0000"))  ; Pure red is vibrant
     (is (sut/muted? "#808080"))    ; Gray is muted
     (is (not (sut/vibrant? "#808080")))
-    (is (not (sut/muted? "#ff0000")))))
+    (is (not (sut/muted? "#ff0000"))))
+
+  (testing "Saturation is compared unrounded at the threshold"
+    ;; [199 122 222] is 60.24% saturated, which rounds to 60.
+    (is (sut/vibrant? [199 122 222]))
+    (is (not (sut/muted? [199 122 222])))
+    (is (not (sut/vibrant? [199 122 222] 60.5)))
+    (is (sut/muted? [199 122 222] 60.5))))
 
 (deftest test-color-names
   (testing "Color name to hex conversion"
@@ -1930,18 +1971,47 @@
     (is (= "rgba(255,0,100,0.5)"
            (sut/->css [255 0 96 0.5] {:significant-digits 1}))))
 
+  (testing "Tiny values print as plain decimals on both platforms"
+    ;; JavaScript's Number#toString would give 2.8e-14 and 1e-7.
+    (is (= "rgba(0.000000000000028,0,0,1)" (sut/->css [2.8e-14 0 0 1])))
+    (is (= "rgba(0.0000001,0,0,1)" (sut/->css [1e-7 0 0 1])))
+    (is (= "rgba(255,0,0,0.0000005)" (sut/->css [255 0 0 5e-7]))))
+
   (testing "Existing numeric string exporters accept formatting options"
     (is (= "rgba(255,0,0,0.3333)"
            (sut/with-alpha "#ff0000" (/ 1.0 3) {:decimal-places 4})))
     (is (= "rgba(69.55,0,185.45,0.55)"
            (sut/alpha-blend "rgba(255,0,0,0.25)" "rgba(0,0,255,0.4)"
-                            {:decimal-places 2})))
-    (let [result (sut/alpha-blend "rgba(255,0,0,0.25)"
-                                  "rgba(0,0,255,0.4)")]
-      (is (< (max-channel-error
-              [(/ 38.25 0.55) 0 (/ 102 0.55) 0.55]
-              (sut/->rgba result))
-             1.0E-10))))
+                            {:decimal-places 2}))))
+
+  (testing "alpha-blend rounds translucent strings to 3 decimals"
+    (is (= "rgba(69.545,0,185.455,0.55)"
+           (sut/alpha-blend "rgba(255,0,0,0.25)" "rgba(0,0,255,0.4)")))
+    (is (= "rgba(179.857,97.714,105.429,0.7)"
+           (sut/alpha-blend "rgba(52,152,219,0.4)" "rgba(231,76,60,0.5)")))
+    ;; The red channel is 104.99999999999999 before rounding.
+    (is (= "rgba(105,0,150,0.51)"
+           (sut/alpha-blend "rgba(255,0,0,0.3)" "rgba(0,0,255,0.3)"))))
+
+  (testing "An explicit precision replaces the 3 decimal default"
+    (let [base "rgba(52,152,219,0.4)"
+          overlay "rgba(231,76,60,0.5)"]
+      (is (= "rgba(180,98,105,0.7)"
+             (sut/alpha-blend base overlay {:decimal-places 0})))
+      (is (= "rgba(179.85714,97.71429,105.42857,0.7)"
+             (sut/alpha-blend base overlay {:decimal-places 5})))
+      (is (= "rgba(179.9,97.71,105.4,0.7)"
+             (sut/alpha-blend base overlay {:significant-digits 4})))))
+
+  (testing "Only translucent alpha-blend strings round by default"
+    ;; Vectors keep full precision. So does with-alpha, whose string
+    ;; output only echoes its input.
+    (is (< (max-channel-error
+            [(/ 125.9 0.7) (/ 68.4 0.7) (/ 73.8 0.7) 0.7]
+            (sut/alpha-blend [52 152 219 0.4] [231 76 60 0.5]))
+           1.0E-10))
+    (is (= "rgba(255,0,0,0.12345)" (sut/with-alpha "#ff0000" 0.12345)))
+    (is (= "#4d00b3" (sut/alpha-blend "#ff0000" "rgba(0,0,255,0.7)"))))
 
   (testing "Ambiguous precision options throw at the export boundary"
     (let [options {:decimal-places 4 :significant-digits 3}]
@@ -1951,6 +2021,30 @@
                                         "rgba(4,5,6,0.5)" options)]]
         (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo)
                      (export)))))))
+
+(deftest hsl-hsv-rounding-ties-test
+  ;; The exact answer is x.5, so the result must round up on both
+  ;; platforms. Floating point lands a hair under, and ClojureScript used
+  ;; to round those down.
+  (testing "RGB to HSL and HSV round exact halves up"
+    (is (= [123 100 5] (sut/rgb->hsl [0 24 1])))   ; hue 122.5
+    (is (= [123 100 9] (sut/rgb->hsv [0 24 1])))
+    (is (= [123 100 9] (sut/rgb->hsl [0 48 2])))
+    (is (= [208 100 14] (sut/rgb->hsl [0 39 72]))))
+
+  (testing "HSL and HSV to RGB round exact halves up"
+    (is (= [230 153 153] (sut/hsl->rgb [0 60 75])))   ; channel 229.5
+    (is (= [179 26 26] (sut/hsl->rgb [0 75 40])))
+    (is (= [230 179 179] (sut/hsv->rgb [0 22 90])))
+    (is (= [230 165 165] (sut/hsv->rgb [0 28 90]))))
+
+  (testing "HSL adjustments agree on a tie"
+    ;; Rotating #9988ee by 65 degrees gives a blue channel of exactly 212.5.
+    (is (= "#ee88d5" (sut/adjust-hue "#9988ee" 65))))
+
+  (testing "Full precision keeps the computed value"
+    (let [[hue] (sut/rgb->hsl [0 24 1] {:full-precision? true})]
+      (is (< (Math/abs (- 122.5 hue)) 1.0E-9)))))
 
 (def ^:private oklab-reference-rgb
   [[0 0 0] [255 255 255] [128 128 128] [255 0 0] [0 255 0] [0 0 255]

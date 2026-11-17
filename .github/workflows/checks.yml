@@ -50,6 +50,11 @@ jobs:
       - name: Run clj-kondo linter
         run: clj-kondo --lint src test
 
+      - name: Check for reflection warnings
+        run: |
+          clojure -M -e "(set! *warn-on-reflection* true) (require 'jon.color-tools)" 2>&1 | tee reflection.log
+          ! grep -q "Reflection warning" reflection.log
+
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:

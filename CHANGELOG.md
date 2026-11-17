@@ -32,24 +32,30 @@ All notable changes to this project will be documented in this file. This change
   `{:full-precision? true}` in a second argument to preserve computed
   doubles. `(color input options)` and `(->color r g b a options)` accept
   the same flag to keep fractional RGB channels. Existing defaults stay
-  rounded or truncated until 2.0 (#38).
-- `->css` exports numeric CSS with per-call `:decimal-places` or
-  `:significant-digits` options. `with-alpha` and `alpha-blend` accept the
-  same options for translucent string output; passing both options throws.
+  rounded or truncated until 2.0
+  ([#8](https://github.com/jramosg/color-tools/issues/8),
+  [#38](https://github.com/jramosg/color-tools/issues/38)).
+- `->css` exports a color as CSS `rgba()`, with per-call `:decimal-places`
+  or `:significant-digits` options. `with-alpha` and `alpha-blend` accept
+  the same options for translucent string output; passing both options
+  throws ([#8](https://github.com/jramosg/color-tools/issues/8)).
 - A Precision section in the API reference explains output rounding and
-  how to adopt precise calculations and adapt exact comparisons from 1.3.
+  how to adopt precise calculations and adapt exact comparisons from 1.3
+  ([#8](https://github.com/jramosg/color-tools/issues/8)).
 - `get-contrast-text` takes a WCAG level: `(get-contrast-text bg :aa-large)`.
   It returns white when white meets the level, black when only black does,
   and the one with more contrast when neither does, the rule Material UI and
-  Bootstrap use.
+  Bootstrap use ([#54](https://github.com/jramosg/color-tools/issues/54)).
 
 ### Changed
 - `mix`, `interpolate`, `gradient` and `alpha-blend` retain fractional
   vector channels. Hex and legacy `Color` results round once to 8-bit
   channels. HSL and HSV interpolation uses full precision internally, so
-  gradients may change where whole-coordinate rounding shifted a step.
+  gradients may change where whole-coordinate rounding shifted a step
+  ([#8](https://github.com/jramosg/color-tools/issues/8)).
 - `->rgb` and `->rgba` preserve fractional channels from vectors and CSS
-  strings, including when used by luminance and Delta E calculations.
+  strings, including when used by luminance and Delta E calculations
+  ([#8](https://github.com/jramosg/color-tools/issues/8)).
 - `lighten`, `darken`, `saturate`, `desaturate` and `adjust-hue` work on
   full-precision HSL and round once, to 8-bit channels. They used to round
   HSL to whole numbers first, which moved a color by up to 3 per channel
@@ -58,78 +64,108 @@ All notable changes to this project will be documented in this file. This change
   `(complementary "#3498db")` is now `"#db7734"`, an exact channel swap,
   instead of `"#db7633"`. `complementary`, `triadic`, `tetradic`,
   `analogous`, `split-complementary` and the `:secondary`, `:accent` and
-  `:focus-ring` tokens of `accessible-theme` follow (#100).
+  `:focus-ring` tokens of `accessible-theme` follow
+  ([#100](https://github.com/jramosg/color-tools/issues/100)).
 - CSS numeric output preserves fractional channels by default, and CSS
-  parsers accept decimal channels and exponent notation for round trips.
+  parsers accept decimal channels and exponent notation for round trips
+  ([#8](https://github.com/jramosg/color-tools/issues/8)).
+- `alpha-blend` strings keep fractional channels, rounded to 3 decimal
+  places unless you pass `:decimal-places` or `:significant-digits`. 1.3
+  rounded them to whole numbers, and unrounded results such as
+  `179.8571428571429` are not useful in a stylesheet
+  ([#127](https://github.com/jramosg/color-tools/issues/127)).
 - `get-contrast-text` aims for `:aa` (4.5:1) by default, as `accessible?`
-  does, instead of 3:1.
+  does, instead of 3:1
+  ([#54](https://github.com/jramosg/color-tools/issues/54)).
 - `accessible-theme` picks `:on-primary`, `:on-secondary` and `:on-accent`
-  with `get-contrast-text` at the theme's level, so the two agree.
+  with `get-contrast-text` at the theme's level, so the two agree
+  ([#54](https://github.com/jramosg/color-tools/issues/54)).
 - `find-accessible-color` returns the variant of the target nearest to it in
-  lightness that meets the level, instead of black whenever black passes.
+  lightness that meets the level, instead of black whenever black passes
+  ([#35](https://github.com/jramosg/color-tools/issues/35)).
 - `accessible-theme` builds on that search, so two tokens keep their color
   where they used to fall back to black or white: `:focus-ring` keeps its
   hue and `:on-muted` its slate tint, at the nearest lightness that meets the
-  level.
+  level ([#35](https://github.com/jramosg/color-tools/issues/35)).
 
 ### Fixed
 - `accessible?`, `find-accessible-color`, `get-contrast-text` and
   `accessible-theme` checked any unknown level, such as a mistyped `:AAA`,
   as `:aa`, and could report a pair as accessible that is not. Unknown
   levels now throw, as does a theme `:mode` other than `:light` or `:dark`.
-  `nil` still means the default (#99).
-- Accessibility checks continue to compare raw contrast, including for
-  fractional channels. Near a threshold, `accessible-theme` uses the
-  passing foreground: `#006ffb` gets black `:on-primary` text at AA, since
-  white's raw ratio is 4.499888 even though `contrast-ratio` displays 4.5.
+  `nil` still means the default
+  ([#99](https://github.com/jramosg/color-tools/issues/99)).
 - Hex export no longer narrows channels to a 32-bit float before rounding,
   which could round a channel just below a half-integer up instead of down.
 - On the JVM, `(with-alpha "#ff0000" 1)` returned `rgba(255,0,0,1)` for an
-  integer alpha of 1. It returns the hex string, as it does for `1.0` (#96).
+  integer alpha of 1. It returns the hex string, as it does for `1.0`
+  ([#96](https://github.com/jramosg/color-tools/issues/96)).
 - On the JVM, `round` and `round-int` returned 0 for NaN. NaN now stays
-  NaN, as in ClojureScript and `round-coords` (#97).
+  NaN, as in ClojureScript and `round-coords`
+  ([#97](https://github.com/jramosg/color-tools/issues/97)).
 - `accessible-theme` could return a dark `:muted` surface on which no text
   color meets `:aaa`, so `:on-muted` missed the level it promises. `:muted`
-  now darkens until the level is reachable.
+  now darkens until the level is reachable
+  ([#52](https://github.com/jramosg/color-tools/issues/52)).
 - `round` and `round-int` overflowed when rounding large numbers to zero
   decimal places. Values outside the 32-bit integer range now remain
-  doubles; ordinary zero-decimal results still return integers (#89).
+  doubles; ordinary zero-decimal results still return integers
+  ([#89](https://github.com/jramosg/color-tools/issues/89)).
 - The documentation of `accessible-theme` said every `:on-*` token meets the
   requested level. On `:primary`, `:secondary` and `:accent` that can't hold
-  at `:aaa` for mid-tone colors, and the documentation now says so.
+  at `:aaa` for mid-tone colors, and the documentation now says so
+  ([#52](https://github.com/jramosg/color-tools/issues/52)).
 - `hsv->rgb` returned a color for out-of-range input, such as a hue of 400
   or a saturation of 150. It now checks `valid-hsv?`, as `hsl->rgb` checks
-  `valid-hsl?` (#101).
+  `valid-hsl?` ([#101](https://github.com/jramosg/color-tools/issues/101)).
+- On ClojureScript, `rgb->hsl`, `rgb->hsv`, `hsl->rgb` and `hsv->rgb` rounded
+  a value that is exactly halfway down whenever floating point landed a hair
+  under it, while the JVM rounded it up. That affects about one color in 300:
+  `(rgb->hsl [0 24 1])` was `[122 100 5]` there and `[123 100 5]` on the JVM.
+  Both platforms now round halves up, as the JVM always did
+  ([#134](https://github.com/jramosg/color-tools/issues/134)).
 - `split-complementary` added the base hue twice, producing incorrect
   palettes for nonzero base hues. It now rotates by 180 degrees plus or
-  minus the requested angle.
+  minus the requested angle
+  ([#86](https://github.com/jramosg/color-tools/issues/86)).
 - The demo converter rejected `rgba()` without an alpha, such as
   `rgba(52, 152, 219)`. CSS treats `rgba()` as an alias of `rgb()`, so it now
   reads it as RGBA with an alpha of 1.
 - `monochromatic` ignored the saturation of the base color, so a gray gave a
   red palette and a muted color a vivid one. Saturation now follows the
-  base. Fully saturated colors give the same palette as before (#98).
+  base ([#98](https://github.com/jramosg/color-tools/issues/98)).
+- `vibrant?`, `muted?`, `warm?`, `cool?`, `temperature` and `monochromatic`
+  read hue and saturation after rounding them to whole numbers, so a color
+  at 60.24% saturation was not vibrant at the default threshold of 60, and
+  one at hue 60.24 degrees counted as warm. They now use the exact values.
+  `monochromatic` steps can differ from 1.3 by one channel level
+  ([#128](https://github.com/jramosg/color-tools/issues/128)).
 - One-step `gradient` and `monochromatic` calls divided by zero. They now
   return the first gradient stop unchanged or the first monochromatic
-  variation, while zero steps still returns an empty sequence.
+  variation, while zero steps still returns an empty sequence
+  ([#87](https://github.com/jramosg/color-tools/issues/87)).
 - The demo converter showed "Detected RGB" for invalid input that names
   another format, such as `hsl(400, 50%, 50%)`, with a color made from its
   numbers. Input that starts with a format name now gets only that format's
-  parser.
+  parser ([#37](https://github.com/jramosg/color-tools/issues/37)).
 - The demo converter said "No valid color yet" for input that will never be
   valid. Empty input now says "Paste a color to convert" and anything else
   that fails to parse says "Not a valid color".
 - `luminance` used the obsolete sRGB cutoff of 0.03928 instead of WCAG's
   current 0.04045. Fractional channels between the cutoffs now use the
-  correct linear branch.
+  correct linear branch
+  ([#88](https://github.com/jramosg/color-tools/issues/88)).
 - `rgb->lab` converted with the sRGB matrix rounded to 4 digits, which put
   Lab values off by up to 0.02. It now uses the full matrix and matches
   reference values to 0.001. `delta-e` and `perceptually-similar?` build on
   it, so their results shift by a similar amount. It also uses CIE's exact
   216/24389 and 24389/27 in place of the rounded 0.008856 and 7.787, and
   white and grays are neutral: `(rgb->lab [255 255 255])` is
-  `[100.0 0.0 0.0]` (#102).
-  `rgb->kelvin` uses the same matrix and can differ by 1 K.
+  `[100.0 0.0 0.0]`. `rgb->kelvin` uses the same matrix, so sRGB white is
+  6503 K instead of 6504 K and very cool colors above 14000 K can move by
+  10 K or more
+  ([#36](https://github.com/jramosg/color-tools/issues/36),
+  [#102](https://github.com/jramosg/color-tools/issues/102)).
 
 ### Adapting from 1.3
 - Computed vectors can now contain fractions, such as
@@ -139,12 +175,6 @@ All notable changes to this project will be documented in this file. This change
   when an integration needs integer channels. Existing HSL/HSV conversion
   and record-construction defaults are retained; full precision is opt-in.
   See the [precision guide](doc/api-reference.md#precision).
-
-### Planned
-- In 2.0, make full precision the default for the HSL/HSV conversions and
-  RGB `Color` construction (#38). The explicit 1.4 options provide a
-  migration path. Keep typed values (#7), the CLI (#6) and later roadmap
-  features in their existing 1.x milestones.
 
 ## [1.3.0] - 2026-11-13
 ### Added
