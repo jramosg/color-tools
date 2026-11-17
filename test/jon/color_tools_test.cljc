@@ -584,17 +584,19 @@
       (is (= 2 (count split)))
       (is (every? string? split)))))
 
+(defn- hue-distance
+  "Distance between two hues in degrees; 0 and 360 are the same hue."
+  [a b]
+  (let [d (mod (Math/abs (- a b)) 360)]
+    (min d (- 360 d))))
+
 (deftest split-complementary-base-hue-test
   (testing "Split complements rotate around the base's complementary hue"
     (doseq [hue [30 90 210 350]
             :let [base (sut/hsl->rgb [hue 100 50])
                   [left right] (sut/split-complementary base)]]
-      (is (< (Math/abs (- (mod (+ hue 150) 360)
-                          (first (sut/->hsl left))))
-             1.0E-10))
-      (is (< (Math/abs (- (mod (+ hue 210) 360)
-                          (first (sut/->hsl right))))
-             1.0E-10)))))
+      (is (< (hue-distance (+ hue 150) (first (sut/->hsl left))) 1.0E-10))
+      (is (< (hue-distance (+ hue 210) (first (sut/->hsl right))) 1.0E-10)))))
 
 (deftest test-palette-generation
   (testing "Generate different palette types"
@@ -1981,6 +1983,30 @@
                                         "rgba(4,5,6,0.5)" options)]]
         (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo)
                      (export)))))))
+
+(deftest hsl-hsv-rounding-ties-test
+  ;; The exact answer is x.5, so the result must round up on both
+  ;; platforms. Floating point lands a hair under, and ClojureScript used
+  ;; to round those down.
+  (testing "RGB to HSL and HSV round exact halves up"
+    (is (= [123 100 5] (sut/rgb->hsl [0 24 1])))   ; hue 122.5
+    (is (= [123 100 9] (sut/rgb->hsv [0 24 1])))
+    (is (= [123 100 9] (sut/rgb->hsl [0 48 2])))
+    (is (= [208 100 14] (sut/rgb->hsl [0 39 72]))))
+
+  (testing "HSL and HSV to RGB round exact halves up"
+    (is (= [230 153 153] (sut/hsl->rgb [0 60 75])))   ; channel 229.5
+    (is (= [179 26 26] (sut/hsl->rgb [0 75 40])))
+    (is (= [230 179 179] (sut/hsv->rgb [0 22 90])))
+    (is (= [230 165 165] (sut/hsv->rgb [0 28 90]))))
+
+  (testing "HSL adjustments agree on a tie"
+    ;; Rotating #9988ee by 65 degrees gives a blue channel of exactly 212.5.
+    (is (= "#ee88d5" (sut/adjust-hue "#9988ee" 65))))
+
+  (testing "Full precision keeps the computed value"
+    (let [[hue] (sut/rgb->hsl [0 24 1] {:full-precision? true})]
+      (is (< (Math/abs (- 122.5 hue)) 1.0E-9)))))
 
 (def ^:private oklab-reference-rgb
   [[0 0 0] [255 255 255] [128 128 128] [255 0 0] [0 255 0] [0 0 255]

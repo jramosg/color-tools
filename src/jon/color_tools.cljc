@@ -291,9 +291,20 @@
   {:pre [(valid-rgba? rgba)]}
   (rgb->hex (into [] (take 3 rgba))))
 
+(defn- round-coord
+  "Round a computed coordinate to a whole number. A value within 1e-9 of a
+   tie counts as the tie: the exact answer is x.5 and floating point lands
+   a hair on either side, so without this the JVM and ClojureScript round
+   the same color differently."
+  [x]
+  (round-int (round-places x 9)))
+
+;; The HSL and HSV conversions divide by doubles. Dividing integers is exact
+;; on the JVM, where (/ 153 255) is the ratio 3/5, and floating point in
+;; ClojureScript, so the platforms differ in the last bit of every result.
 (defn- rgb->hsl-coords [rgb]
   {:pre [(valid-rgb? rgb)]}
-  (let [[r g b] (map #(/ % 255) rgb)
+  (let [[r g b] (map #(/ % 255.0) rgb)
         max-val (max r g b)
         min-val (min r g b)
         diff (- max-val min-val)
@@ -316,24 +327,24 @@
   ([rgb] (rgb->hsl rgb {}))
   ([rgb options]
    (cond->> (rgb->hsl-coords rgb)
-     (not (:full-precision? options)) (mapv round-int))))
+     (not (:full-precision? options)) (mapv round-coord))))
 
 (defn- hsl->rgb-coords [hsl]
   {:pre [(valid-hsl? hsl)]}
   (let [[h s l] hsl
-        h-norm (/ h 360)
-        s-norm (/ s 100)
-        l-norm (/ l 100)
+        h-norm (/ h 360.0)
+        s-norm (/ s 100.0)
+        l-norm (/ l 100.0)
         abs-fn #(if (< % 0) (- %) %)
         c (* (- 1 (abs-fn (- (* 2 l-norm) 1))) s-norm)
         x (* c (- 1 (abs-fn (- (mod (* h-norm 6) 2) 1))))
         m (- l-norm (/ c 2))
         [r' g' b'] (cond
-                     (< h-norm (/ 1 6)) [c x 0]
-                     (< h-norm (/ 2 6)) [x c 0]
-                     (< h-norm (/ 3 6)) [0 c x]
-                     (< h-norm (/ 4 6)) [0 x c]
-                     (< h-norm (/ 5 6)) [x 0 c]
+                     (< h-norm (/ 1.0 6)) [c x 0]
+                     (< h-norm (/ 2.0 6)) [x c 0]
+                     (< h-norm (/ 3.0 6)) [0 c x]
+                     (< h-norm (/ 4.0 6)) [0 x c]
+                     (< h-norm (/ 5.0 6)) [x 0 c]
                      :else [c 0 x])]
     (clamp-rgb
      (mapv double [(* (+ r' m) 255) (* (+ g' m) 255) (* (+ b' m) 255)]))))
@@ -344,7 +355,7 @@
   ([hsl] (hsl->rgb hsl {}))
   ([hsl options]
    (cond->> (hsl->rgb-coords hsl)
-     (not (:full-precision? options)) (mapv round-int))))
+     (not (:full-precision? options)) (mapv round-coord))))
 
 (defn hex->hsl
   "Convert hex to HSL"
@@ -360,7 +371,7 @@
 
 (defn- rgb->hsv-coords [rgb]
   {:pre [(valid-rgb? rgb)]}
-  (let [[r g b] (map #(/ % 255) rgb)
+  (let [[r g b] (map #(/ % 255.0) rgb)
         max-val (max r g b)
         min-val (min r g b)
         diff (- max-val min-val)
@@ -379,24 +390,24 @@
   ([rgb] (rgb->hsv rgb {}))
   ([rgb options]
    (cond->> (rgb->hsv-coords rgb)
-     (not (:full-precision? options)) (mapv round-int))))
+     (not (:full-precision? options)) (mapv round-coord))))
 
 (defn- hsv->rgb-coords [hsv]
   {:pre [(valid-hsv? hsv)]}
   (let [[h s v] hsv
-        h-norm (/ h 360)
-        s-norm (/ s 100)
-        v-norm (/ v 100)
+        h-norm (/ h 360.0)
+        s-norm (/ s 100.0)
+        v-norm (/ v 100.0)
         c (* v-norm s-norm)
         abs-fn #(if (< % 0) (- %) %)
         x (* c (- 1 (abs-fn (- (mod (* h-norm 6) 2) 1))))
         m (- v-norm c)
         [r' g' b'] (cond
-                     (< h-norm (/ 1 6)) [c x 0]
-                     (< h-norm (/ 2 6)) [x c 0]
-                     (< h-norm (/ 3 6)) [0 c x]
-                     (< h-norm (/ 4 6)) [0 x c]
-                     (< h-norm (/ 5 6)) [x 0 c]
+                     (< h-norm (/ 1.0 6)) [c x 0]
+                     (< h-norm (/ 2.0 6)) [x c 0]
+                     (< h-norm (/ 3.0 6)) [0 c x]
+                     (< h-norm (/ 4.0 6)) [0 x c]
+                     (< h-norm (/ 5.0 6)) [x 0 c]
                      :else [c 0 x])]
     (clamp-rgb
      (mapv double [(* (+ r' m) 255) (* (+ g' m) 255) (* (+ b' m) 255)]))))
@@ -407,7 +418,7 @@
   ([hsv] (hsv->rgb hsv {}))
   ([hsv options]
    (cond->> (hsv->rgb-coords hsv)
-     (not (:full-precision? options)) (mapv round-int))))
+     (not (:full-precision? options)) (mapv round-coord))))
 
 (defn normalize-css-color-string
   "Normalize CSS color string by removing extra spaces and standardizing separators"
@@ -679,7 +690,7 @@
    HSL to whole numbers on the way would move the color even when `f`
    changes nothing."
   [color f]
-  (->> (->rgb color) rgb->hsl-coords f hsl->rgb-coords (mapv round-int)))
+  (->> (->rgb color) rgb->hsl-coords f hsl->rgb-coords (mapv round-coord)))
 
 (defn- like-input
   "Return 8-bit `rgb` as a Color, hex string or vector, following `color`."
