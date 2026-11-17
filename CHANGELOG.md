@@ -99,6 +99,10 @@ All notable changes to this project will be documented in this file. This change
   `(rgb->hsl [0 24 1])` was `[122 100 5]` there and `[123 100 5]` on the JVM.
   Both platforms now round halves up, as the JVM always did
   ([#134](https://github.com/jramosg/color-tools/issues/134)).
+- `gradient` gave different colors on the JVM and in ClojureScript for some
+  inputs, in every color space: about one random color pair in 70. Both
+  platforms now agree
+  ([#137](https://github.com/jramosg/color-tools/issues/137)).
 - `split-complementary` added the base hue twice, producing incorrect
   palettes for nonzero base hues. It now rotates by 180 degrees plus or
   minus the requested angle
