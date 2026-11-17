@@ -108,8 +108,13 @@ All notable changes to this project will be documented in this file. This change
   reads it as RGBA with an alpha of 1.
 - `monochromatic` ignored the saturation of the base color, so a gray gave a
   red palette and a muted color a vivid one. Saturation now follows the
-  base. Fully saturated colors give the same palette as before
-  ([#98](https://github.com/jramosg/color-tools/issues/98)).
+  base ([#98](https://github.com/jramosg/color-tools/issues/98)).
+- `vibrant?`, `muted?`, `warm?`, `cool?`, `temperature` and `monochromatic`
+  read hue and saturation after rounding them to whole numbers, so a color
+  at 60.24% saturation was not vibrant at the default threshold of 60, and
+  one at hue 60.24 degrees counted as warm. They now use the exact values.
+  `monochromatic` steps can differ from 1.3 by one channel level
+  ([#128](https://github.com/jramosg/color-tools/issues/128)).
 - One-step `gradient` and `monochromatic` calls divided by zero. They now
   return the first gradient stop unchanged or the first monochromatic
   variation, while zero steps still returns an empty sequence

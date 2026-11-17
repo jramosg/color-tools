@@ -397,10 +397,10 @@
     (is (= "#207ab6" (sut/find-accessible-color "#ffffff" "#3498db" :aa)))
     (is (= "#52110a" (sut/find-accessible-color "#3498db" "#e74c3c" :aa)))
     (testing "a lower level allows a nearer color"
-      (is (= "#841c10"
+      (is (= "#841b10"
              (sut/find-accessible-color "#3498db" "#e74c3c" :aa-large))))
     (testing "on a dark background it goes lighter"
-      (is (= "#409fdd"
+      (is (= "#409edd"
              (sut/find-accessible-color "#000000" "#3498db" :aaa)))))
 
   (testing "find-accessible-color keeps hue and saturation"
@@ -425,6 +425,21 @@
             :when (< (Math/abs (- l nearer)) (dec distance))]
       (is (not (sut/accessible? bg (sut/hsl->hex [h s nearer]) level))
           (pr-str [bg target level found nearer]))))
+
+  (testing "find-accessible-color measures from the unrounded lightness"
+    ;; [10 136 184] has lightness 38.04, which ->hsl rounds to 38.
+    (is (= [120 212 248] (sut/find-accessible-color [45 90 103] [10 136 184])))
+    (doseq [bg [[45 90 103] [186 182 109] [255 255 255] [0 0 0]]
+            target [[10 136 184] [54 161 102] [199 122 222] [233 90 33]]
+            :when (not (sut/accessible? bg target))
+            :let [[h s l] (sut/rgb->hsl target {:full-precision? true})
+                  nearest (->> (range 0 101)
+                               (sort-by #(Math/abs (double (- % l))))
+                               (map #(sut/hsl->rgb [h s %]))
+                               (filter #(sut/accessible? bg %))
+                               first)]]
+      (is (= nearest (sut/find-accessible-color bg target))
+          (pr-str [bg target]))))
 
   (testing "find-accessible-color returns a passing target unchanged"
     ;; #3498db is hsl(204, 70%, 53%), which converts back to #3398db.
@@ -577,6 +592,12 @@
     (let [saturation #(second (sut/->hsl %))]
       (is (every? #(<= (saturation %) 30)
                   (sut/monochromatic "#6b7f8c")))))
+
+  (testing "Monochromatic palettes start from the unrounded hue and saturation"
+    (doseq [base [[199 122 222] [52 152 219] [233 90 33]]
+            :let [[h s] (sut/rgb->hsl base {:full-precision? true})]]
+      (is (= (sut/hsl->rgb [h s 20]) (first (sut/monochromatic base)))
+          (pr-str base))))
 
   (testing "Split complementary colors"
     (let [red "#ff0000"
@@ -798,8 +819,10 @@
     (let [theme (sut/accessible-theme "#9988ee")
           [ring-hue] (sut/->hsl (:focus-ring theme))
           [wanted-hue] (sut/->hsl (sut/adjust-hue "#9988ee" 65))]
-      (is (= "#e75ac4" (:focus-ring theme)))
-      (is (= wanted-hue ring-hue))
+      (is (= "#e75ac5" (:focus-ring theme)))
+      ;; Hex quantization moves the hue by under a degree: 314.7 and 314.5
+      ;; here, which round to 315 and 314.
+      (is (<= (Math/abs (- wanted-hue ring-hue)) 1))
       (is (sut/accessible? (:background theme) (:focus-ring theme)
                            :aa-large))))
 
@@ -826,6 +849,14 @@
     (is (sut/warm? "#ffff00"))  ; Yellow
     (is (not (sut/warm? "#0000ff")))  ; Blue
     (is (not (sut/warm? "#00ff00"))))  ; Green
+
+  (testing "Hue is compared unrounded at the edges of the warm range"
+    ;; Hues 60.24 and 299.76 round to 60 and 300, but lie outside the range.
+    (is (sut/warm? [255 255 0]))  ; hue 60
+    (is (sut/warm? [255 0 255]))  ; hue 300
+    (is (not (sut/warm? [254 255 0])))
+    (is (not (sut/warm? [254 0 255])))
+    (is (= :cool (sut/temperature [254 255 0]))))
 
   (testing "Cool color detection"
     (is (sut/cool? "#0000ff"))  ; Blue
@@ -873,7 +904,14 @@
     (is (sut/vibrant? "#ff0000"))  ; Pure red is vibrant
     (is (sut/muted? "#808080"))    ; Gray is muted
     (is (not (sut/vibrant? "#808080")))
-    (is (not (sut/muted? "#ff0000")))))
+    (is (not (sut/muted? "#ff0000"))))
+
+  (testing "Saturation is compared unrounded at the threshold"
+    ;; [199 122 222] is 60.24% saturated, which rounds to 60.
+    (is (sut/vibrant? [199 122 222]))
+    (is (not (sut/muted? [199 122 222])))
+    (is (not (sut/vibrant? [199 122 222] 60.5)))
+    (is (sut/muted? [199 122 222] 60.5))))
 
 (deftest test-color-names
   (testing "Color name to hex conversion"

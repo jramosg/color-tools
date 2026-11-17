@@ -680,6 +680,12 @@
   [color]
   (rgb->hsv (->rgb color)))
 
+(defn- hsl-coords
+  "Unrounded HSL of any color input. ->hsl rounds for display, so reading a
+   hue, saturation or lightness through it is off by up to half a unit."
+  [color]
+  (rgb->hsl-coords (->rgb color)))
+
 ;; =============================================================================
 ;; Color Manipulation
 ;; =============================================================================
@@ -690,7 +696,7 @@
    HSL to whole numbers on the way would move the color even when `f`
    changes nothing."
   [color f]
-  (->> (->rgb color) rgb->hsl-coords f hsl->rgb-coords (mapv round-coord)))
+  (->> (hsl-coords color) f hsl->rgb-coords (mapv round-coord)))
 
 (defn- like-input
   "Return 8-bit `rgb` as a Color, hex string or vector, following `color`."
@@ -841,9 +847,9 @@
    a WCAG contrast level against `background`.
 
    Keeps the hue and saturation of the target and tries each whole HSL
-   lightness from 0 to 100, starting at the target's own and moving
-   outward. When a darker and a lighter variant are equally near, the
-   darker one is tried first.
+   lightness from 0 to 100, nearest the target's own lightness first. When
+   a darker and a lighter variant are equally near, the darker one is tried
+   first.
 
    Returns the target itself when it already meets the level, and nil when
    no lightness does. No color reaches :aaa on a mid-tone background.
@@ -855,7 +861,7 @@
   ([background target-color level]
    (let [threshold (contrast-threshold level)
          passes? #(>= (raw-contrast-ratio background %) threshold)
-         [h s l] (->hsl target-color)
+         [h s l] (hsl-coords target-color)
          variant (fn [lightness]
                    (if (string? target-color)
                      (hsl->hex [h s lightness])
@@ -935,7 +941,7 @@
   ([color] (monochromatic color 5))
   ([color count]
    (let [count (or count 5)
-         [h s] (->hsl color)
+         [h s] (hsl-coords color)
          variations (for [i (range count)
                           :let [factor (/ i (max 1 (dec count)))
                                 new-l (+ 20 (* 60 factor))
@@ -1163,7 +1169,7 @@
 (defn warm?
   "Check if a color is warm (red/orange/yellow family)"
   [color]
-  (let [[h] (->hsl color)]
+  (let [[h] (hsl-coords color)]
     (or (<= 0 h 60) (<= 300 h 360))))
 
 (defn cool?
@@ -1201,7 +1207,7 @@
   ([color] (vibrant? color 60))
   ([color threshold]
    (let [threshold (or threshold 60)
-         [_ s] (->hsl color)]
+         [_ s] (hsl-coords color)]
      (> s threshold))))
 
 (defn muted?
