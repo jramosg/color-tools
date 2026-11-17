@@ -1,4 +1,5 @@
-;; copyright (c) 2025 -- Jon Ramos, all rights reserved.
+;; Copyright (c) 2025 Jon Ramos
+;; SPDX-License-Identifier: EPL-1.0
 
 (ns jon.color-tools-test
   (:require [clojure.test :refer [deftest is testing are]]

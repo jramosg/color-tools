@@ -24,8 +24,8 @@
    [:url "https://github.com/jramosg/color-tools"]
    [:licenses
     [:license
-     [:name "Eclipse Public License"]
-     [:url "http://www.eclipse.org/legal/epl-v10.html"]]]
+     [:name "Eclipse Public License 1.0"]
+     [:url "https://www.eclipse.org/legal/epl-v10.html"]]]
    [:developers
     [:developer
      [:name "Jon"]]]
