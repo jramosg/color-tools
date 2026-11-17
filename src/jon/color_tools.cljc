@@ -484,9 +484,23 @@
 ;; Color Record Type
 ;; =============================================================================
 
+#?(:cljs
+   (defn- plain-decimal
+     "Write the string JavaScript gives a number below 1e-6, such as
+      \"2.8e-14\", as the plain decimal the JVM prints. Any other string
+      passes through: color channels never reach the 1e21 where JavaScript
+      uses a positive exponent."
+     [s]
+     (if-let [[_ sign digit fraction exponent]
+              (re-matches #"(-?)(\d)(?:\.(\d+))?e-(\d+)" s)]
+       (str sign "0."
+            (str/join (repeat (dec (js/parseInt exponent 10)) "0"))
+            digit fraction)
+       s)))
+
 (defn- css-number [n]
   #?(:clj (.toPlainString (.stripTrailingZeros (bigdec (double n))))
-     :cljs (str n)))
+     :cljs (plain-decimal (str n))))
 
 (def ^:private min-alpha-decimal-places
   "Decimal places alpha keeps under :decimal-places. Alpha runs from 0 to

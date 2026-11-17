@@ -1931,6 +1931,12 @@
     (is (= "rgba(255,0,100,0.5)"
            (sut/->css [255 0 96 0.5] {:significant-digits 1}))))
 
+  (testing "Tiny values print as plain decimals on both platforms"
+    ;; JavaScript's Number#toString would give 2.8e-14 and 1e-7.
+    (is (= "rgba(0.000000000000028,0,0,1)" (sut/->css [2.8e-14 0 0 1])))
+    (is (= "rgba(0.0000001,0,0,1)" (sut/->css [1e-7 0 0 1])))
+    (is (= "rgba(255,0,0,0.0000005)" (sut/->css [255 0 0 5e-7]))))
+
   (testing "Existing numeric string exporters accept formatting options"
     (is (= "rgba(255,0,0,0.3333)"
            (sut/with-alpha "#ff0000" (/ 1.0 3) {:decimal-places 4})))
