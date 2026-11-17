@@ -50,8 +50,9 @@ All notable changes to this project will be documented in this file. This change
   `179.8571428571429` are not useful in a stylesheet
   ([#127](https://github.com/jramosg/color-tools/issues/127)).
 - `get-contrast-text` aims for `:aa` (4.5:1) by default, as `accessible?`
-  does, instead of 3:1
-  ([#54](https://github.com/jramosg/color-tools/issues/54)).
+  does, instead of 3:1. About one color in five now gets black text where it
+  got white, on mid-tones such as `#3498db`. Pass `:aa-large` to keep the 1.3
+  result ([#54](https://github.com/jramosg/color-tools/issues/54)).
 - `accessible-theme` picks `:on-primary`, `:on-secondary` and `:on-accent`
   with `get-contrast-text` at the theme's level, so the two agree
   ([#54](https://github.com/jramosg/color-tools/issues/54)).
