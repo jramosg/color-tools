@@ -476,7 +476,7 @@
 ;; =============================================================================
 
 (defprotocol Colorspace
-  "Protocol to convert a record into different Colorspace impls into a different Colorspace record -><colorspace>-space."
+  "Protocol to convert a record into different Colorspace impls. the convention is -><colorspace-impl>-space."
   (->rgb-space [c]
     "Convert c to a Color record, keeping fractional channels.
 
