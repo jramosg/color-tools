@@ -765,11 +765,20 @@
 ;; Color Mixing and Blending
 ;; =============================================================================
 
+#?(:clj
+   (defn- ratio->double
+     "The double nearest to the ratio `r`, from one division of two exact
+      doubles. Clojure's own (double 2/3) goes through 16 decimal digits and
+      is 0.6666666666666667, one ulp above the 0.6666666666666666 that
+      JavaScript computes, which flips a rounding tie."
+     [r]
+     (/ (double (numerator r)) (double (denominator r)))))
+
 (defn- inexact
   "Turn a JVM Ratio into a double and leave other numbers alone, so exact
    rational arithmetic does not leak Ratios and BigInts into results."
   [n]
-  #?(:clj (cond-> n (ratio? n) double)
+  #?(:clj (cond-> n (ratio? n) ratio->double)
      :cljs n))
 
 (defn mix
@@ -1391,7 +1400,8 @@
    Color results quantize once to 8-bit channels."
   ([colors position] (interpolate colors position :rgb))
   ([colors position color-space]
-   (let [color-space (or color-space :rgb)
+   (let [position (inexact position)
+         color-space (or color-space :rgb)
          n (count colors)
          _ (when (< n 2)
              (throw (ex-info "Need at least 2 colors to interpolate"

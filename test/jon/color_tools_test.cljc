@@ -2046,6 +2046,27 @@
     (let [[hue] (sut/rgb->hsl [0 24 1] {:full-precision? true})]
       (is (< (Math/abs (- 122.5 hue)) 1.0E-9)))))
 
+(deftest step-positions-round-the-same-on-both-platforms-test
+  ;; The position of a step is a ratio on the JVM, such as 5/6. Clojure's
+  ;; (double 5/6) is not the double JavaScript divides to, and one ulp
+  ;; decides a channel that is exactly halfway between two integers.
+  (testing "tints and tones round exact halves up"
+    (is (= ["#30f668" "#59f886" "#83faa5" "#acfbc3" "#d6fde1" "#ffffff"]
+           (vec (sut/tints "#06f44a" 6))))   ; red channel 213.5
+    (is (= ["#722eb1" "#753ea7" "#784f9e" "#7a5f94" "#7d708a" "#808080"]
+           (vec (sut/tones "#6f1dbb" 6)))))   ; green channel 111.5
+
+  (testing "gradient in HSV gives the 1.3 colors"
+    (is (= ["#72c1d8" "#4ebac9" "#2fb8ba" "#13ab9d"]
+           (vec (sut/gradient ["#72c1d8" "#13ab9d"] 4 :hsv)))))
+
+  (testing "A ratio position gives the color of the double"
+    ;; (/ 2 3) is a ratio on the JVM and a double in ClojureScript.
+    (doseq [space [:rgb :hsl :hsv]]
+      (is (= (sut/interpolate ["#72c1d8" "#13ab9d"] (/ 2.0 3) space)
+             (sut/interpolate ["#72c1d8" "#13ab9d"] (/ 2 3) space))
+          (str space)))))
+
 (def ^:private oklab-reference-rgb
   [[0 0 0] [255 255 255] [128 128 128] [255 0 0] [0 255 0] [0 0 255]
    [255 255 0] [0 255 255] [255 0 255] [255 128 0] [51 102 153]])
