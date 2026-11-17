@@ -1936,13 +1936,36 @@
            (sut/with-alpha "#ff0000" (/ 1.0 3) {:decimal-places 4})))
     (is (= "rgba(69.55,0,185.45,0.55)"
            (sut/alpha-blend "rgba(255,0,0,0.25)" "rgba(0,0,255,0.4)"
-                            {:decimal-places 2})))
-    (let [result (sut/alpha-blend "rgba(255,0,0,0.25)"
-                                  "rgba(0,0,255,0.4)")]
-      (is (< (max-channel-error
-              [(/ 38.25 0.55) 0 (/ 102 0.55) 0.55]
-              (sut/->rgba result))
-             1.0E-10))))
+                            {:decimal-places 2}))))
+
+  (testing "alpha-blend rounds translucent strings to 3 decimals"
+    (is (= "rgba(69.545,0,185.455,0.55)"
+           (sut/alpha-blend "rgba(255,0,0,0.25)" "rgba(0,0,255,0.4)")))
+    (is (= "rgba(179.857,97.714,105.429,0.7)"
+           (sut/alpha-blend "rgba(52,152,219,0.4)" "rgba(231,76,60,0.5)")))
+    ;; The red channel is 104.99999999999999 before rounding.
+    (is (= "rgba(105,0,150,0.51)"
+           (sut/alpha-blend "rgba(255,0,0,0.3)" "rgba(0,0,255,0.3)"))))
+
+  (testing "An explicit precision replaces the 3 decimal default"
+    (let [base "rgba(52,152,219,0.4)"
+          overlay "rgba(231,76,60,0.5)"]
+      (is (= "rgba(180,98,105,0.7)"
+             (sut/alpha-blend base overlay {:decimal-places 0})))
+      (is (= "rgba(179.85714,97.71429,105.42857,0.7)"
+             (sut/alpha-blend base overlay {:decimal-places 5})))
+      (is (= "rgba(179.9,97.71,105.4,0.7)"
+             (sut/alpha-blend base overlay {:significant-digits 4})))))
+
+  (testing "Only translucent alpha-blend strings round by default"
+    ;; Vectors keep full precision. So does with-alpha, whose string
+    ;; output only echoes its input.
+    (is (< (max-channel-error
+            [(/ 125.9 0.7) (/ 68.4 0.7) (/ 73.8 0.7) 0.7]
+            (sut/alpha-blend [52 152 219 0.4] [231 76 60 0.5]))
+           1.0E-10))
+    (is (= "rgba(255,0,0,0.12345)" (sut/with-alpha "#ff0000" 0.12345)))
+    (is (= "#4d00b3" (sut/alpha-blend "#ff0000" "rgba(0,0,255,0.7)"))))
 
   (testing "Ambiguous precision options throw at the export boundary"
     (let [options {:decimal-places 4 :significant-digits 3}]

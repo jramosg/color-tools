@@ -62,9 +62,11 @@ threshold decisions rather than comparing its displayed return value.
 
 `->css` exports numeric CSS with optional `:decimal-places` or
 `:significant-digits`. The string outputs of `with-alpha` and `alpha-blend`
-accept the same options in a final map. By default they preserve all channel
-digits; rounding does not pad with trailing zeros. `theme->css-vars` exports
-hex tokens, so decimal places do not apply.
+accept the same options in a final map. `->css` and `with-alpha` preserve all
+channel digits by default. `alpha-blend` computes its channels, so it rounds
+translucent strings to 3 decimal places unless you pass one of the options.
+Rounding does not pad with trailing zeros. `theme->css-vars` exports hex
+tokens, so decimal places do not apply.
 
 `:decimal-places` rounds the RGB channels. Alpha runs from 0 to 1, so it
 keeps at least 3 decimal places: whole-number channels leave the opacity
@@ -79,6 +81,13 @@ alone. `:significant-digits` applies to every coordinate.
 
 (with-alpha "#ff0000" (/ 1.0 3) {:decimal-places 4})
 ;=> "rgba(255,0,0,0.3333)"
+
+(alpha-blend "rgba(52,152,219,0.4)" "rgba(231,76,60,0.5)")
+;=> "rgba(179.857,97.714,105.429,0.7)"
+
+(alpha-blend "rgba(52,152,219,0.4)" "rgba(231,76,60,0.5)"
+             {:decimal-places 0})
+;=> "rgba(180,98,105,0.7)"
 ```
 
 ### Full precision without changing existing defaults
@@ -888,8 +897,9 @@ Generates tone steps. `count` defaults to `5`.
 
 Composites `overlay-color` over `base-color` using source-over alpha blending.
 Vector results retain fractional RGB channels and the output alpha.
-Translucent string output uses CSS `rgba()` and accepts `:decimal-places` or
-`:significant-digits` in `options`. Opaque hex output ignores decimal places.
+Translucent string output uses CSS `rgba()`, rounded to 3 decimal places.
+Pass `:decimal-places` or `:significant-digits` in `options` for another
+precision. Opaque hex output ignores them.
 
 ### `with-alpha`
 

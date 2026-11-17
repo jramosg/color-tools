@@ -44,6 +44,11 @@ All notable changes to this project will be documented in this file. This change
 - CSS numeric output preserves fractional channels by default, and CSS
   parsers accept decimal channels and exponent notation for round trips
   ([#8](https://github.com/jramosg/color-tools/issues/8)).
+- `alpha-blend` strings keep fractional channels, rounded to 3 decimal
+  places unless you pass `:decimal-places` or `:significant-digits`. 1.3
+  rounded them to whole numbers, and unrounded results such as
+  `179.8571428571429` are not useful in a stylesheet
+  ([#127](https://github.com/jramosg/color-tools/issues/127)).
 - `get-contrast-text` aims for `:aa` (4.5:1) by default, as `accessible?`
   does, instead of 3:1
   ([#54](https://github.com/jramosg/color-tools/issues/54)).

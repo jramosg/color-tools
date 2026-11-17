@@ -1288,11 +1288,27 @@
 ;; Alpha Blending and Compositing
 ;; =============================================================================
 
+(def ^:private blend-decimal-places
+  "Decimal places alpha-blend gives a translucent string unless the caller
+   picks a precision. Blending computes channels such as 179.857142857...,
+   and a CSS string is output, so it is rounded like output."
+  3)
+
+(defn- rounded-by-default
+  "Round CSS output to blend-decimal-places unless `options` already pick a
+   precision. Adding the default to :significant-digits would make the
+   pair ambiguous."
+  [options]
+  (cond-> options
+    (every? #(nil? (% options)) [:decimal-places :significant-digits])
+    (assoc :decimal-places blend-decimal-places)))
+
 (defn alpha-blend
   "Blend two colors with alpha compositing (overlay on top of base).
    Vectors keep fractional channels. Hex and Color results quantize once
-   to 8 bits. Translucent strings use CSS rgba(); options may contain
-   :decimal-places or :significant-digits to format those strings."
+   to 8 bits. Translucent strings use CSS rgba(), rounded to 3 decimal
+   places; options may contain :decimal-places or :significant-digits to
+   choose another precision."
   ([base-color overlay-color] (alpha-blend base-color overlay-color {}))
   ([base-color overlay-color options]
    (let [base-rgba (->rgba base-color)
@@ -1315,7 +1331,7 @@
        (string? base-color)
        (if (== a-out 1)
          (rgb->hex result)
-         (css-rgba (conj result a-out) options))
+         (css-rgba (conj result a-out) (rounded-by-default options)))
 
        (vector? base-color) (conj result a-out)))))
 
