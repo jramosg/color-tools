@@ -160,9 +160,9 @@
 (defn valid-rgb?
   "Check if vector is a valid RGB color"
   [rgb]
-   (and (vector? rgb)
-    (= 3 (count rgb))
-    (every? #(and (number? %) (<= 0 % 255)) rgb)))
+  (and (vector? rgb)
+       (= 3 (count rgb))
+       (every? #(and (number? %) (<= 0 % 255)) rgb)))
 
 (defn valid-rgba?
   "Check if vector is a valid RGBA color"
@@ -212,7 +212,6 @@
   (and (string? css-str)
        (boolean (re-matches css-rgb-pattern
                             (str/lower-case css-str)))))
-
 
 (defn valid-css-rgba?
   "Check if string is a valid CSS rgba() color"
@@ -477,10 +476,17 @@
 ;; =============================================================================
 
 (defprotocol Colorspace
-"Protocol to convert a record into different Colorspace impls 
+  "Protocol to convert a record into different Colorspace impls 
 into a different Colorspace record -><colorspace>-space."
-  (->rgb-space   [c])
-  (->oklab-space [c]))
+  (->rgb-space [c]
+    "Convert c to a Color record, keeping fractional channels.
+
+     Different colorspaces, including Oklab can describe colors outside the sRGB gamut, and Color cannot hold
+     channels below 0 or above 255. Oklab input is clamped per channel with
+     clamp-rgb, which shifts the hue and lightness of out-of-gamut colors.
+     Check in-gamut? first when that matters.")
+  (->oklab-space [c]
+    "Convert c to an Oklab record."))
 
 ;; =============================================================================
 ;; Color Record Type
@@ -1568,9 +1574,6 @@ into a different Colorspace record -><colorspace>-space."
       (when (and (<= duv max-duv) (<= 1000 cct 40000))
         (round cct 0)))))
 
-
-
-
 (defn rgb->oklab
   "Convert an sRGB vector [r g b], with channels from 0 to 255, to Oklab.
    Returns [l a b] without rounding: l uses a 0-1 lightness scale;
@@ -1615,10 +1618,9 @@ into a different Colorspace record -><colorspace>-space."
 (defn- valid-oklab?
   "Either oklab record or record of L a b"
   [oklab]
-    (and (vector? oklab)
-         (= 3 (count oklab))
-         (every? finite? oklab)))
-
+  (and (vector? oklab)
+       (= 3 (count oklab))
+       (every? finite? oklab)))
 
 (defn oklab->rgb
   "Convert Oklab coordinates [l a b] to an sRGB vector [r g b] on the 0 to
@@ -1739,27 +1741,25 @@ into a different Colorspace record -><colorspace>-space."
   [oklch]
   (oklab->hex (oklch->oklab oklch)))
 
-
 ;; =============================================================================
 ;; Oklab
 ;; =============================================================================
-(defrecord Oklab [L a b] 
-    Colorspace
-    (->rgb-space [this]
-        "a conversion can go outside of valid range. Check if the given oklab coordinates are 
-         in-gamut? prior to conversion."
-        (color (oklab->rgb [L a b])))
-    (->oklab-space [ths] ths))
-
+(defrecord Oklab [L a b alpha]
+  Colorspace
+  (->rgb-space [_]
+    (color (conj (clamp-rgb (oklab->rgb [L a b])) alpha)
+           {:full-precision? true}))
+  (->oklab-space [ths] ths))
 
 (extend-protocol Colorspace
-    Color 
-    (->rgb-space [ths] ths) 
-    (->oklab-space [c] 
-        (apply ->Oklab (rgb->oklab (->rgb c)))) 
+  Color
+  (->rgb-space [ths] ths)
+  (->oklab-space [c]
+    (let [[l a b] (rgb->oklab (->rgb c))]
+      (->Oklab l a b (:a c))))
 
-   #?(:clj String :cljs string) 
-    (->rgb-space [ths]
-        (normalize-color-input ths)) ;Color
-    (->oklab-space [c]
-         (->oklab-space (normalize-color-input c))))
+  #?(:clj String :cljs string)
+  (->rgb-space [ths]
+    (normalize-color-input ths)) ;Color
+  (->oklab-space [c]
+    (->oklab-space (normalize-color-input c))))

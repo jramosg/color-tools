@@ -2137,3 +2137,44 @@
             :let [estimate (sut/rgb->kelvin (sut/kelvin->rgb kelvin))]]
       (is (< (Math/abs (- estimate kelvin)) (* 0.05 kelvin))
           (pr-str [kelvin estimate])))))
+
+(def ^:private out-of-gamut-oklab
+  [[0.9 0.3 0.3] [1.01 0 0] [-0.01 0 0] [0.5 0.4 0] [0.7 0 -0.4]])
+
+(defn- round-trip [c] (sut/->rgb-space (sut/->oklab-space c)))
+
+(deftest colorspace-reference-colors
+  (doseq [rgb oklab-reference-rgb
+          :let [c (sut/color rgb)
+                oklab (sut/->oklab-space c)]]
+    (testing "Color -> Oklab matches rgb->oklab"
+      (is (close? (sut/rgb->oklab rgb) [(:L oklab) (:a oklab) (:b oklab)])
+          (pr-str rgb)))
+    (testing "Color -> Oklab -> Color returns the same channels"
+      (is (close? (sut/->rgb c) (sut/->rgb (round-trip c))) (pr-str rgb)))))
+
+(deftest colorspace-float-error
+  (testing "float error just past 255 is clamped instead of throwing"
+    (is (= "#f0ffff" (sut/->hex (round-trip "#f0ffff"))))))
+
+(deftest colorspace-out-of-gamut
+  (doseq [oklab out-of-gamut-oklab]
+    (testing "Unclamped out-of-gamut channels are rejected by color"
+      (is (thrown? #?(:clj AssertionError :cljs :default)
+                   (sut/color (sut/oklab->rgb oklab)))
+          (pr-str oklab)))
+    (testing "->rgb-space clamps them into 0-255 instead"
+      (let [c (sut/->rgb-space (apply sut/->Oklab (conj oklab 1.0)))]
+        (is (every? #(<= 0 % 255) (sut/->rgb c)) (pr-str oklab))))))
+
+(deftest colorspace-alpha
+  (testing "alpha at both ends and in between survives the round trip"
+    (doseq [a [0.0 0.5 1.0]]
+      (is (= a (:alpha (sut/->oklab-space (sut/color 10 20 30 a)))))
+      (is (= a (:a (round-trip (sut/color 10 20 30 a))))))))
+
+(deftest colorspace-identity
+  (let [ok (sut/->Oklab 0.5 0.1 -0.1 0.8)
+        c  (sut/color 10 20 30)]
+    (is (identical? ok (sut/->oklab-space ok)))
+    (is (identical? c (sut/->rgb-space c)))))
