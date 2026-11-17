@@ -6,6 +6,8 @@
       [clojure.string :as str]))
 
 (def color-names
+  "Map of lowercase CSS color names to hex strings, such as \"red\" to
+   \"#ff0000\"."
   {"red" "#ff0000"
    "green" "#008000"
    "blue" "#0000ff"
@@ -77,7 +79,11 @@
      (cond-> rounded
        (and (= decimals 0) (<= -2147483648 rounded 2147483647)) int))))
 
-(defn round-int [n]
+(defn round-int
+  "Round a number to the nearest integer. Same as `(round n 0)`: returns a
+   32-bit integer when it fits and a double otherwise. Ties round toward
+   positive infinity."
+  [n]
   (round n 0))
 
 (defn- round-significant
@@ -142,6 +148,8 @@
           coords)))
 
 (defn parse-int
+  "Parse the string `s` as an integer in `radix` (10 by default). Throws on
+   invalid input on the JVM and returns NaN in ClojureScript."
   ([s] (parse-int s 10))
   ([s radix]
    #?(:clj (Integer/parseInt s (or radix 10))
