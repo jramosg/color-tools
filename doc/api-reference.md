@@ -192,6 +192,19 @@ and value are between 0 and 100.
 
 Returns true for supported CSS `rgb()` strings. Comma-separated,
 space-separated, case-insensitive, and extra-whitespace forms are accepted.
+It checks the format, not the range of the numbers: a channel above 255 is
+still valid format, and `parse-css-color-components` returns `nil` for it.
+
+```clojure
+(valid-css-rgb? "rgb(255, 0, 0)")
+;=> true
+
+(valid-css-rgb? "rgb(300, 0, 0)")
+;=> true
+
+(parse-css-color-components "rgb(300, 0, 0)")
+;=> nil
+```
 
 ### `valid-css-rgba?`
 
@@ -200,7 +213,16 @@ space-separated, case-insensitive, and extra-whitespace forms are accepted.
 ```
 
 Returns true for supported CSS `rgba()` strings, including decimal alpha
-values such as `.5`.
+values such as `.5`. Like `valid-css-rgb?` it does not check that the channels
+are at most 255, but it does reject an alpha outside 0 to 1.
+
+```clojure
+(valid-css-rgba? "rgba(300, 0, 0, 0.5)")
+;=> true
+
+(valid-css-rgba? "rgba(255, 0, 0, 1.5)")
+;=> false
+```
 
 ## Format Conversion
 
@@ -348,7 +370,8 @@ when the string is unsupported or contains out-of-range values.
 (parse-css-rgb css-str) => [r g b]
 ```
 
-Parses a valid CSS `rgb()` string.
+Parses a valid CSS `rgb()` string. Throws `ex-info` for a channel above 255,
+which `valid-css-rgb?` accepts.
 
 ### `parse-css-rgba`
 
@@ -356,7 +379,8 @@ Parses a valid CSS `rgb()` string.
 (parse-css-rgba css-str) => [r g b a]
 ```
 
-Parses a valid CSS `rgba()` string.
+Parses a valid CSS `rgba()` string. Throws `ex-info` for a channel above 255,
+which `valid-css-rgba?` accepts.
 
 ## Color Records and Universal Conversion
 

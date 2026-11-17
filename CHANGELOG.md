@@ -75,8 +75,9 @@ All notable changes to this project will be documented in this file. This change
   `179.8571428571429` are not useful in a stylesheet
   ([#127](https://github.com/jramosg/color-tools/issues/127)).
 - `get-contrast-text` aims for `:aa` (4.5:1) by default, as `accessible?`
-  does, instead of 3:1
-  ([#54](https://github.com/jramosg/color-tools/issues/54)).
+  does, instead of 3:1. About one color in five now gets black text where it
+  got white, on mid-tones such as `#3498db`. Pass `:aa-large` to keep the 1.3
+  result ([#54](https://github.com/jramosg/color-tools/issues/54)).
 - `accessible-theme` picks `:on-primary`, `:on-secondary` and `:on-accent`
   with `get-contrast-text` at the theme's level, so the two agree
   ([#54](https://github.com/jramosg/color-tools/issues/54)).
@@ -124,6 +125,10 @@ All notable changes to this project will be documented in this file. This change
   `(rgb->hsl [0 24 1])` was `[122 100 5]` there and `[123 100 5]` on the JVM.
   Both platforms now round halves up, as the JVM always did
   ([#134](https://github.com/jramosg/color-tools/issues/134)).
+- `gradient` gave different colors on the JVM and in ClojureScript for some
+  inputs, in every color space: about one random color pair in 70. Both
+  platforms now agree
+  ([#137](https://github.com/jramosg/color-tools/issues/137)).
 - `split-complementary` added the base hue twice, producing incorrect
   palettes for nonzero base hues. It now rotates by 180 degrees plus or
   minus the requested angle

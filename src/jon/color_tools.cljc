@@ -216,14 +216,18 @@
 (def ^:private css-rgba-pattern (css-color-pattern "rgba" 4))
 
 (defn valid-css-rgb?
-  "Check if string is a valid CSS rgb() color"
+  "Check if string is a CSS rgb() color in a supported format. Checks the
+   format only: \"rgb(300,0,0)\" is valid, and parse-css-color-components
+   returns nil for it."
   [css-str]
   (and (string? css-str)
        (boolean (re-matches css-rgb-pattern
                             (str/lower-case css-str)))))
 
 (defn valid-css-rgba?
-  "Check if string is a valid CSS rgba() color"
+  "Check if string is a CSS rgba() color in a supported format, with an
+   alpha from 0 to 1. Does not check the channels: \"rgba(300,0,0,0.5)\" is
+   valid, and parse-css-color-components returns nil for it."
   [css-str]
   (and (string? css-str)
        (boolean
@@ -476,7 +480,8 @@
         rgba? (conj (parse-double (nth matches 3)))))))
 
 (defn parse-css-rgb
-  "Parse CSS rgb() string to RGB vector"
+  "Parse CSS rgb() string to RGB vector. Throws ex-info for a channel above
+   255, which valid-css-rgb? accepts."
   [css-str]
   {:pre [(valid-css-rgb? css-str)]}
   (if-let [rgb (parse-css-color-components css-str)]
@@ -484,7 +489,8 @@
     (throw (ex-info "Invalid CSS RGB format" {:input css-str}))))
 
 (defn parse-css-rgba
-  "Parse CSS rgba() string to RGBA vector"
+  "Parse CSS rgba() string to RGBA vector. Throws ex-info for a channel above
+   255, which valid-css-rgba? accepts."
   [css-str]
   {:pre [(valid-css-rgba? css-str)]}
   (if-let [rgba (parse-css-color-components css-str)]
@@ -765,11 +771,20 @@
 ;; Color Mixing and Blending
 ;; =============================================================================
 
+#?(:clj
+   (defn- ratio->double
+     "The double nearest to the ratio `r`, from one division of two exact
+      doubles. Clojure's own (double 2/3) goes through 16 decimal digits and
+      is 0.6666666666666667, one ulp above the 0.6666666666666666 that
+      JavaScript computes, which flips a rounding tie."
+     [r]
+     (/ (double (numerator r)) (double (denominator r)))))
+
 (defn- inexact
   "Turn a JVM Ratio into a double and leave other numbers alone, so exact
    rational arithmetic does not leak Ratios and BigInts into results."
   [n]
-  #?(:clj (cond-> n (ratio? n) double)
+  #?(:clj (cond-> n (ratio? n) ratio->double)
      :cljs n))
 
 (defn mix
@@ -1391,7 +1406,8 @@
    Color results quantize once to 8-bit channels."
   ([colors position] (interpolate colors position :rgb))
   ([colors position color-space]
-   (let [color-space (or color-space :rgb)
+   (let [position (inexact position)
+         color-space (or color-space :rgb)
          n (count colors)
          _ (when (< n 2)
              (throw (ex-info "Need at least 2 colors to interpolate"
