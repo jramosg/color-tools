@@ -382,8 +382,8 @@
             "triadic              #db3498 #98db34"
             "tetradic             #cb34db #db7734 #45db34"
             "analogous            #3445db #7734db #cb34db"
-            "split-complementary  #db3445 #dbca34"
-            "monochromatic        #0f3a57 #1f6594 #318fce #73b0d9 #b1d1e7"]
+            "split-complementary  #db3445 #dbcb34"
+            "monochromatic        #0f3a57 #1f6594 #328fcd #73b0d8 #b1d1e7"]
            (lines "palette" "#3498db")))
     (is (str/includes? (out "palette" "#3498db" "--json")
                        "\"triadic\": [\"#db3498\", \"#98db34\"],")))

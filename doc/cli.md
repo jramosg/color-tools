@@ -198,7 +198,7 @@ numbers.
 
 ```console
 $ color-tools convert '#3498db' --to hsl --json
-[204.0718562874251, 69.8744769874477, 53.13725490196078]
+[204.07185628742516, 69.8744769874477, 53.13725490196079]
 $ color-tools contrast '#3498db' '#ffffff' --json
 {
   "ratio": 3.15,
@@ -394,7 +394,7 @@ $ color-tools desaturate '#3498db' 0.2
 $ color-tools rotate '#3498db' 180
 #db7734
 $ color-tools rotate '#3498db' -30
-#34dbca
+#34dbcb
 $ color-tools invert '#3498db'
 #cb6724
 $ color-tools grayscale '#3498db'
@@ -463,8 +463,8 @@ complementary        #db7734
 triadic              #db3498 #98db34
 tetradic             #cb34db #db7734 #45db34
 analogous            #3445db #7734db #cb34db
-split-complementary  #db3445 #dbca34
-monochromatic        #0f3a57 #1f6594 #318fce #73b0d9 #b1d1e7
+split-complementary  #db3445 #dbcb34
+monochromatic        #0f3a57 #1f6594 #328fcd #73b0d8 #b1d1e7
 $ color-tools palette '#3498db' --type analogous --count 5 --angle 15
 #346edb
 #3445db
@@ -473,7 +473,7 @@ $ color-tools palette '#3498db' --type analogous --count 5 --angle 15
 #a134db
 $ color-tools palette '#3498db' --type monochromatic --count 3
 #0f3a57
-#318fce
+#328fcd
 #b1d1e7
 ```
 
