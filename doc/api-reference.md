@@ -396,6 +396,9 @@ which `valid-css-rgba?` accepts.
 Creates a `Color` record from any supported input, RGB channels, or RGBA
 channels. Existing arities truncate RGB channels. The two-argument options
 form can preserve fractions with `:full-precision? true`.
+An `Oklab` record is the exception: it converts through `->rgb-space`, which
+keeps fractional channels, so the result can differ from whole numbers in the
+last digits. Use `->hex` or `round-coords` for clean output.
 
 ```clojure
 (color "#ff0000")
