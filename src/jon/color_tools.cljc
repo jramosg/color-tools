@@ -480,7 +480,7 @@
   (->rgb-space [c]
     "Convert c to a Color record, keeping fractional channels.
 
-     Different colorspaces, including Oklab can describe colors outside the sRGB gamut, and Color cannot hold
+     Different colorspaces, including Oklab, can describe colors outside the sRGB gamut, and Color cannot hold
      channels below 0 or above 255. Oklab input is clamped per channel with
      clamp-rgb, which shifts the hue and lightness of out-of-gamut colors.")
   (->oklab-space [c]
