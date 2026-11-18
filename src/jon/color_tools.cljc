@@ -1617,6 +1617,11 @@
       (cond-> (- (* 1.055 (Math/pow abs-c (/ 1 2.4))) 0.055)
         (neg? c) -))))
 
+(defn- ->lab-vec
+  "Unwrap an Oklab record to [l a b], dropping alpha. Vectors pass through."
+  [oklab]
+  (if (map? oklab) [(:L oklab) (:a oklab) (:b oklab)] oklab))
+
 (defn- valid-oklab?
   [oklab]
   (and (vector? oklab)
@@ -1624,8 +1629,9 @@
        (every? finite? oklab)))
 
 (defn oklab->rgb
-  "Convert Oklab coordinates [l a b] to an sRGB vector [r g b] on the 0 to
-   255 scale. The inverse of rgb->oklab.
+  "Convert Oklab coordinates [l a b], or an Oklab record, to an sRGB vector
+   [r g b] on the 0 to 255 scale. The inverse of rgb->oklab. A record's
+   alpha is dropped; use ->rgb-space to keep it.
 
    Returns unrounded floats and does not clamp. Colors outside the sRGB
    gamut produce channels below 0 or above 255; check with in-gamut?. Use
@@ -1636,8 +1642,8 @@
    (oklab->rgb (rgb->oklab rgb)) returns rgb to within float error. Checks
    the input shape with an assertion precondition."
   [oklab]
-  {:pre [(valid-oklab? oklab)]}
-  (let [[l a b] oklab
+  {:pre [(valid-oklab? (->lab-vec oklab))]}
+  (let [[l a b] (->lab-vec oklab)
         l-root (+ (* 0.9999999984505198 l)
                   (* 0.39633779217376786 a)
                   (* 0.2158037580607588 b))
@@ -1671,7 +1677,8 @@
   1e-4)
 
 (defn in-gamut?
-  "Check whether Oklab coordinates [l a b] fall inside the sRGB gamut, so
+  "Check whether Oklab coordinates [l a b], or an Oklab record, fall inside
+   the sRGB gamut, so
    that oklab->rgb returns every channel between 0 and 255. Allows a small
    tolerance for float error, so colors converted from valid RGB stay in
    gamut."
@@ -1680,8 +1687,9 @@
           (oklab->rgb oklab)))
 
 (defn oklab->hex
-  "Convert Oklab coordinates [l a b] to a hex string. Clamps channels
-   outside the sRGB gamut with clamp-rgb, then rounds each to 8 bits."
+  "Convert Oklab coordinates [l a b], or an Oklab record, to a hex string.
+   Clamps channels outside the sRGB gamut with clamp-rgb, then rounds each
+   to 8 bits. A record's alpha is dropped."
   [oklab]
   (rgb->hex (clamp-rgb (oklab->rgb oklab))))
 
@@ -1700,13 +1708,14 @@
        (not (neg? (second oklch)))))
 
 (defn oklab->oklch
-  "Convert Oklab coordinates [l a b] to OKLCh [l c h], the polar form:
-   l is unchanged, c is chroma (0 and up) and h is hue in degrees, from 0
-   up to 360. Colors with chroma below 1e-6 get hue 0; CSS calls that hue
-   `none`. Returns unrounded values."
+  "Convert Oklab coordinates [l a b], or an Oklab record, to OKLCh [l c h],
+   the polar form: l is unchanged, c is chroma (0 and up) and h is hue in
+   degrees, from 0 up to 360. Colors with chroma below 1e-6 get hue 0; CSS
+   calls that hue `none`. Returns unrounded values. A record's alpha is
+   dropped."
   [oklab]
-  {:pre [(valid-oklab? oklab)]}
-  (let [[l a b] oklab
+  {:pre [(valid-oklab? (->lab-vec oklab))]}
+  (let [[l a b] (->lab-vec oklab)
         c (Math/sqrt (+ (* a a) (* b b)))
         h (if (< c achromatic-chroma)
             0.0
@@ -1748,8 +1757,8 @@
 
 (defrecord Oklab [L a b alpha]
   Colorspace
-  (->rgb-space [_]
-    (color (conj (clamp-rgb (oklab->rgb [L a b])) alpha)
+  (->rgb-space [ths]
+    (color (conj (clamp-rgb (oklab->rgb ths)) alpha)
            {:full-precision? true}))
   (->oklab-space [ths] ths))
 

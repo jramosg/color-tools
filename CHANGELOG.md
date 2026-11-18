@@ -3,6 +3,9 @@ All notable changes to this project will be documented in this file. This change
 
 ## Unreleased
 ### Added
+- `oklab->rgb`, `oklab->hex`, `in-gamut?` and `oklab->oklch` accept an
+  `Oklab` record as well as an `[l a b]` vector. They return vectors or
+  strings, so the record's alpha is dropped (#7).
 - `rgb->hsl`, `rgb->hsv`, `hsl->rgb` and `hsv->rgb` accept
   `{:full-precision? true}` in a second argument to preserve computed
   doubles. `(color input options)` and `(->color r g b a options)` accept

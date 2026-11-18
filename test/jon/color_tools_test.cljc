@@ -2173,6 +2173,21 @@
       (is (= a (:alpha (sut/->oklab-space (sut/color 10 20 30 a)))))
       (is (= a (:a (round-trip (sut/color 10 20 30 a))))))))
 
+(deftest oklab-record-accepted-by-vector-fns
+  (let [ok  (sut/->oklab-space "#336699")
+        lab [(:L ok) (:a ok) (:b ok)]]
+    (testing "records give the same result as their [l a b] vector"
+      (is (= (sut/oklab->rgb lab) (sut/oklab->rgb ok)))
+      (is (= (sut/oklab->oklch lab) (sut/oklab->oklch ok)))
+      (is (= (sut/oklab->hex lab) (sut/oklab->hex ok)))
+      (is (= (sut/in-gamut? lab) (sut/in-gamut? ok)))
+      (is (false? (sut/in-gamut? (sut/->Oklab 0.9 0.3 0.3 1.0)))))
+    (testing "vector-returning functions drop alpha"
+      (is (= 3 (count (sut/oklab->rgb (assoc ok :alpha 0.5))))))
+    (testing "invalid records still fail the precondition"
+      (is (thrown? #?(:clj AssertionError :cljs :default)
+                   (sut/oklab->rgb (sut/->Oklab nil 0 0 1.0)))))))
+
 (deftest colorspace-identity
   (let [ok (sut/->Oklab 0.5 0.1 -0.1 0.8)
         c  (sut/color 10 20 30)]

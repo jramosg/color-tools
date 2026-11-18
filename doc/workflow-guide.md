@@ -447,6 +447,13 @@ Check each step with `in-gamut?` to catch that:
 ;=> false
 ```
 
+These functions also take the `Oklab` record that `->oklab-space` returns:
+
+```clojure
+(color/in-gamut? (color/->oklab-space "#336699"))
+;=> true
+```
+
 ### Hue and Chroma in OKLCh
 
 OKLCh splits Oklab into lightness, chroma and hue. Rotating the hue keeps

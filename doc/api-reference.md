@@ -1018,6 +1018,10 @@ The result keeps full precision and is not clamped. Colors outside the sRGB
 gamut produce channels below `0` or above `255`; check them with
 [`in-gamut?`](#in-gamut).
 
+`oklab->rgb`, `oklab->hex`, `in-gamut?` and `oklab->oklch` also accept an
+`Oklab` record, such as one from `->oklab-space`. They return vectors or
+strings, so the record's alpha is dropped; use `->rgb-space` to keep it.
+
 ```clojure
 (color/round-coords (color/oklab->rgb [0.628 0.2249 0.1258])
                     {:decimal-places 2})
