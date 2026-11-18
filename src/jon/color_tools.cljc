@@ -502,13 +502,21 @@
 ;; =============================================================================
 
 (defprotocol Colorspace
-  "Protocol to convert into different colorspaces. The convention is -><colorspace-impl>-space."
+  "Convert a value into another colorspace. Implementations follow the
+   -><colorspace>-space naming convention."
   (->rgb-space [c]
     "Convert c to a Color record, keeping fractional channels.
 
-     Different colorspaces, including Oklab, can describe colors outside the sRGB gamut, and Color cannot hold
-     channels below 0 or above 255. Oklab input is clamped per channel with
-     clamp-rgb, which shifts the hue and lightness of out-of-gamut colors.")
+     Oklab can describe colors outside the sRGB gamut, and Color cannot
+     hold channels below 0 or above 255. Oklab input is clamped per
+     channel with clamp-rgb, which shifts the hue and lightness of
+     out-of-gamut colors. Throws when the coordinates are so large that
+     the conversion overflows.
+
+     Channels keep full precision, so a round trip through another
+     colorspace can differ from the original in the last digits. Round
+     the result with round-coords, or pass :decimal-places to ->css, for
+     display.")
   (->oklab-space [c]
     "Convert c to an Oklab record."))
 
@@ -631,6 +639,7 @@
     (vector? color-input) (if (= 4 (count color-input))
                             (color-from-rgba color-input)
                             (color-from-rgb color-input))
+    (satisfies? Colorspace color-input) (->rgb-space color-input)
     :else (throw (ex-info "Invalid color input" {:input color-input
                                                  :reason :unknown-format}))))
 
@@ -1689,16 +1698,32 @@
       (cond-> (- (* 1.055 (Math/pow abs-c (/ 1 2.4))) 0.055)
         (neg? c) -))))
 
-(defn- ->lab-vec
-  "Unwrap an Oklab record to [l a b], dropping alpha. Vectors pass through."
-  [oklab]
-  (if (map? oklab) [(:L oklab) (:a oklab) (:b oklab)] oklab))
+(declare oklab->rgb)
+
+(defrecord Oklab [L a b alpha]
+  Colorspace
+  (->rgb-space [ths]
+    (let [rgb (oklab->rgb ths)]
+      (when-not (every? finite? rgb)
+        (throw (ex-info "Oklab coordinates are too large to convert"
+                        {:oklab ths})))
+      (color (conj (clamp-rgb rgb) alpha) {:full-precision? true})))
+  (->oklab-space [ths] ths))
 
 (defn- valid-oklab?
   [oklab]
   (and (vector? oklab)
        (= 3 (count oklab))
        (every? finite? oklab)))
+
+(defn- oklab-coords
+  "Return [l a b] for an Oklab record, dropping alpha, or for a vector.
+   Checks the shape with an assertion."
+  [oklab]
+  (let [lab (cond-> oklab
+              (instance? Oklab oklab) ((juxt :L :a :b)))]
+    (assert (valid-oklab? lab) "Oklab must be a record or [l a b]")
+    lab))
 
 (defn oklab->rgb
   "Convert Oklab coordinates [l a b], or an Oklab record, to an sRGB vector
@@ -1714,8 +1739,7 @@
    (oklab->rgb (rgb->oklab rgb)) returns rgb to within float error. Checks
    the input shape with an assertion precondition."
   [oklab]
-  {:pre [(valid-oklab? (->lab-vec oklab))]}
-  (let [[l a b] (->lab-vec oklab)
+  (let [[l a b] (oklab-coords oklab)
         l-root (+ (* 0.9999999984505198 l)
                   (* 0.39633779217376786 a)
                   (* 0.2158037580607588 b))
@@ -1750,10 +1774,9 @@
 
 (defn in-gamut?
   "Check whether Oklab coordinates [l a b], or an Oklab record, fall inside
-   the sRGB gamut, so
-   that oklab->rgb returns every channel between 0 and 255. Allows a small
-   tolerance for float error, so colors converted from valid RGB stay in
-   gamut."
+   the sRGB gamut, so that oklab->rgb returns every channel between 0 and
+   255. Allows a small tolerance for float error, so colors converted from
+   valid RGB stay in gamut."
   [oklab]
   (every? #(<= (- gamut-tolerance) % (+ 255 gamut-tolerance))
           (oklab->rgb oklab)))
@@ -1786,8 +1809,7 @@
    calls that hue `none`. Returns unrounded values. A record's alpha is
    dropped."
   [oklab]
-  {:pre [(valid-oklab? (->lab-vec oklab))]}
-  (let [[l a b] (->lab-vec oklab)
+  (let [[l a b] (oklab-coords oklab)
         c (Math/sqrt (+ (* a a) (* b b)))
         h (if (< c achromatic-chroma)
             0.0
@@ -1826,13 +1848,6 @@
 ;; =============================================================================
 ;; Colorspace implementations
 ;; =============================================================================
-
-(defrecord Oklab [L a b alpha]
-  Colorspace
-  (->rgb-space [ths]
-    (color (conj (clamp-rgb (oklab->rgb ths)) alpha)
-           {:full-precision? true}))
-  (->oklab-space [ths] ths))
 
 (extend-protocol Colorspace
   Color
