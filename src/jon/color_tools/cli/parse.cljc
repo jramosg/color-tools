@@ -217,6 +217,13 @@
                          {:full-precision? true})
                alpha)})))
 
+(defn- oklab-rgb [oklab]
+  (let [rgb (ct/oklab->rgb oklab)]
+    (when (some #(or (NaN? %) (infinite? %)) rgb)
+      (throw (ex-info "Oklab coordinates are too large to convert"
+                      {:type ::overflow})))
+    rgb))
+
 (defn- oklab-color
   "Build a color from Oklab coordinates. Colors outside sRGB are clamped;
    :in-gamut? records whether that happened."
@@ -226,7 +233,7 @@
      :oklab oklab
      :in-gamut? (ct/in-gamut? oklab)
      :color (apply-alpha
-             (ct/color (ct/clamp-rgb (ct/oklab->rgb oklab))
+             (ct/color (ct/clamp-rgb (oklab-rgb oklab))
                        {:full-precision? true})
              alpha)}
     {:error "alpha must be from 0 to 1"}))
@@ -318,13 +325,18 @@
    and OKLCh input also carries :oklab and :in-gamut?."
   [input]
   (let [s (str/trim input)]
-    (assoc (or (library-color s)
-               (alpha-hex-color s)
-               (kelvin-color s)
-               (function-color s)
-               (bare-color s)
-               {:error "not a color"})
-           :input input)))
+    (try
+      (assoc (or (library-color s)
+                 (alpha-hex-color s)
+                 (kelvin-color s)
+                 (function-color s)
+                 (bare-color s)
+                 {:error "not a color"})
+             :input input)
+      (catch #?(:clj clojure.lang.ExceptionInfo :cljs :default) e
+        (if (= ::overflow (:type (ex-data e)))
+          {:input input :error (ex-message e)}
+          (throw e))))))
 
 (defn parse-color
   "Like try-color, but throws a usage error for input that isn't a color."

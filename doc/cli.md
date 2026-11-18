@@ -340,6 +340,10 @@ as pure red.
 `validate` answers "is this a color?" with an exit code, and reports the
 detected format. `--as` also requires a format.
 
+Coordinates whose conversion overflows are invalid input. Validation reports
+them with exit 1 and continues through the rest of a batch; conversion
+commands instead exit 2 with an input error.
+
 ```console
 $ color-tools validate '#3498db'
 input   #3498db
