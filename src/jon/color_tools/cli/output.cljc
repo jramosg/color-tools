@@ -113,8 +113,8 @@
       :hsl (ct/rgb->hsl rgb {:full-precision? true})
       :hsv (ct/rgb->hsv rgb {:full-precision? true})
       :lab (ct/rgb->lab rgb)
-      :oklab (ct/rgb->oklab rgb)
-      :oklch (ct/rgb->oklch rgb)
+      :oklab ((juxt :L :a :b) (ct/->oklab-space color))
+      :oklch (ct/oklab->oklch (ct/->oklab-space color))
       :name (ct/->name color)
       :kelvin (ct/rgb->kelvin rgb))))
 
@@ -165,7 +165,8 @@
         css-options (or (rounding-options options places) {})
         walk (fn walk [x]
                (cond
-                 (ct/color? x) (cell x to true round-fn css-options)
+                 (and (record? x) (satisfies? ct/Colorspace x))
+                 (cell x to true round-fn css-options)
                  (instance? Shown x) (cell (:color x) (:fmt x) (:swatch? x)
                                            round-fn css-options)
                  (plain-map? x) (ordered-map (fn [[k v]] [k (walk v)]) x)

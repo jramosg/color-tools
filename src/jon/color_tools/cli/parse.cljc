@@ -218,12 +218,13 @@
                alpha)})))
 
 (defn- oklab-color
-  "Build a color from Oklab coordinates. Colors outside sRGB are clamped;
-   :in-gamut? records whether that happened."
+  "Keep native coordinates as :source and an sRGB projection as :color.
+   :in-gamut? records whether the projection had to be clamped."
   [fmt oklab alpha]
   (if (valid-alpha? alpha)
     {:format fmt
      :oklab oklab
+     :source (apply ct/oklab (conj oklab (or alpha 1.0)))
      :in-gamut? (ct/in-gamut? oklab)
      :color (apply-alpha
              (ct/color (ct/clamp-rgb (ct/oklab->rgb oklab))

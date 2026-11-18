@@ -36,20 +36,23 @@
 ;; Arguments
 ;; =============================================================================
 
-(defn- checked-color
+(defn- warn-clipped! [{:keys [input color in-gamut?]}]
+  (when (false? in-gamut?)
+    (*warn* (str input " is outside sRGB; clamped to " (ct/->hex color)))))
+
+(defn- checked-color!
   "Parse a color and warn when it had to be clamped into sRGB."
   [s]
-  (let [{:keys [color in-gamut?] :as parsed} (parse/parse-color s)]
-    (when (false? in-gamut?)
-      (*warn* (str s " is outside sRGB; clamped to " (ct/->hex color))))
+  (let [parsed (parse/parse-color s)]
+    (warn-clipped! parsed)
     parsed))
 
 (def color-param
-  {:key :color :label "COLOR" :parse (comp :color checked-color)})
+  {:key :color :label "COLOR" :parse (comp :color checked-color!)})
 
 (def ^:private parsed-color-param
   "A color argument whose command also needs the input text and format."
-  {:key :color :label "COLOR" :parse checked-color})
+  {:key :color :label "COLOR" :parse checked-color!})
 
 (defn- variadic
   "Make `param` take `min-count` or more values."
@@ -63,7 +66,7 @@
 (defn- hex-swatch [color]
   (out/shown color :hex true))
 
-(defn- info [{{:keys [input color]} :color} {:keys [level]}]
+(defn- info [{{:keys [input color source]} :color} {:keys [level]}]
   (array-map
    :input input
    :hex (hex-swatch color)
@@ -71,8 +74,8 @@
    :hsl (out/shown color :hsl)
    :hsv (out/shown color :hsv)
    :lab (out/shown color :lab)
-   :oklab (out/shown color :oklab)
-   :oklch (out/shown color :oklch)
+   :oklab (out/shown (or source color) :oklab)
+   :oklch (out/shown (or source color) :oklch)
    :alpha (:a color)
    :name (ct/->name color)
    :luminance (ct/luminance color)
@@ -130,7 +133,7 @@
               "Fractional channels and HSL/HSV precision are preserved.\n"
               "--to kelvin prints none for colors with no meaningful\n"
               "temperature. lab uses the D65 white point, unlike CSS lab().")
-    :params [(variadic color-param 1)]
+    :params [(variadic (assoc parsed-color-param :parse parse/parse-color) 1)]
     :each? true
     :examples ["convert '#3498db' --to hsl"
                "convert 'rgb(10.7,20.2,30.9)' --to rgb --json"
@@ -146,7 +149,10 @@
            normalize-hex name->hex oklab->rgb oklab->hex oklab->oklch
            oklch->oklab oklch->rgb oklch->hex clamp-rgb round-coords
            oklab ->Oklab map->Oklab ->oklab-space ->rgb-space]
-    :run (fn [{:keys [color]} _] color)}
+    :run (fn [{:keys [color]} {:keys [to]}]
+           (if (#{:oklab :oklch} to)
+             (or (:source color) (:color color))
+             (do (warn-clipped! color) (:color color))))}
 
    {:name "validate"
     :group :inspect

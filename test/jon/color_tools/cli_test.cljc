@@ -832,3 +832,21 @@
       (is (= ["#333333" "#808080" "#cccccc"]
              (json "palette" "#808080" "--type" "monochromatic"
                    "--count" "3"))))))
+
+(deftest native-colorspace-conversions-test
+  (testing "out-of-sRGB coordinates survive native-space conversions"
+    (doseq [[input expected]
+            [["oklab(0.7 0.4 0.4)" [0.7 0.4 0.4]]
+             ["oklch(0.7 0.4 150 / 0.25)"
+              (ct/oklch->oklab [0.7 0.4 150])]]]
+      (let [actual (reader/read-string
+                    (out "convert" input "--to" "oklab" "--json"))]
+        (is (every? #(< (Math/abs %) 1.0E-12) (map - expected actual))))
+      (let [actual (reader/read-string
+                    (out "convert" input "--to" "oklch" "--json"))
+            expected (ct/oklab->oklch expected)]
+        (is (every? #(< (Math/abs %) 1.0E-12) (map - expected actual))))))
+  (testing "sRGB output still warns when native coordinates are clipped"
+    (let [{:keys [out err]} (run "convert" "oklab(0.7 0.4 0.4)")]
+      (is (= "#ff0000\n" out))
+      (is (str/includes? err "outside sRGB; clamped to #ff0000")))))
