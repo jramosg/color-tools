@@ -26,8 +26,8 @@ All notable changes to this project will be documented in this file. This change
     and 2 on invalid input, for use in scripts and CI
   - `info` and `text-color` pick text at AA by default; `--level` selects
     AA, AA for large text, or AAA
-  - Every public function has a command; a test keeps the
-    [coverage table](doc/cli.md#library-coverage) current
+  - The [CLI guide](doc/cli.md#library-coverage) maps color operations to
+    commands, with examples and output formats
 - `oklab` builds an `Oklab` record from `l`, `a` and `b`. Alpha defaults
   to 1.0 ([#7](https://github.com/jramosg/color-tools/issues/7)).
 - `->oklab-space` converts a color to an `Oklab` record, which keeps alpha.

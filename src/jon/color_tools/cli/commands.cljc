@@ -392,8 +392,15 @@
       (vec (repeatedly count random))
       (random))))
 
-(defn- interpolate [{:keys [colors]} {:keys [at space]}]
-  (let [colors (mapv ct/->rgb colors)
+(defn- interpolation-inputs
+  "Let the library quantize hex results. Coordinate output keeps fractions."
+  [colors to]
+  (if (or (nil? to) (#{:hex :hex8} to))
+    colors
+    (mapv ct/->rgba colors)))
+
+(defn- interpolate [{:keys [colors]} {:keys [at space to]}]
+  (let [colors (interpolation-inputs colors to)
         results (mapv #(precise-color (ct/interpolate colors % space))
                       (or at [0.5]))]
     (if (next results)
@@ -439,9 +446,10 @@
     :examples ["gradient '#ff0000' '#0000ff' --steps 10 --space hsl"
                "gradient red yellow green --steps 7 --json"]
     :api '[gradient]
-    :run (fn [{:keys [colors]} {:keys [steps space]}]
+    :run (fn [{:keys [colors]} {:keys [steps space to]}]
            (mapv precise-color
-                 (ct/gradient (mapv ct/->rgb colors) (or steps 5) space)))}
+                 (ct/gradient (interpolation-inputs colors to)
+                              (or steps 5) space)))}
 
    {:name "interpolate"
     :group :generate
