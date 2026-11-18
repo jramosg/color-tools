@@ -1,3 +1,8 @@
 {:paths ["src"]
  ;; bbin install io.github.jramosg/color-tools
- :bbin/bin {color-tools {:main-opts ["-m" "jon.color-tools.main"]}}}
+ :bbin/bin {color-tools {:main-opts ["-m" "jon.color-tools.main"]}}
+ :tasks
+ {test {:doc "Run the shared .cljc test suite on Babashka"
+        :extra-paths ["test"]
+        :requires ([jon.bb-runner :as runner])
+        :task (runner/run-tests!)}}}

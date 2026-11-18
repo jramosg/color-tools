@@ -74,6 +74,9 @@ jobs:
           clojure -M:npm
           test/cli-smoke.sh node npm/color-tools.js
 
+      - name: Run Babashka tests
+        run: bb test
+
   demo-build:
     name: Build demo
     runs-on: ubuntu-latest

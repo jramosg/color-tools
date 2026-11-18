@@ -69,7 +69,7 @@ npx http-server demo/public -p 8000
 - **Palette Generation**: Color harmonies from color theory
 - **Accessibility**: WCAG-compliant contrast checking and accessible color finding
 - **Color Analysis**: Brightness, warmth, and vibrancy checks
-- **Cross-platform**: Works in both Clojure (JVM) and ClojureScript (browser/Node.js)
+- **Cross-platform**: Clojure (JVM), ClojureScript (browser/Node.js), and Babashka
 - **Command line**: [`color-tools`](doc/cli.md) runs every feature from a
   terminal, a script or CI
 
@@ -471,7 +471,7 @@ Key namespaces:
 
 ### Running Tests
 
-The tests live in `.cljc` files and run on both platforms:
+The shared `.cljc` tests run on Clojure, ClojureScript and Babashka:
 
 ```bash
 # Clojure (JVM)
@@ -479,6 +479,9 @@ clojure -T:build test
 
 # ClojureScript (Node.js)
 clojure -M:test-cljs
+
+# Babashka
+bb test
 ```
 
 The ClojureScript run needs Node.js on your `PATH`.
@@ -582,6 +585,7 @@ for authentication and publishing options.
 
 - **Clojure (JVM)**: Supports the full API
 - **ClojureScript**: Supports the full API in browsers and Node.js
+- **Babashka**: Supports the full API; `bb test` runs the shared suite in CI
 
 ## Contributing
 

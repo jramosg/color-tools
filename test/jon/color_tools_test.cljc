@@ -2178,7 +2178,9 @@
             :let [[_ _ h] (sut/oklab->oklch oklab)]]
       (is (<= 0.0 h) (pr-str oklab))
       (is (< h 360.0) (pr-str oklab))
-      (is (not (and (zero? h) (neg? (/ 1.0 h)))) (pr-str oklab)))))
+      (is (not #?(:clj (neg? (Double/compare (double h) 0.0))
+                  :cljs (js/Object.is h -0.0)))
+          (pr-str oklab)))))
 
 (deftest oklch->oklab-test
   (testing "Round trip sRGB through OKLCh"
