@@ -14,11 +14,6 @@ All notable changes to this project will be documented in this file. This change
   an `Oklab` record too
   ([#7](https://github.com/jramosg/color-tools/issues/7)).
 
-- A seeded expected-value fixture checks shared color calculations on each
-  runtime. Regenerate it with
-  `clojure -M:test -m jon.generate-runtime-fixture`
-  ([#141](https://github.com/jramosg/color-tools/issues/141)).
-
 ### Fixed
 - Hex and Color interpolation stabilize computed half-channel ties before
   rounding. The HSV midpoint of `#001801` and `#003002` is now `#002402`
