@@ -516,6 +516,46 @@ Converts any supported color input to HSL.
 
 Converts any supported color input to HSV.
 
+### `->oklab-space`
+
+```clojure
+(->oklab-space color) => Oklab
+```
+
+Converts a color to an `Oklab` record with the fields `:L`, `:a`, `:b` and
+`:alpha`. Unlike the `[l a b]` vector from `rgb->oklab`, the record keeps the
+alpha channel. `:a` here is the green-red axis, not alpha as on `Color`.
+Passing an `Oklab` returns it unchanged.
+
+```clojure
+(let [ok (color/->oklab-space "#336699")]
+  (color/in-gamut? ok))
+;=> true
+```
+
+### `->rgb-space`
+
+```clojure
+(->rgb-space color) => Color
+```
+
+Converts a color, such as an `Oklab` record, back to a `Color` record.
+Channels keep full precision, so a round trip through Oklab can differ from
+the original in the last digits; round the result with `round-coords`, or
+pass `:decimal-places` to `->css`, for display.
+
+An `Oklab` outside the sRGB gamut is clamped per channel with `clamp-rgb`,
+which shifts its hue and lightness. Coordinates so large that the conversion
+overflows throw an `ex-info`.
+
+The other color functions, such as `color`, `->rgb`, `->hex` and `->css`,
+call `->rgb-space` on an `Oklab`, so they accept the record too.
+
+```clojure
+(color/->hex (color/->oklab-space "#336699"))
+;=> "#336699"
+```
+
 ## Color Manipulation
 
 ### `lighten`
@@ -1052,8 +1092,9 @@ gamut produce channels below `0` or above `255`; check them with
 [`in-gamut?`](#in-gamut).
 
 `oklab->rgb`, `oklab->hex`, `in-gamut?` and `oklab->oklch` also accept an
-`Oklab` record, such as one from `->oklab-space`. They return vectors or
-strings, so the record's alpha is dropped; use `->rgb-space` to keep it.
+`Oklab` record, such as one from [`->oklab-space`](#-oklab-space). Their
+results have no alpha, so the record's alpha is dropped; use
+[`->rgb-space`](#-rgb-space) to keep it.
 
 ```clojure
 (color/round-coords (color/oklab->rgb [0.628 0.2249 0.1258])

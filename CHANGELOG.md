@@ -2,12 +2,19 @@
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- `->oklab-space` and `->rgb-space` convert a color to an `Oklab` record,
+  which keeps alpha, and back to a `Color`, clamping out-of-gamut channels.
+  `->rgb-space` keeps fractional channels, including those in CSS strings
+  ([#7](https://github.com/jramosg/color-tools/issues/7)).
+- `oklab->rgb`, `oklab->hex`, `in-gamut?` and `oklab->oklch` accept an
+  `Oklab` record as well as an `[l a b]` vector. Their results have no
+  alpha, so the record's alpha is dropped. `color`, `->rgb`, `->hex`,
+  `->css` and the other color functions accept an `Oklab` record too
+  ([#7](https://github.com/jramosg/color-tools/issues/7)).
 
 ## [1.4.0] - 2026-11-17
 ### Added
-- `oklab->rgb`, `oklab->hex`, `in-gamut?` and `oklab->oklch` accept an
-  `Oklab` record as well as an `[l a b]` vector. They return vectors or
-  strings, so the record's alpha is dropped (#7).
 - `rgb->hsl`, `rgb->hsv`, `hsl->rgb` and `hsv->rgb` accept
   `{:full-precision? true}` in a second argument to preserve computed
   doubles. `(color input options)` and `(->color r g b a options)` accept
