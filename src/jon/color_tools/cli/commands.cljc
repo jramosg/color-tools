@@ -334,15 +334,16 @@
               "overlay onto the base and keeps the resulting alpha.")
     :params [(assoc color-param :key :base :label "BASE")
              (assoc color-param :key :overlay :label "OVERLAY")]
-    :opts [[:mode "multiply (default), screen, overlay or alpha"]]
+    :opts [{:id :mode
+            :choices [:multiply :screen :overlay :alpha]
+            :default :multiply
+            :doc "multiply (default), screen, overlay or alpha"}]
     :examples ["blend '#ff0000' '#0000ff' --mode screen"
                "blend '#ffffff' 'rgba(255,0,0,0.5)' --mode alpha"]
     :api '[blend-multiply blend-screen blend-overlay alpha-blend]
     :run (fn [{:keys [base overlay]} {:keys [mode]}]
-           (let [mode (parse/parse-choice "--mode" (keys blend-modes)
-                                          (or mode "multiply"))]
-             (precise-color
-              ((blend-modes mode) (ct/->rgba base) (ct/->rgba overlay)))))}
+           (precise-color
+            ((blend-modes mode) (ct/->rgba base) (ct/->rgba overlay))))}
 
    (adjust-command :mix "tint" ct/tint "Mix a color with white")
    (adjust-command :mix "shade" ct/shade "Mix a color with black")
@@ -493,8 +494,6 @@
       (apply array-map result))))
 
 (defn- accessible [{:keys [color]} {:keys [on level]}]
-  (when-not on
-    (throw (parse/usage-error "--on BACKGROUND is required")))
   (let [level (or level :aa)
         found (ct/find-accessible-color on color level)]
     (when-not found
@@ -571,14 +570,8 @@
 
 (defn- theme
   "One theme, or with --mode both a map of the :light and the :dark one."
-  [{:keys [color]} {:keys [mode level prefix vars format dark-selector]}]
-  (let [mode (parse/parse-choice "--mode" [:light :dark :both]
-                                 (or mode "light"))
-        _ (when (and dark-selector (not= :both mode))
-            (throw (parse/usage-error
-                    "--dark-selector needs --mode both")))
-        prefix (some-> prefix css-prefix)
-        build (fn [mode]
+  [{:keys [color]} {:keys [mode level prefix vars format]}]
+  (let [build (fn [mode]
                 (let [theme (ct/accessible-theme
                              color {:mode mode :level (or level :aa)})]
                   (warn-below-level theme)
@@ -623,7 +616,8 @@
               "saturation; a color that already passes is unchanged.\n"
               "Exits 1 and prints none when no lightness is enough.")
     :params [color-param]
-    :opts [[:on "The background color (required)"] :level]
+    :opts [{:id :on :required? true
+            :doc "The background color (required)"} :level]
     :examples ["accessible '#3498db' --on '#ffffff'"
                "accessible '#3498db' --on '#ffffff' --level aaa"]
     :api '[find-accessible-color]
@@ -663,8 +657,10 @@
               "with a class or attribute.")
     :css? true
     :params [color-param]
-    :opts [[:mode "light (default), dark or both"] :level :prefix :selector
-           :dark-selector :vars
+    :opts [{:id :mode :choices [:light :dark :both] :default :light
+            :doc "light (default), dark or both"}
+           :level {:id :prefix :parse css-prefix} :selector
+           {:id :dark-selector :requires {:mode :both}} :vars
            [:format "text (default), json, edn or css"]]
     :examples ["theme '#3498db'"
                "theme '#3498db' --mode dark --level aaa --json"
@@ -711,9 +707,6 @@
    :muted ct/muted?})
 
 (defn- is [{:keys [predicate color]} {:keys [threshold]}]
-  (when (and threshold (not (#{:vibrant :muted} predicate)))
-    (throw (parse/usage-error
-            "--threshold applies only to vibrant and muted")))
   (let [f (predicates predicate)
         result (if threshold (f color threshold) (f color))]
     (verdict result result)))
@@ -757,6 +750,12 @@
               :parse #(parse/parse-choice "PROPERTY" (keys predicates) %)}
              (variadic color-param 1)]
     :each? true
+    :check-options
+    (fn [args {:keys [threshold]}]
+      (when (and threshold (seq args)
+                 (not (#{"vibrant" "muted"} (str/lower-case (first args)))))
+        (throw (parse/usage-error
+                "--threshold applies only to vibrant and muted"))))
     :opts [[:threshold "Saturation, from 0 to 100, that counts as vibrant"]]
     :examples ["is dark '#2c3e50'"
                "is vibrant '#3498db' --threshold 80"

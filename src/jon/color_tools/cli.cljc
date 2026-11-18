@@ -152,13 +152,14 @@
         commands/commands))
 
 (defn- command-options
-  "The command's own option specs. An entry may be [id doc] to describe the
-   option in the command's terms."
+  "A command can override an option's help, choices, parser or default."
   [command]
   (map (fn [entry]
-         (if (vector? entry)
+         (cond
+           (map? entry) (merge (option-by-id (:id entry)) entry)
+           (vector? entry)
            (assoc (option-by-id (first entry)) :doc (second entry))
-           (option-by-id entry)))
+           :else (option-by-id entry)))
        (:opts command)))
 
 (defn- usage-line [command]
@@ -359,6 +360,45 @@
 ;; Binding arguments
 ;; =============================================================================
 
+(defn- prepare-options
+  "Validate command configuration once, before expanding stdin."
+  [command args opts]
+  (check-options command opts)
+  (let [overrides (into {} (keep #(when (map? %) [(:id %) %]))
+                        (:opts command))
+        specs (command-options command)
+        prepared
+        (reduce
+         (fn [result {:keys [id long choices required?] :as spec}]
+           (let [value (get opts id)
+                 parser (get-in overrides [id :parse])]
+             (cond
+               (some? value)
+               (assoc result id
+                      (cond
+                        (and choices (not (keyword? value)))
+                        (parse/parse-choice long choices value)
+                        parser (parser value)
+                        :else value))
+
+               required?
+               (throw (parse/usage-error
+                       (str long " " (:arg spec) " is required")))
+
+               (contains? spec :default) (assoc result id (:default spec))
+               :else result)))
+         opts specs)]
+    (doseq [{:keys [id requires]} specs
+            :when (contains? prepared id)
+            [other value] requires
+            :when (not= value (get prepared other))]
+      (throw (parse/usage-error
+              (str (:long (option-by-id id)) " needs "
+                   (:long (option-by-id other)) " " (name value)))))
+    (when-let [check (:check-options command)]
+      (check args prepared))
+    prepared))
+
 (declare bind)
 
 (defn- stdin-entries
@@ -556,8 +596,8 @@
 ;; =============================================================================
 
 (defn- run-command [command args opts process]
-  (check-options command opts)
-  (let [warnings (volatile! [])
+  (let [opts (prepare-options command args opts)
+        warnings (volatile! [])
         {:keys [runs stdin]} (expand-stdin command args (:stdin process))
         results (binding [commands/*warn* #(vswap! warnings conj %)]
                   (mapv #(run-once command % opts stdin) runs))
@@ -572,6 +612,16 @@
      :err (str/join (map #(str program ": warning: " % "\n")
                          (distinct @warnings)))}))
 
+(defn- completion-options [command]
+  (let [options (concat (map option-by-id global-options)
+                        (command-options command))
+        by-id (into {} (map (juxt :id identity)) options)]
+    (map (fn [id]
+           (cond-> (by-id id)
+             (and (= :format id) (not (:css? command)))
+             (update :choices #(vec (remove #{:css} %)))))
+         (distinct (map :id options)))))
+
 (defn- completion-script
   "The completion script for the shell named by `args`."
   [args]
@@ -583,10 +633,21 @@
             (str "Usage: " program " completions bash|zsh|fish"))))
   (completions/script
    (parse/parse-choice "SHELL" completions/shells (first args))
-   {:commands (concat commands/commands
+   {:commands (concat (mapcat (fn [command]
+                                (map #(assoc command :name %)
+                                     (cons (:name command)
+                                           (:aliases command))))
+                              commands/commands)
                       [{:name "help" :summary "Show help"}
                        {:name "completions"
                         :summary "Print a shell completion script"}])
+    :global-options (map option-by-id global-options)
+    :command-options
+    (into {"help" (map option-by-id global-options)
+           "completions" (map option-by-id global-options)}
+          (for [command commands/commands
+                n (cons (:name command) (:aliases command))]
+            [n (completion-options command)]))
     :options (map #(cond-> % (:complete %) (assoc :choices (:complete %)))
                   option-specs)
     :first-arguments (into {"help" (map :name commands/commands)

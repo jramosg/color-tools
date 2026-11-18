@@ -87,7 +87,9 @@ color-tools --version
 ### Shell completion
 
 `color-tools completions` prints a script that completes commands, options
-and their values, such as the formats of `--to`.
+and their values, such as the formats of `--to`. Suggestions use the selected
+command's options and modes. Aliases and global options before the command
+are supported.
 
 ```bash
 # bash: add to ~/.bashrc
@@ -288,6 +290,10 @@ Commands that take a list of colors, such as `gradient`, read all of stdin
 as that list.
 
 ## Exit codes
+
+Command options are checked before stdin is read. An empty input file still
+reports invalid modes, missing required options and conflicting settings as
+usage errors (exit 2), including with `--quiet`.
 
 | Code | Meaning |
 | --- | --- |
