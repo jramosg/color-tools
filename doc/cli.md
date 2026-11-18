@@ -277,6 +277,10 @@ as that list.
 
 ## Exit codes
 
+Command options are checked before stdin is read. An empty input file still
+reports invalid modes, missing required options and conflicting settings as
+usage errors (exit 2), including with `--quiet`.
+
 | Code | Meaning |
 | --- | --- |
 | `0` | Success. For checks: the check passed. |

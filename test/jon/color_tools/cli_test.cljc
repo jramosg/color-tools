@@ -832,3 +832,22 @@
       (is (= ["#333333" "#808080" "#cccccc"]
              (json "palette" "#808080" "--type" "monochromatic"
                    "--count" "3"))))))
+
+(deftest configuration-before-stdin-test
+  (doseq [[args message]
+          [[["theme" "-" "--mode" "sepia"] "--mode must be one of"]
+           [["blend" "-" "red" "--mode" "sepia"] "--mode must be one of"]
+           [["accessible" "-"] "--on BACKGROUND is required"]
+           [["is" "dark" "-" "--threshold" "3"]
+            "--threshold applies only to vibrant and muted"]
+           [["theme" "-" "--prefix" "bad prefix"]
+            "--prefix may contain only"]
+           [["theme" "-" "--dark-selector" ".dark"]
+            "--dark-selector needs --mode both"]]]
+    (doseq [stdin ["" "red\n"]]
+      (let [{:keys [exit out err]} (apply run {:stdin stdin} args)]
+        (is (= [2 ""] [exit out]) (pr-str args))
+        (is (str/includes? err message) err)))
+    (let [result (cli/run
+                  args {:stdin #(throw (ex-info "stdin was read" {}))})]
+      (is (str/includes? (:err result) message) (pr-str result)))))
