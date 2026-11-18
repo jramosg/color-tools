@@ -1698,17 +1698,7 @@
       (cond-> (- (* 1.055 (Math/pow abs-c (/ 1 2.4))) 0.055)
         (neg? c) -))))
 
-(declare oklab->rgb)
-
-(defrecord Oklab [l a b alpha]
-  Colorspace
-  (->rgb-space [ths]
-    (let [rgb (oklab->rgb ths)]
-      (when-not (every? finite? rgb)
-        (throw (ex-info "Oklab coordinates are too large to convert"
-                        {:oklab ths})))
-      (color (conj (clamp-rgb rgb) alpha) {:full-precision? true})))
-  (->oklab-space [ths] ths))
+(defrecord Oklab [l a b alpha])
 
 (defn- valid-oklab?
   [oklab]
@@ -1860,6 +1850,16 @@
 ;; =============================================================================
 
 (extend-protocol Colorspace
+  Oklab
+  (->rgb-space [ths]
+    (let [rgb (oklab->rgb ths)]
+      (when-not (every? finite? rgb)
+        (throw (ex-info "Oklab coordinates are too large to convert"
+                        {:oklab ths})))
+      (color (conj (clamp-rgb rgb) (:alpha ths))
+             {:full-precision? true})))
+  (->oklab-space [ths] ths)
+
   Color
   (->rgb-space [ths] ths)
   (->oklab-space [c]
