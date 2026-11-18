@@ -263,7 +263,7 @@ Find accessible alternatives by adjusting lightness:
 
 ;; For large text (lower requirements)
 (color/find-accessible-color bg desired-text :aa-large)
-;=> "#841c10"  ; The large-text threshold allows a lighter red
+;=> "#841b10"  ; The large-text threshold allows a lighter red
 ```
 
 ### Generating Accessible Theme Tokens
@@ -344,7 +344,7 @@ Create palettes using variations of a single hue:
 
 ```clojure
 (color/monochromatic "#3498db" 5)
-;=> ["#0f3a57" "#1f6594" "#318fce" "#73b0d9" "#b1d1e7"]
+;=> ["#0f3a57" "#1f6594" "#328fcd" "#73b0d8" "#b1d1e7"]
 ```
 
 ### Theme Generation

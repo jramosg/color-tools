@@ -62,9 +62,11 @@ threshold decisions rather than comparing its displayed return value.
 
 `->css` exports numeric CSS with optional `:decimal-places` or
 `:significant-digits`. The string outputs of `with-alpha` and `alpha-blend`
-accept the same options in a final map. By default they preserve all channel
-digits; rounding does not pad with trailing zeros. `theme->css-vars` exports
-hex tokens, so decimal places do not apply.
+accept the same options in a final map. `->css` and `with-alpha` preserve all
+channel digits by default. `alpha-blend` computes its channels, so it rounds
+translucent strings to 3 decimal places unless you pass one of the options.
+Rounding does not pad with trailing zeros. `theme->css-vars` exports hex
+tokens, so decimal places do not apply.
 
 `:decimal-places` rounds the RGB channels. Alpha runs from 0 to 1, so it
 keeps at least 3 decimal places: whole-number channels leave the opacity
@@ -79,6 +81,13 @@ alone. `:significant-digits` applies to every coordinate.
 
 (with-alpha "#ff0000" (/ 1.0 3) {:decimal-places 4})
 ;=> "rgba(255,0,0,0.3333)"
+
+(alpha-blend "rgba(52,152,219,0.4)" "rgba(231,76,60,0.5)")
+;=> "rgba(179.857,97.714,105.429,0.7)"
+
+(alpha-blend "rgba(52,152,219,0.4)" "rgba(231,76,60,0.5)"
+             {:decimal-places 0})
+;=> "rgba(180,98,105,0.7)"
 ```
 
 ### Full precision without changing existing defaults
@@ -183,6 +192,19 @@ and value are between 0 and 100.
 
 Returns true for supported CSS `rgb()` strings. Comma-separated,
 space-separated, case-insensitive, and extra-whitespace forms are accepted.
+It checks the format, not the range of the numbers: a channel above 255 is
+still valid format, and `parse-css-color-components` returns `nil` for it.
+
+```clojure
+(valid-css-rgb? "rgb(255, 0, 0)")
+;=> true
+
+(valid-css-rgb? "rgb(300, 0, 0)")
+;=> true
+
+(parse-css-color-components "rgb(300, 0, 0)")
+;=> nil
+```
 
 ### `valid-css-rgba?`
 
@@ -191,7 +213,16 @@ space-separated, case-insensitive, and extra-whitespace forms are accepted.
 ```
 
 Returns true for supported CSS `rgba()` strings, including decimal alpha
-values such as `.5`.
+values such as `.5`. Like `valid-css-rgb?` it does not check that the channels
+are at most 255, but it does reject an alpha outside 0 to 1.
+
+```clojure
+(valid-css-rgba? "rgba(300, 0, 0, 0.5)")
+;=> true
+
+(valid-css-rgba? "rgba(255, 0, 0, 1.5)")
+;=> false
+```
 
 ## Format Conversion
 
@@ -339,7 +370,8 @@ when the string is unsupported or contains out-of-range values.
 (parse-css-rgb css-str) => [r g b]
 ```
 
-Parses a valid CSS `rgb()` string.
+Parses a valid CSS `rgb()` string. Throws `ex-info` for a channel above 255,
+which `valid-css-rgb?` accepts.
 
 ### `parse-css-rgba`
 
@@ -347,7 +379,8 @@ Parses a valid CSS `rgb()` string.
 (parse-css-rgba css-str) => [r g b a]
 ```
 
-Parses a valid CSS `rgba()` string.
+Parses a valid CSS `rgba()` string. Throws `ex-info` for a channel above 255,
+which `valid-css-rgba?` accepts.
 
 ## Color Records and Universal Conversion
 
@@ -604,9 +637,8 @@ Finds the variant of `target-color` nearest to it in lightness that meets the
 requested contrast level against `background`. `level` defaults to `:aa`.
 
 It keeps the hue and saturation of the target and tries each whole HSL
-lightness from 0 to 100, starting at the target's own and moving outward.
-When a darker and a lighter variant are equally near, it tries the darker one
-first.
+lightness from 0 to 100, nearest the target's own lightness first. When a
+darker and a lighter variant are equally near, it tries the darker one first.
 
 ```clojure
 (find-accessible-color "#ffffff" "#3498db")
@@ -888,8 +920,9 @@ Generates tone steps. `count` defaults to `5`.
 
 Composites `overlay-color` over `base-color` using source-over alpha blending.
 Vector results retain fractional RGB channels and the output alpha.
-Translucent string output uses CSS `rgba()` and accepts `:decimal-places` or
-`:significant-digits` in `options`. Opaque hex output ignores decimal places.
+Translucent string output uses CSS `rgba()`, rounded to 3 decimal places.
+Pass `:decimal-places` or `:significant-digits` in `options` for another
+precision. Opaque hex output ignores them.
 
 ### `with-alpha`
 

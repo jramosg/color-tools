@@ -76,13 +76,13 @@ npx http-server demo/public -p 8000
 Add the following dependency to your `deps.edn`:
 
 ```clojure
-{:deps com.github.jramosg/color-tools {:mvn/version "1.3.0"}}
+{:deps com.github.jramosg/color-tools {:mvn/version "1.4.0"}}
 ```
 
 Or for Leiningen, add to your `project.clj`:
 
 ```clojure
-[com.github.jramosg/color-tools "1.3.0"]
+[com.github.jramosg/color-tools "1.4.0"]
 ```
 
 ## Quick Start
@@ -306,7 +306,7 @@ The parser accepts common CSS color string formats:
 
 ;; Monochromatic palette
 (color/monochromatic "#3498db" 5)
-;=> ["#0f3a57" "#1f6594" "#318fce" "#73b0d9" "#b1d1e7"]
+;=> ["#0f3a57" "#1f6594" "#328fcd" "#73b0d8" "#b1d1e7"]
 
 ;; Generate palettes by strategy
 (color/generate-palette :triadic "#e74c3c")

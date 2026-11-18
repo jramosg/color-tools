@@ -4,7 +4,7 @@
             [deps-deploy.deps-deploy :as dd]))
 
 (def lib 'com.github.jramosg/color-tools)
-(def version "1.3.0")
+(def version "1.4.0")
 #_ ; alternatively, use MAJOR.MINOR.COMMITS:
 (def version (format "1.0.%s" (b/git-count-revs nil)))
 (def class-dir "target/classes")
@@ -24,8 +24,8 @@
    [:url "https://github.com/jramosg/color-tools"]
    [:licenses
     [:license
-     [:name "Eclipse Public License"]
-     [:url "http://www.eclipse.org/legal/epl-v10.html"]]]
+     [:name "Eclipse Public License 1.0"]
+     [:url "https://www.eclipse.org/legal/epl-v10.html"]]]
    [:developers
     [:developer
      [:name "Jon"]]]
