@@ -571,6 +571,8 @@
       (rgb->hex [r g b])
       (css-rgba [r g b a] {}))))
 
+(defrecord Oklab [L a b alpha])
+
 (defn color?
   "Check if value is a Color record"
   [x]
@@ -1697,8 +1699,6 @@
       (* 12.92 c)
       (cond-> (- (* 1.055 (Math/pow abs-c (/ 1 2.4))) 0.055)
         (neg? c) -))))
-
-(defrecord Oklab [L a b alpha])
 
 (defn- valid-oklab?
   [oklab]
