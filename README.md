@@ -461,6 +461,22 @@ clojure -M:test-cljs
 
 The ClojureScript run needs Node.js on your `PATH`.
 
+The shared tests compare each runtime with one committed expected-value
+fixture. It covers conversions, adjustments, palettes, gradients, blending,
+themes and contrast, including the rounding regressions from #134 and #137.
+Strings and booleans must match exactly; numeric results allow a relative
+and absolute tolerance of `1e-9` for floating-point noise.
+
+To intentionally update the expected values, regenerate them on the JVM:
+
+```bash
+clojure -M:test -m jon.generate-runtime-fixture
+```
+
+Review the diff in `test/fixtures/runtime_parity.edn` before committing it.
+The generator uses seed `141113`; tests read the fixture without regenerating
+it, so a platform regression cannot silently change its expectations.
+
 ### Code Quality
 
 #### Formatting
