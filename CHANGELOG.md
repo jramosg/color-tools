@@ -2,6 +2,17 @@
 All notable changes to this project will be documented in this file. This change log follows the conventions of [keepachangelog.com](http://keepachangelog.com/).
 
 ## Unreleased
+### Added
+- `oklab` builds an `Oklab` record from `l`, `a` and `b`. Alpha defaults
+  to 1.0 ([#7](https://github.com/jramosg/color-tools/issues/7)).
+- `->oklab-space` converts a color to an `Oklab` record, which keeps alpha.
+  `->rgb-space` converts it back to a `Color` and clamps out-of-gamut
+  channels ([#7](https://github.com/jramosg/color-tools/issues/7)).
+- `oklab->rgb`, `oklab->hex`, `in-gamut?` and `oklab->oklch` accept an
+  `Oklab` record as well as an `[l a b]` vector, and ignore its alpha.
+  `color`, `->rgb`, `->hex`, `->css` and the other color functions accept
+  an `Oklab` record too
+  ([#7](https://github.com/jramosg/color-tools/issues/7)).
 
 ## [1.4.0] - 2026-11-17
 ### Added
