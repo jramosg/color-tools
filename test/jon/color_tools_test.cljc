@@ -2067,6 +2067,17 @@
              (sut/interpolate ["#72c1d8" "#13ab9d"] (/ 2 3) space))
           (str space)))))
 
+(deftest hsv-interpolation-midpoint-tie-test
+  (testing "the exact 1.5 blue channel rounds up on every runtime"
+    (let [colors ["#001801" "#003002"]]
+      (is (= "#002402" (sut/interpolate colors 0.5 :hsv)))
+      (is (= "#002402" (nth (sut/gradient colors 7 :hsv) 3)))
+      (is (= "#002402"
+             (sut/->hex (sut/interpolate (mapv sut/color colors)
+                                         0.5 :hsv))))
+      (let [rgb (sut/interpolate (mapv sut/->rgb colors) 0.5 :hsv)]
+        (is (< (max-channel-error [0 36 1.5] rgb) 1.0E-12))))))
+
 (def ^:private oklab-reference-rgb
   [[0 0 0] [255 255 255] [128 128 128] [255 0 0] [0 255 0] [0 0 255]
    [255 255 0] [0 255 255] [255 0 255] [255 128 0] [51 102 153]])
@@ -2167,7 +2178,9 @@
             :let [[_ _ h] (sut/oklab->oklch oklab)]]
       (is (<= 0.0 h) (pr-str oklab))
       (is (< h 360.0) (pr-str oklab))
-      (is (not (and (zero? h) (neg? (/ 1.0 h)))) (pr-str oklab)))))
+      (is (not #?(:clj (neg? (Double/compare (double h) 0.0))
+                  :cljs (js/Object.is h -0.0)))
+          (pr-str oklab)))))
 
 (deftest oklch->oklab-test
   (testing "Round trip sRGB through OKLCh"

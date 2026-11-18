@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Run the color-tools CLI from a checkout. Uses Babashka when it is
+# installed, for a fast start, and the Clojure CLI otherwise.
+set -euo pipefail
+
+source="${BASH_SOURCE[0]}"
+while [ -L "$source" ]; do
+  dir="$(cd -P "$(dirname "$source")" && pwd)"
+  source="$(readlink "$source")"
+  case "$source" in
+    /*) ;;
+    *) source="$dir/$source" ;;
+  esac
+done
+root="$(cd -P "$(dirname "$source")/.." && pwd)"
+
+if command -v bb >/dev/null 2>&1; then
+  exec bb --classpath "$root/src" --main jon.color-tools.main "$@"
+else
+  exec clojure -Sdeps "{:deps {color-tools/local {:local/root \"$root\"}}}" \
+    -M -m jon.color-tools.main "$@"
+fi

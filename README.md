@@ -69,7 +69,9 @@ npx http-server demo/public -p 8000
 - **Palette Generation**: Color harmonies from color theory
 - **Accessibility**: WCAG-compliant contrast checking and accessible color finding
 - **Color Analysis**: Brightness, warmth, and vibrancy checks
-- **Cross-platform**: Works in both Clojure (JVM) and ClojureScript (browser/Node.js)
+- **Cross-platform**: Clojure (JVM), ClojureScript (browser/Node.js), and Babashka
+- **Command line**: [`color-tools`](doc/cli.md) runs every feature from a
+  terminal, a script or CI
 
 ## Installation
 
@@ -139,6 +141,24 @@ Or for Leiningen, add to your `project.clj`:
 (color/theme->css-vars theme)
 ;=> {"--ct-primary" "#3498db", "--ct-on-primary" "#000000", ...}
 ```
+
+## Command Line
+
+The whole library is also a command, `color-tools`, for terminals, shell
+scripts and CI. It needs no Clojure code and runs on Node.js, Babashka or
+the JVM.
+
+```bash
+color-tools contrast '#3498db' '#ffffff' --level aa   # exits 1: 3.15:1
+color-tools convert '#3498db' --to oklch
+color-tools palette '#3498db' --type triadic
+color-tools gradient '#ff0000' '#0000ff' --steps 10 --space hsl
+color-tools theme '#3498db' --mode dark --format css > theme.css
+```
+
+It prints text with color swatches on a terminal, JSON or EDN for scripts,
+and reads colors from stdin. See the [CLI guide](doc/cli.md) for
+installation, every command and CI recipes.
 
 ## Usage Examples
 
@@ -444,12 +464,14 @@ The parser accepts common CSS color string formats:
 Key namespaces:
 
 - `jon.color-tools` - Main API with all color manipulation functions
+- `jon.color-tools.cli` - The command-line interface; see the
+  [CLI guide](doc/cli.md)
 
 ## Development
 
 ### Running Tests
 
-The tests live in `.cljc` files and run on both platforms:
+The shared `.cljc` tests run on Clojure, ClojureScript and Babashka:
 
 ```bash
 # Clojure (JVM)
@@ -457,9 +479,31 @@ clojure -T:build test
 
 # ClojureScript (Node.js)
 clojure -M:test-cljs
+
+# Babashka
+bb test
 ```
 
 The ClojureScript run needs Node.js on your `PATH`.
+
+Run the CLI from the checkout with `bin/color-tools`, or
+`clojure -M:cli`. `clojure -M:npm` compiles it to `npm/color-tools.js`.
+
+The shared tests compare each runtime with one committed expected-value
+fixture. It covers conversions, adjustments, palettes, gradients, blending,
+themes and contrast, including the rounding regressions from #134 and #137.
+Strings and booleans must match exactly; numeric results allow a relative
+and absolute tolerance of `1e-9` for floating-point noise.
+
+To intentionally update the expected values, regenerate them on the JVM:
+
+```bash
+clojure -M:test -m jon.generate-runtime-fixture
+```
+
+Review the diff in `test/fixtures/runtime_parity.edn` before committing it.
+The generator uses seed `141113`; tests read the fixture without regenerating
+it, so a platform regression cannot silently change its expectations.
 
 ### Code Quality
 
@@ -492,10 +536,56 @@ clojure -T:build install
 clojure -T:build deploy
 ```
 
+### Publishing to npm
+
+The CLI is published manually as `@jramosg/color-tools`. You need the
+Clojure CLI, Java, Node.js 18 or newer, npm, and an npm account with
+publishing access to the `jramosg` organization.
+
+Check that the version in `npm/package.json` matches `build.clj` and the
+`version` definition in `src/jon/color_tools/cli.cljc`. For later releases,
+update all three together. Each published package version must be unique.
+
+From the repository root, build and smoke-test the CLI:
+
+```bash
+clojure -M:npm
+test/cli-smoke.sh node npm/color-tools.js
+```
+
+The generated `npm/color-tools.js` is ignored by Git; rebuild it for every
+release.
+
+Enter the package directory, check your npm login, and preview the package:
+
+```bash
+cd npm
+npm whoami
+npm pack --dry-run
+```
+
+Run `npm login` if needed. Confirm the preview includes `color-tools.js`,
+then publish:
+
+```bash
+npm publish --access public
+```
+
+Verify the published version and run the package from the registry:
+
+```bash
+npm view @jramosg/color-tools version
+npx --yes @jramosg/color-tools help
+```
+
+See the [npm publishing documentation](https://docs.npmjs.com/cli/v11/commands/npm-publish/)
+for authentication and publishing options.
+
 ## Supported Platforms
 
 - **Clojure (JVM)**: Supports the full API
 - **ClojureScript**: Supports the full API in browsers and Node.js
+- **Babashka**: Supports the full API; `bb test` runs the shared suite in CI
 
 ## Contributing
 

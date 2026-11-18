@@ -3,6 +3,31 @@ All notable changes to this project will be documented in this file. This change
 
 ## Unreleased
 ### Added
+- `color-tools`, a command-line interface to the whole library: convert
+  formats, adjust, mix and blend colors, generate palettes, gradients and
+  accessible themes, and check WCAG contrast without writing Clojure. See the
+  [CLI guide](doc/cli.md).
+  - Runs on Node.js (`npx @jramosg/color-tools`), Babashka
+    (`bbin install io.github.jramosg/color-tools`) and the JVM
+    (`clojure -M -m jon.color-tools.main`)
+  - Reads hex, names, `rgb()`, `rgba()`, `hsl()`, `hsv()`, `oklab()`,
+    `oklch()`, bare channels and temperatures such as `6500k`; `-` reads
+    colors from stdin
+  - Prints text with terminal swatches, pretty-printed JSON and EDN, or CSS
+    custom properties for themes; `--to` picks the color format
+  - Keeps fractional channels in input, conversions, mixing and gradients;
+    JSON and EDN retain precision, while text rounds at the output boundary
+  - RGB/RGBA formatting uses the CSS exporter: decimal rounding keeps at
+    least 3 alpha places, and rounded RGB channels stay within 0 to 255
+  - `theme --mode both --format css` writes a light theme and a dark one
+    that follows `prefers-color-scheme`, or a selector of your choice
+  - `color-tools completions bash|zsh|fish` prints a shell completion script
+  - Exits 0 on success, 1 when a check such as `contrast --level aa` fails
+    and 2 on invalid input, for use in scripts and CI
+  - `info` and `text-color` pick text at AA by default; `--level` selects
+    AA, AA for large text, or AAA
+  - The [CLI guide](doc/cli.md#library-coverage) maps color operations to
+    commands, with examples and output formats
 - `oklab` builds an `Oklab` record from `l`, `a` and `b`. Alpha defaults
   to 1.0 ([#7](https://github.com/jramosg/color-tools/issues/7)).
 - `->oklab-space` converts a color to an `Oklab` record, which keeps alpha.
@@ -13,6 +38,12 @@ All notable changes to this project will be documented in this file. This change
   `color`, `->rgb`, `->hex`, `->css` and the other color functions accept
   an `Oklab` record too
   ([#7](https://github.com/jramosg/color-tools/issues/7)).
+
+### Fixed
+- Hex and Color interpolation stabilize computed half-channel ties before
+  rounding. The HSV midpoint of `#001801` and `#003002` is now `#002402`
+  on every runtime; vector results keep their full precision
+  ([#142](https://github.com/jramosg/color-tools/issues/142)).
 
 ## [1.4.0] - 2026-11-17
 ### Added
