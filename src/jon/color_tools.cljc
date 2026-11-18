@@ -1762,6 +1762,6 @@
 
   #?(:clj String :cljs string)
   (->rgb-space [ths]
-    (normalize-color-input ths)) ;Color
+    (normalize-color-input ths)) ; Color
   (->oklab-space [c]
     (->oklab-space (normalize-color-input c))))
