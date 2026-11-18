@@ -1484,8 +1484,8 @@
                    :rgb interpolated))]
 
      (cond
-       (every? color? colors) (color-from-rgb (mapv round-int result))
-       (every? string? colors) (rgb->hex result)
+       (every? color? colors) (color-from-rgb (mapv round-coord result))
+       (every? string? colors) (rgb->hex (mapv round-coord result))
        :else result))))
 
 (defn gradient
