@@ -30,9 +30,9 @@
   (let [stdout (unchecked-get process "stdout")
         _ (ignore-closed-pipe! stdout)
         {:keys [exit out err]}
-        (cli/run (vec args) {:stdin read-stdin
-                             :tty? (boolean (unchecked-get stdout "isTTY"))
-                             :env (environment)})]
+        (cli/run! (vec args) {:stdin read-stdin
+                              :tty? (boolean (unchecked-get stdout "isTTY"))
+                              :env (environment)})]
     (js-invoke stdout "write" out)
     (js-invoke (unchecked-get process "stderr") "write" err)
     (unchecked-set process "exitCode" exit)))

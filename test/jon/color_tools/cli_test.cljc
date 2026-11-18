@@ -886,3 +886,13 @@
     (let [result (cli/run
                   args {:stdin #(throw (ex-info "stdin was read" {}))})]
       (is (str/includes? (:err result) message) (pr-str result)))))
+
+(deftest option-color-warning-test
+  (doseq [quiet [[] ["--quiet"]]]
+    (let [{:keys [exit err]}
+          (apply run (concat ["accessible" "red" "--on"
+                              "oklch(0.7 0.4 150)"] quiet))]
+      (is (= 0 exit))
+      (is (= (str "color-tools: warning: oklch(0.7 0.4 150) is outside"
+                  " sRGB; clamped to #00d600\n")
+             err)))))

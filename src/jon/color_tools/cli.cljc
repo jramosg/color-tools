@@ -1,9 +1,10 @@
 (ns jon.color-tools.cli
   "Command-line interface to jon.color-tools.
 
-   `run` is pure: it takes the argument vector and a map describing the
-   process, and returns the exit code with the text for stdout and stderr.
-   jon.color-tools.main does the IO."
+   `run!` takes arguments and a process map, may read stdin or generate
+   random colors, and returns the exit code with stdout and stderr text.
+   jon.color-tools.main writes the returned text to the process streams."
+  (:refer-clojure :exclude [run!])
   (:require
    [clojure.string :as str]
    [jon.color-tools.cli.commands :as commands]
@@ -597,10 +598,8 @@
 
 (defn- run-command [command args opts process]
   (let [opts (prepare-options command args opts)
-        warnings (volatile! [])
         {:keys [runs stdin]} (expand-stdin command args (:stdin process))
-        results (binding [commands/*warn* #(vswap! warnings conj %)]
-                  (mapv #(run-once command % opts stdin) runs))
+        results (mapv #(run-once command % opts stdin) runs)
         [value passed?] (unwrap (if (= :per-line stdin)
                                   results
                                   (first results)))]
@@ -609,8 +608,7 @@
     {:exit (if passed? exit-ok exit-check-failed)
      :out (let [text (render command value opts process)]
             (if (:quiet opts) "" text))
-     :err (str/join (map #(str program ": warning: " % "\n")
-                         (distinct @warnings)))}))
+     :err ""}))
 
 (defn- completion-options [command]
   (let [options (concat (map option-by-id global-options)
@@ -694,8 +692,9 @@
       :else
       (run-command (find-command word) (vec more) opts process))))
 
-(defn run
-  "Run the CLI. `argv` is the argument vector. `process` describes the
+(defn run!
+  "Run the CLI, reading stdin or generating random colors when requested.
+   `argv` is the argument vector. `process` describes the
    outside world:
 
    - :stdin, a function that returns all of standard input as a string
@@ -706,7 +705,13 @@
    exit with 2 and a message on stderr, never a stack trace."
   [argv process]
   (try
-    (dispatch argv process)
+    (let [warnings (volatile! [])
+          result (binding [commands/*warn* #(vswap! warnings conj %)]
+                   (dispatch argv process))]
+      (assoc result :err
+             (str (:err result)
+                  (str/join (map #(str program ": warning: " % "\n")
+                                 (distinct @warnings))))))
     (catch #?(:clj Throwable :cljs :default) e
       {:exit exit-usage
        :out ""
@@ -716,3 +721,7 @@
                         (some->> (:hint (ex-data e)) (str "\n")))
                    (str "unexpected error: " (or (ex-message e) (str e))))
                  "\n")})))
+
+(def run
+  "Compatibility alias for run!. New callers should use its effectful name."
+  run!)
