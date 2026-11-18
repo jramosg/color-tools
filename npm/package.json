@@ -1,6 +1,6 @@
 {
   "name": "@jramosg/color-tools",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Convert, adjust and check colors from the terminal: WCAG contrast, palettes, gradients, accessible themes, Oklab and OKLCh",
   "bin": {
     "color-tools": "color-tools.js"
