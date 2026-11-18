@@ -39,6 +39,12 @@ All notable changes to this project will be documented in this file. This change
   an `Oklab` record too
   ([#7](https://github.com/jramosg/color-tools/issues/7)).
 
+### Fixed
+- Hex and Color interpolation stabilize computed half-channel ties before
+  rounding. The HSV midpoint of `#001801` and `#003002` is now `#002402`
+  on every runtime; vector results keep their full precision
+  ([#142](https://github.com/jramosg/color-tools/issues/142)).
+
 ## [1.4.0] - 2026-11-17
 ### Added
 - `rgb->hsl`, `rgb->hsv`, `hsl->rgb` and `hsv->rgb` accept
