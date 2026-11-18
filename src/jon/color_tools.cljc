@@ -1700,7 +1700,7 @@
 
 (declare oklab->rgb)
 
-(defrecord Oklab [L a b alpha]
+(defrecord Oklab [l a b alpha]
   Colorspace
   (->rgb-space [ths]
     (let [rgb (oklab->rgb ths)]
@@ -1716,12 +1716,22 @@
        (= 3 (count oklab))
        (every? finite? oklab)))
 
+(defn oklab
+  "Create an Oklab record from Oklab coordinates, with alpha from 0 to 1
+   that defaults to 1.0. The fields are :l, :a, :b and :alpha; :a is the
+   green-red axis, not alpha as on Color. Checks the input with an
+   assertion precondition."
+  ([l a b] (oklab l a b 1.0))
+  ([l a b alpha]
+   {:pre [(valid-oklab? [l a b]) (number? alpha) (<= 0 alpha 1)]}
+   (->Oklab l a b (double alpha))))
+
 (defn- oklab-coords
   "Return [l a b] for an Oklab record, dropping alpha, or for a vector.
    Checks the shape with an assertion."
   [oklab]
   (let [lab (cond-> oklab
-              (instance? Oklab oklab) ((juxt :L :a :b)))]
+              (instance? Oklab oklab) ((juxt :l :a :b)))]
     (assert (valid-oklab? lab) "Oklab must be a record or [l a b]")
     lab))
 

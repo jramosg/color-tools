@@ -522,7 +522,7 @@ Converts any supported color input to HSV.
 (->oklab-space color) => Oklab
 ```
 
-Converts a color to an `Oklab` record with the fields `:L`, `:a`, `:b` and
+Converts a color to an `Oklab` record with the fields `:l`, `:a`, `:b` and
 `:alpha`. Unlike the `[l a b]` vector from `rgb->oklab`, the record keeps the
 alpha channel. `:a` here is the green-red axis, not alpha as on `Color`.
 Passing an `Oklab` returns it unchanged.
@@ -531,6 +531,22 @@ Passing an `Oklab` returns it unchanged.
 (let [ok (color/->oklab-space "#336699")]
   (color/in-gamut? ok))
 ;=> true
+```
+
+### `oklab`
+
+```clojure
+(oklab l a b) => Oklab
+(oklab l a b alpha) => Oklab
+```
+
+Creates an `Oklab` record from coordinates. `alpha` runs from `0` to `1` and
+defaults to `1.0`. Non-finite coordinates and alpha outside that range fail
+an assertion.
+
+```clojure
+(color/->hex (color/oklab 0.5 0.0 0.0))
+;=> "#636363"
 ```
 
 ### `->rgb-space`

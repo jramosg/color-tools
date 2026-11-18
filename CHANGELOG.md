@@ -3,6 +3,8 @@ All notable changes to this project will be documented in this file. This change
 
 ## Unreleased
 ### Added
+- `oklab` creates an `Oklab` record from `l`, `a` and `b`, with alpha
+  defaulting to 1.0 ([#7](https://github.com/jramosg/color-tools/issues/7)).
 - `->oklab-space` and `->rgb-space` convert a color to an `Oklab` record,
   which keeps alpha, and back to a `Color`, clamping out-of-gamut channels.
   `->rgb-space` keeps fractional channels, including those in CSS strings
