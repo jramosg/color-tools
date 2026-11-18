@@ -11,7 +11,7 @@
    [jon.color-tools.cli.output :as out]
    [jon.color-tools.cli.parse :as parse]))
 
-(def version "1.3.0")
+(def version "1.4.0")
 
 (def ^:private program "color-tools")
 

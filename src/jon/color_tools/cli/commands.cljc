@@ -144,7 +144,8 @@
            hex->hsl hsl->hex rgb->hsv hsv->rgb parse-css-rgb parse-css-rgba
            parse-css-color-components normalize-css-color-string
            normalize-hex name->hex oklab->rgb oklab->hex oklab->oklch
-           oklch->oklab oklch->rgb oklch->hex clamp-rgb round-coords]
+           oklch->oklab oklch->rgb oklch->hex clamp-rgb round-coords
+           oklab ->Oklab map->Oklab ->oklab-space ->rgb-space]
     :run (fn [{:keys [color]} _] color)}
 
    {:name "validate"
@@ -784,7 +785,8 @@
   "Public library functions with no command of their own, and why. With
    the :api of each command, this accounts for every public var of
    jon.color-tools; a test fails when a new one is added without a home."
-  {'clamp "Number helper; commands validate ranges instead of clamping"
+  {'Colorspace "Protocol behind ->oklab-space and ->rgb-space; convert --to"
+   'clamp "Number helper; commands validate ranges instead of clamping"
    'parse-int "String helper used inside the library's own parsers"
    'round "Number helper; --precision and --significant round output"
    'round-int "Number helper; hex and terminal swatches use 8-bit channels"})

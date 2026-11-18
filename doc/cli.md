@@ -817,14 +817,18 @@ command or a reason before the build passes.
 | Library function | Command |
 | --- | --- |
 | `->Color` | `convert` |
+| `->Oklab` | `convert` |
 | `->color` | `convert` |
 | `->css` | `convert` |
 | `->hex` | `info`, `convert` |
 | `->hsl` | `info`, `convert` |
 | `->hsv` | `info`, `convert` |
 | `->name` | `info`, `convert`, `name` |
+| `->oklab-space` | `convert` |
 | `->rgb` | `info`, `convert` |
+| `->rgb-space` | `convert` |
 | `->rgba` | `convert` |
+| `Colorspace` | None. Protocol behind ->oklab-space and ->rgb-space; convert --to |
 | `accessible-theme` | `theme` |
 | `accessible?` | `contrast` |
 | `adjust-hue` | `rotate` |
@@ -874,12 +878,14 @@ command or a reason before the build passes.
 | `lighten` | `lighten` |
 | `luminance` | `info`, `luminance` |
 | `map->Color` | `convert` |
+| `map->Oklab` | `convert` |
 | `mix` | `mix` |
 | `monochromatic` | `palette` |
 | `muted?` | `is` |
 | `name->hex` | `convert` |
 | `normalize-css-color-string` | `convert` |
 | `normalize-hex` | `convert` |
+| `oklab` | `convert` |
 | `oklab->hex` | `convert` |
 | `oklab->oklch` | `convert` |
 | `oklab->rgb` | `convert` |
