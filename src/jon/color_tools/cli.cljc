@@ -612,6 +612,16 @@
      :err (str/join (map #(str program ": warning: " % "\n")
                          (distinct @warnings)))}))
 
+(defn- completion-options [command]
+  (let [options (concat (map option-by-id global-options)
+                        (command-options command))
+        by-id (into {} (map (juxt :id identity)) options)]
+    (map (fn [id]
+           (cond-> (by-id id)
+             (and (= :format id) (not (:css? command)))
+             (update :choices #(vec (remove #{:css} %)))))
+         (distinct (map :id options)))))
+
 (defn- completion-script
   "The completion script for the shell named by `args`."
   [args]
@@ -623,10 +633,21 @@
             (str "Usage: " program " completions bash|zsh|fish"))))
   (completions/script
    (parse/parse-choice "SHELL" completions/shells (first args))
-   {:commands (concat commands/commands
+   {:commands (concat (mapcat (fn [command]
+                                (map #(assoc command :name %)
+                                     (cons (:name command)
+                                           (:aliases command))))
+                              commands/commands)
                       [{:name "help" :summary "Show help"}
                        {:name "completions"
                         :summary "Print a shell completion script"}])
+    :global-options (map option-by-id global-options)
+    :command-options
+    (into {"help" (map option-by-id global-options)
+           "completions" (map option-by-id global-options)}
+          (for [command commands/commands
+                n (cons (:name command) (:aliases command))]
+            [n (completion-options command)]))
     :options (map #(cond-> % (:complete %) (assoc :choices (:complete %)))
                   option-specs)
     :first-arguments (into {"help" (map :name commands/commands)

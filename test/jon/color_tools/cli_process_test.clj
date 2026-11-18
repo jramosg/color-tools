@@ -64,13 +64,48 @@
 (deftest bash-completion-test
   (let [script (:out (cli/run ["completions" "bash"] {}))
         complete (partial bash-complete script "color-tools")]
-    (is (= "convert contrast" (complete "con")))
+    (is (= "convert contrast contrast-text" (complete "con")))
     (is (= "oklab oklch" (complete "convert" "--to" "ok")))
     (is (= "aa aa-large aaa" (complete "contrast" "-l" "")))
     (is (= "warm cool light dark vibrant muted" (complete "is" "")))
-    (is (= "--mode --metric" (complete "theme" "--m")))
+    (is (= "--mode" (complete "theme" "--m")))
+    (is (= "" (complete "convert" "--m")))
+    (is (= "light dark both" (complete "theme" "--mode" "")))
+    (is (= "multiply screen overlay alpha" (complete "blend" "--mode" "")))
+    (is (= "text json edn" (complete "convert" "--format" "")))
+    (is (= "text json edn css" (complete "theme" "--format" "")))
+    (is (= "light dark both" (complete "--json" "theme" "--mode" "")))
+    (is (= "light dark both"
+           (complete "--selector" "names" "theme" "--mode" "")))
+    (is (= "aa aa-large aaa" (complete "contrast-text" "--level" "")))
     (is (= "grayscale gradient" (complete "help" "gra")))
     (is (= "bash zsh fish" (complete "completions" "")))
     (testing "nothing after an option that takes free text, or for colors"
       (is (= "" (complete "convert" "--precision" "")))
       (is (= "" (complete "convert" ""))))))
+
+(deftest zsh-completion-context-test
+  (try
+    (let [script (:out (cli/run ["completions" "zsh"] {}))
+          complete
+          (fn [& words]
+            (let [quoted (str/join " " (map #(str "'" % "'") words))
+                  {:keys [exit out err]}
+                  (shell/sh
+                   "zsh" "-f" "-c"
+                   (str "compdef() { :; }\n" script "\n"
+                        "compadd() { [[ $1 == -- ]] && shift; "
+                        "print -l -- \"$@\"; }\n"
+                        "words=(color-tools " quoted ")\n"
+                        "CURRENT=${#words[@]}\n_color_tools\n"))]
+              (is (= 0 exit) err)
+              (set (str/split-lines (str/trim out)))))]
+      (is (= #{"light" "dark" "both"}
+             (complete "theme" "--mode" "")))
+      (is (= #{"multiply" "screen" "overlay" "alpha"}
+             (complete "blend" "--mode" "")))
+      (is (not ((complete "theme" "--") "--metric")))
+      (is (= #{"light" "dark" "both"}
+             (complete "--selector" "names" "theme" "--mode" ""))))
+    (catch java.io.IOException _
+      (println "Skipping zsh completion execution: zsh is unavailable"))))
