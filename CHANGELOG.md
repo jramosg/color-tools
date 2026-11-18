@@ -3,8 +3,6 @@ All notable changes to this project will be documented in this file. This change
 
 ## Unreleased
 ### Added
-- `bb test` runs the shared `.cljc` suite locally and in CI
-  ([#113](https://github.com/jramosg/color-tools/issues/113)).
 - `oklab` builds an `Oklab` record from `l`, `a` and `b`. Alpha defaults
   to 1.0 ([#7](https://github.com/jramosg/color-tools/issues/7)).
 - `->oklab-space` converts a color to an `Oklab` record, which keeps alpha.
