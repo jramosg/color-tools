@@ -15,9 +15,9 @@
 
 (defn -main [& args]
   (let [{:keys [exit out err]}
-        (cli/run (vec args) {:stdin #(slurp *in*)
-                             :tty? (boolean (terminal?))
-                             :env (into {} (System/getenv))})]
+        (cli/run! (vec args) {:stdin #(slurp *in*)
+                              :tty? (boolean (terminal?))
+                              :env (into {} (System/getenv))})]
     (print out)
     (flush)
     (binding [*out* *err*]

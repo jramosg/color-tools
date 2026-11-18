@@ -255,6 +255,10 @@ so redirected output is always clean.
 
 ## Reading colors from stdin
 
+Warnings describe accepted input that needed adjustment, such as a clipped
+color. They go to stderr for both positional colors and `--on` backgrounds,
+including under `--quiet`; stdout stays suitable for scripts.
+
 Pass `-` where a color goes and the command reads colors from stdin, one per
 line. Blank lines are skipped.
 
