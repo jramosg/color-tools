@@ -513,10 +513,10 @@
      out-of-gamut colors. Throws when the coordinates are so large that
      the conversion overflows.
 
-     Channels keep full precision, so a round trip through another
-     colorspace can differ from the original in the last digits. Round
-     the result with round-coords, or pass :decimal-places to ->css, for
-     display.")
+     Channels keep full precision, except that a channel within 1e-9 of a
+     whole number snaps to it, so an 8-bit color survives a round trip
+     through another colorspace. Round the result with round-coords, or
+     pass :decimal-places to ->css, for display.")
   (->oklab-space [c]
     "Convert c to an Oklab record."))
 
@@ -731,10 +731,11 @@
   (->> (hsl-coords color) f hsl->rgb-coords (mapv round-coord)))
 
 (defn- like-input
-  "Return 8-bit `rgb` as a Color, hex string or vector, following `color`."
+  "Return 8-bit `rgb` as a Color, hex string or vector, following `color`.
+   Any record, such as an Oklab, gets a Color."
   [color rgb]
   (cond
-    (color? color) (color-from-rgb rgb)
+    (record? color) (color-from-rgb rgb)
     (string? color) (rgb->hex rgb)
     (vector? color) rgb))
 
@@ -778,7 +779,7 @@
         [r g b] (->rgb color-record)
         inverted [(- 255 r) (- 255 g) (- 255 b)]]
     (cond
-      (color? color) (color-from-rgb inverted)
+      (record? color) (color-from-rgb inverted)
       (string? color) (rgb->hex inverted)
       (vector? color) inverted)))
 
@@ -824,7 +825,7 @@
          rgb2 (->rgb color2)
          mixed (mapv #(+ %1 (* (- %2 %1) ratio)) rgb1 rgb2)]
      (cond
-       (color? color1) (color-from-rgb (mapv round-int mixed))
+       (record? color1) (color-from-rgb (mapv round-int mixed))
        (string? color1) (rgb->hex mixed)
        (vector? color1) mixed))))
 
@@ -1278,7 +1279,7 @@
                 (blend-channel g1 g2 blend-fn)
                 (blend-channel b1 b2 blend-fn)]]
     (cond
-      (color? base-color) (color-from-rgb result)
+      (record? base-color) (color-from-rgb result)
       (string? base-color) (rgb->hex result)
       (vector? base-color) result)))
 
@@ -1292,7 +1293,7 @@
                 (blend-channel g1 g2 blend-fn)
                 (blend-channel b1 b2 blend-fn)]]
     (cond
-      (color? base-color) (color-from-rgb result)
+      (record? base-color) (color-from-rgb result)
       (string? base-color) (rgb->hex result)
       (vector? base-color) result)))
 
@@ -1309,7 +1310,7 @@
                 (blend-channel g1 g2 blend-fn)
                 (blend-channel b1 b2 blend-fn)]]
     (cond
-      (color? base-color) (color-from-rgb result)
+      (record? base-color) (color-from-rgb result)
       (string? base-color) (rgb->hex result)
       (vector? base-color) result)))
 
@@ -1397,7 +1398,7 @@
                  (blend-channel g1 g2)
                  (blend-channel b1 b2)]]
      (cond
-       (or (color? base-color) (color? overlay-color))
+       (or (record? base-color) (record? overlay-color))
        (color-from-rgba (conj (mapv round-int result) a-out))
 
        (string? base-color)
@@ -1415,7 +1416,7 @@
    {:pre [(and (>= alpha 0) (<= alpha 1))]}
    (let [[r g b] (->rgb color)]
      (cond
-       (color? color) (->color r g b alpha)
+       (record? color) (->color r g b alpha)
        (string? color) (if (== alpha 1)
                          (rgb->hex [r g b])
                          (css-rgba [r g b alpha] options))
@@ -1849,6 +1850,14 @@
 ;; Colorspace implementations
 ;; =============================================================================
 
+(defn- snap-channel
+  "Round `x` to a whole number when float error leaves it within 1e-9 of
+   one, so an 8-bit channel survives a round trip through Oklab."
+  [x]
+  (let [x (double x)
+        n (Math/round x)]
+    (if (< (Math/abs (- x n)) 1e-9) n x)))
+
 (extend-protocol Colorspace
   Oklab
   (->rgb-space [ths]
@@ -1856,7 +1865,7 @@
       (when-not (every? finite? rgb)
         (throw (ex-info "Oklab coordinates are too large to convert"
                         {:oklab ths})))
-      (color (conj (clamp-rgb rgb) (:alpha ths))
+      (color (conj (mapv snap-channel (clamp-rgb rgb)) (:alpha ths))
              {:full-precision? true})))
   (->oklab-space [ths] ths)
 

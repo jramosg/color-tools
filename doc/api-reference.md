@@ -397,8 +397,7 @@ Creates a `Color` record from any supported input, RGB channels, or RGBA
 channels. Existing arities truncate RGB channels. The two-argument options
 form can preserve fractions with `:full-precision? true`.
 An `Oklab` record is the exception: it converts through `->rgb-space`, which
-keeps fractional channels, so the result can differ from whole numbers in the
-last digits. Use `->hex` or `round-coords` for clean output.
+keeps fractional channels. Use `->hex` or `round-coords` for whole numbers.
 
 ```clojure
 (color "#ff0000")
@@ -559,9 +558,10 @@ an assertion.
 ```
 
 Converts a color, such as an `Oklab` record, back to a `Color` record.
-Channels keep full precision, so a round trip through Oklab can differ from
-the original in the last digits; round the result with `round-coords`, or
-pass `:decimal-places` to `->css`, for display.
+Channels keep full precision, except that a channel within `1e-9` of a whole
+number snaps to it, so an 8-bit color survives a round trip through Oklab.
+Round the result with `round-coords`, or pass `:decimal-places` to `->css`,
+for display.
 
 An `Oklab` outside the sRGB gamut is clamped per channel with `clamp-rgb`,
 which shifts its hue and lightness. Coordinates so large that the conversion

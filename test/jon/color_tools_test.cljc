@@ -2268,6 +2268,15 @@
     (testing "Color -> Oklab -> Color returns the same channels"
       (is (close? (sut/->rgb c) (sut/->rgb (round-trip c))) (pr-str rgb)))))
 
+(deftest colorspace-8-bit-round-trip
+  (testing "an 8-bit color comes back equal, not one channel short"
+    (doseq [rgb oklab-reference-rgb
+            :let [c (sut/color rgb)]]
+      (is (= c (round-trip c)) (pr-str rgb))))
+  (testing "alpha survives as well"
+    (let [c (sut/color 51 102 153 0.5)]
+      (is (= c (round-trip c))))))
+
 (deftest colorspace-float-error
   (testing "float error just past 255 is clamped instead of throwing"
     (is (= "#f0ffff" (sut/->hex (round-trip "#f0ffff"))))))
@@ -2338,7 +2347,7 @@
 (deftest colorspace-matches-clamped-conversion
   (doseq [oklab (conj out-of-gamut-oklab [0.5 0.1 -0.1])
           :let [c (sut/->rgb-space (apply sut/->Oklab (conj oklab 1.0)))]]
-    (is (= (sut/clamp-rgb (sut/oklab->rgb oklab)) (sut/->rgb c))
+    (is (close? (sut/clamp-rgb (sut/oklab->rgb oklab)) (sut/->rgb c))
         (pr-str oklab))))
 
 (deftest colorspace-overflow
@@ -2358,6 +2367,42 @@
       (is (thrown? #?(:clj AssertionError :cljs :default)
                    (apply sut/oklab args))
           (pr-str args)))))
+
+(deftest colorspace-record-through-color-operations
+  (let [ok (sut/->oklab-space "#336699")
+        c  (sut/color "#336699")
+        ops {"lighten"        #(sut/lighten % 0.1)
+             "darken"         #(sut/darken % 0.1)
+             "saturate"       #(sut/saturate % 0.1)
+             "adjust-hue"     #(sut/adjust-hue % 30)
+             "invert"         sut/invert
+             "grayscale"      sut/grayscale
+             "mix"            #(sut/mix % "#ffffff")
+             "blend-multiply" #(sut/blend-multiply % "#ffffff")
+             "blend-screen"   #(sut/blend-screen % "#ffffff")
+             "blend-overlay"  #(sut/blend-overlay % "#ffffff")
+             "alpha-blend"    #(sut/alpha-blend % "#ffffff")
+             "with-alpha"     #(sut/with-alpha % 0.5)
+             "complementary"  sut/complementary}]
+    (testing "an Oklab record gives the Color the equivalent Color gives"
+      (doseq [[op f] ops
+              :let [expected (f c)
+                    actual   (f ok)]]
+        (is (= expected actual) op)))
+    (testing "Color-returning operations keep returning Color records"
+      (doseq [op ["lighten" "darken" "adjust-hue" "invert" "mix"
+                  "blend-multiply" "blend-screen" "blend-overlay"
+                  "alpha-blend" "with-alpha" "complementary"]]
+        (is (sut/color? ((ops op) ok)) op)))
+    (testing "palettes return Color records"
+      (doseq [palette [sut/triadic sut/analogous sut/tetradic
+                       sut/split-complementary]
+              :let [colors (palette ok)]]
+        (is (seq colors))
+        (is (every? sut/color? colors))
+        (is (= (palette c) colors))))
+    (testing "monochromatic gives what it gives for the equivalent Color"
+      (is (= (sut/monochromatic c) (sut/monochromatic ok))))))
 
 (deftest colorspace-identity
   (let [ok (sut/->Oklab 0.5 0.1 -0.1 0.8)
