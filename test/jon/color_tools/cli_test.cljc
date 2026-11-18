@@ -832,3 +832,20 @@
       (is (= ["#333333" "#808080" "#cccccc"]
              (json "palette" "#808080" "--type" "monochromatic"
                    "--count" "3"))))))
+
+(deftest overflowing-coordinates-test
+  (doseq [color ["oklab(1e200 0 0)" "oklch(1e200 0 0)"]]
+    (let [{:keys [exit out err]} (run "validate" color "--json")]
+      (is (= [1 ""] [exit err]))
+      (is (str/includes? out "\"valid\": false"))
+      (is (str/includes? out "coordinates are too large to convert")))
+    (let [{:keys [exit err]} (run "convert" color)]
+      (is (= 2 exit))
+      (is (str/starts-with? err "color-tools: invalid color"))
+      (is (not (str/includes? err "Assert failed")))))
+  (testing "one overflowing color does not abort a validation batch"
+    (let [{:keys [exit out err]}
+          (run {:stdin "red\noklab(1e200 0 0)\nblue\n"}
+               "validate" "-" "--edn")]
+      (is (= [1 ""] [exit err]))
+      (is (= 3 (count (reader/read-string out)))))))
