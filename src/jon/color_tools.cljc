@@ -1871,8 +1871,3 @@
     (color ths {:full-precision? true}))
   (->oklab-space [ths]
     (->oklab-space (->rgb-space ths))))
-
-(comment
-  (require '[jon.color-tools :as color])
-  (color/->oklab-space "#336699")
- )
