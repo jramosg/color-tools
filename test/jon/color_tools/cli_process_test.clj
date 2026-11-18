@@ -84,8 +84,13 @@
       (is (= "" (complete "convert" "--precision" "")))
       (is (= "" (complete "convert" ""))))))
 
-(deftest zsh-completion-context-test
+(defn- zsh-available! []
   (try
+    (zero? (:exit (shell/sh "zsh" "--version")))
+    (catch java.io.IOException _ false)))
+
+(deftest zsh-completion-context-test
+  (if (zsh-available!)
     (let [script (:out (cli/run ["completions" "zsh"] {}))
           complete
           (fn [& words]
@@ -107,5 +112,4 @@
       (is (not ((complete "theme" "--") "--metric")))
       (is (= #{"light" "dark" "both"}
              (complete "--selector" "names" "theme" "--mode" ""))))
-    (catch java.io.IOException _
-      (println "Skipping zsh completion execution: zsh is unavailable"))))
+    (println "Skipping zsh completion execution: zsh is unavailable")))
