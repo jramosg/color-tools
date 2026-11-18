@@ -3,17 +3,6 @@ All notable changes to this project will be documented in this file. This change
 
 ## Unreleased
 ### Added
-- `oklab` builds an `Oklab` record from `l`, `a` and `b`. Alpha defaults
-  to 1.0 ([#7](https://github.com/jramosg/color-tools/issues/7)).
-- `->oklab-space` converts a color to an `Oklab` record, which keeps alpha.
-  `->rgb-space` converts it back to a `Color` and clamps out-of-gamut
-  channels ([#7](https://github.com/jramosg/color-tools/issues/7)).
-- `oklab->rgb`, `oklab->hex`, `in-gamut?` and `oklab->oklch` accept an
-  `Oklab` record as well as an `[l a b]` vector, and ignore its alpha.
-  `color`, `->rgb`, `->hex`, `->css` and the other color functions accept
-  an `Oklab` record too
-  ([#7](https://github.com/jramosg/color-tools/issues/7)).
-
 - `color-tools`, a command-line interface to the whole library: convert
   formats, adjust, mix and blend colors, generate palettes, gradients and
   accessible themes, and check WCAG contrast without writing Clojure. See the
@@ -37,8 +26,19 @@ All notable changes to this project will be documented in this file. This change
     and 2 on invalid input, for use in scripts and CI
   - `info` and `text-color` pick text at AA by default; `--level` selects
     AA, AA for large text, or AAA
-  - Every public function has a command; a test keeps the
-    [coverage table](doc/cli.md#library-coverage) current
+  - The [CLI guide](doc/cli.md#library-coverage) maps color operations to
+    commands, with examples and output formats
+- `oklab` builds an `Oklab` record from `l`, `a` and `b`. Alpha defaults
+  to 1.0 ([#7](https://github.com/jramosg/color-tools/issues/7)).
+- `->oklab-space` converts a color to an `Oklab` record, which keeps alpha.
+  `->rgb-space` converts it back to a `Color` and clamps out-of-gamut
+  channels ([#7](https://github.com/jramosg/color-tools/issues/7)).
+- `oklab->rgb`, `oklab->hex`, `in-gamut?` and `oklab->oklch` accept an
+  `Oklab` record as well as an `[l a b]` vector, and ignore its alpha.
+  `color`, `->rgb`, `->hex`, `->css` and the other color functions accept
+  an `Oklab` record too
+  ([#7](https://github.com/jramosg/color-tools/issues/7)).
+
 ### Fixed
 - `mix` preserves fractional RGB channels at a ratio of 0 or 1 before
   output rounding ([#156](https://github.com/jramosg/color-tools/issues/156)).

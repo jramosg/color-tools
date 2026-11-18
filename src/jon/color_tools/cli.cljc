@@ -349,8 +349,7 @@
   (let [allowed (into (set global-options)
                       (map :id)
                       (command-options command))]
-    (doseq [id (keys opts)
-            :when (not (allowed id))]
+    (when-let [id (some #(when-not (allowed %) %) (keys opts))]
       (throw (parse/usage-error
               (str (:long (option-by-id id)) " is not an option of '"
                    (:name command) "'")
@@ -389,10 +388,12 @@
                (contains? spec :default) (assoc result id (:default spec))
                :else result)))
          opts specs)]
-    (doseq [{:keys [id requires]} specs
-            :when (contains? prepared id)
-            [other value] requires
-            :when (not= value (get prepared other))]
+    (when-let [[id other value]
+               (first (for [{:keys [id requires]} specs
+                            :when (contains? prepared id)
+                            [other value] requires
+                            :when (not= value (get prepared other))]
+                        [id other value]))]
       (throw (parse/usage-error
               (str (:long (option-by-id id)) " needs "
                    (:long (option-by-id other)) " " (name value)))))

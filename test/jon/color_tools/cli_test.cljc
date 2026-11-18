@@ -896,3 +896,27 @@
       (is (= (str "color-tools: warning: oklch(0.7 0.4 150) is outside"
                   " sRGB; clamped to #00d600\n")
              err)))))
+
+(deftest interpolation-output-parity-test
+  (doseq [colors [["#001801" "#003002"]
+                  ["#72c1d8" "#13ab9d"]
+                  ["#9988ee" "#3498db"]]
+          space [:rgb :hsl :hsv]]
+    (let [actual (reader/read-string
+                  (apply out (concat ["gradient"] colors
+                                     ["--steps" "7" "--space" (name space)
+                                      "--json"])))]
+      (is (= (vec (ct/gradient colors 7 space)) actual)
+          (pr-str [colors space])))
+    (doseq [position [0.5 (/ 2.0 3)]]
+      (let [actual (reader/read-string
+                    (apply out (concat ["interpolate"] colors
+                                       ["--at" (str position)
+                                        "--space" (name space) "--json"])))]
+        (is (= (ct/interpolate colors position space) actual)
+            (pr-str [colors position space])))))
+  (testing "a single stop retains alpha without quantizing coordinates"
+    (is (= [[0.25 1.5 2.75 0.5]]
+           (reader/read-string
+            (out "gradient" "rgba(0.25,1.5,2.75,0.5)" "white"
+                 "--steps" "1" "--to" "rgba" "--json"))))))

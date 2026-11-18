@@ -22,8 +22,10 @@ $ color-tools palette '#3498db' --type triadic
 
 ## Installation
 
-The CLI ships with releases after 1.3.0. Pick whichever runtime you already
-have; the commands and output are the same on all of them.
+Pick whichever runtime you already have. Node.js, Babashka and the JVM use
+the same commands and color calculations. Hex results and WCAG decisions
+match; full-precision numeric output can differ in its final floating-point
+bits.
 
 ### Node.js
 
@@ -144,10 +146,11 @@ library's full-precision RGB, HSL and HSV conversions and record construction.
 Oklab and OKLCh inputs keep their computed channels instead of passing through
 hex. Hex output and terminal swatches round to 8-bit channels.
 
-Mixing, tinting, compositing, interpolation and gradients keep fractional
-results. HSL adjustments and the library's other 8-bit operations still
-return whole channels; their intermediate calculations use the library's
-current precision rules.
+Mixing, tinting and compositing keep fractional results. Interpolation and
+gradients use the library's final tie rounding for hex output, and keep
+fractional channels for coordinate output. HSL adjustments and other 8-bit
+operations return whole channels; their intermediate calculations follow
+the library's current precision rules.
 
 Oklab and OKLCh can describe colors outside sRGB. Converting between these
 two spaces preserves the original coordinates, including colors a screen
@@ -190,6 +193,12 @@ Coordinate output (`rgb`, `hsl`, `hsv`, `lab`, `oklab`, `oklch`)
 contains three coordinates and omits alpha. Use `rgba` or `hex8` when the
 output must carry opacity. Native Oklab/OKLCh conversion retains alpha
 internally while formatting its three coordinates.
+
+Conversions and one-color adjustments carry input alpha. Mixing, color
+series, palettes, accessibility search and theme generation use RGB results
+and return opaque colors. Interpolation and multi-step gradients are opaque;
+a one-step gradient returns its first stop, including alpha. `blend --mode
+alpha` computes the composited opacity.
 
 ```console
 $ color-tools alpha '#3498db' 0.5
@@ -361,6 +370,10 @@ as pure red.
 
 `validate` answers "is this a color?" with an exit code, and reports the
 detected format. `--as` also requires a format.
+
+Validation uses CLI notation rules, including HSV, Kelvin and flexible
+separators. Success confirms the CLI can read the color; it does not
+guarantee that a browser accepts the original text as CSS.
 
 Coordinates whose conversion overflows are invalid input. Validation reports
 them with exit 1 and continues through the rest of a batch; conversion
