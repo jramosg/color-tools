@@ -2252,3 +2252,160 @@
             :let [estimate (sut/rgb->kelvin (sut/kelvin->rgb kelvin))]]
       (is (< (Math/abs (- estimate kelvin)) (* 0.05 kelvin))
           (pr-str [kelvin estimate])))))
+
+(def ^:private out-of-gamut-oklab
+  [[0.9 0.3 0.3] [1.01 0 0] [-0.01 0 0] [0.5 0.4 0] [0.7 0 -0.4]])
+
+(defn- round-trip [c] (sut/->rgb-space (sut/->oklab-space c)))
+
+(deftest colorspace-reference-colors
+  (doseq [rgb oklab-reference-rgb
+          :let [c (sut/color rgb)
+                oklab (sut/->oklab-space c)]]
+    (testing "Color -> Oklab matches rgb->oklab"
+      (is (close? (sut/rgb->oklab rgb) [(:L oklab) (:a oklab) (:b oklab)])
+          (pr-str rgb)))
+    (testing "Color -> Oklab -> Color returns the same channels"
+      (is (close? (sut/->rgb c) (sut/->rgb (round-trip c))) (pr-str rgb)))))
+
+(deftest colorspace-8-bit-round-trip
+  (testing "an 8-bit color comes back equal, not one channel short"
+    (doseq [rgb oklab-reference-rgb
+            :let [c (sut/color rgb)]]
+      (is (= c (round-trip c)) (pr-str rgb))))
+  (testing "alpha survives as well"
+    (let [c (sut/color 51 102 153 0.5)]
+      (is (= c (round-trip c))))))
+
+(deftest colorspace-float-error
+  (testing "float error just past 255 is clamped instead of throwing"
+    (is (= "#f0ffff" (sut/->hex (round-trip "#f0ffff"))))))
+
+(deftest colorspace-out-of-gamut
+  (doseq [oklab out-of-gamut-oklab]
+    (testing "Unclamped out-of-gamut channels are rejected by color"
+      (is (thrown? #?(:clj AssertionError :cljs :default)
+                   (sut/color (sut/oklab->rgb oklab)))
+          (pr-str oklab)))
+    (testing "->rgb-space clamps them into 0-255 instead"
+      (let [c (sut/->rgb-space (apply sut/->Oklab (conj oklab 1.0)))]
+        (is (every? #(<= 0 % 255) (sut/->rgb c)) (pr-str oklab))))))
+
+(deftest colorspace-alpha
+  (testing "alpha at both ends and in between survives the round trip"
+    (doseq [a [0.0 0.5 1.0]]
+      (is (= a (:alpha (sut/->oklab-space (sut/color 10 20 30 a)))))
+      (is (= a (:a (round-trip (sut/color 10 20 30 a))))))))
+
+(deftest oklab-record-accepted-by-vector-fns
+  (let [ok  (sut/->oklab-space "#336699")
+        lab [(:L ok) (:a ok) (:b ok)]]
+    (testing "records give the same result as their [l a b] vector"
+      (is (= (sut/oklab->rgb lab) (sut/oklab->rgb ok)))
+      (is (= (sut/oklab->oklch lab) (sut/oklab->oklch ok)))
+      (is (= (sut/oklab->hex lab) (sut/oklab->hex ok)))
+      (is (= (sut/in-gamut? lab) (sut/in-gamut? ok))))
+    (testing "out-of-gamut records give the same result as their vector"
+      (let [out     (sut/->Oklab 0.9 0.3 0.3 1.0)
+            out-lab [0.9 0.3 0.3]]
+        (is (false? (sut/in-gamut? out)))
+        (is (= (sut/in-gamut? out-lab) (sut/in-gamut? out)))
+        (is (= (sut/oklab->rgb out-lab) (sut/oklab->rgb out)))
+        (is (= (sut/oklab->hex out-lab) (sut/oklab->hex out)))))
+    (testing "alpha does not change the result"
+      (let [translucent (assoc ok :alpha 0.5)]
+        (is (= (sut/oklab->rgb ok) (sut/oklab->rgb translucent)))
+        (is (= (sut/oklab->oklch ok) (sut/oklab->oklch translucent)))
+        (is (= (sut/oklab->hex ok) (sut/oklab->hex translucent)))
+        (is (= (sut/in-gamut? ok) (sut/in-gamut? translucent)))))
+    (testing "invalid records still fail the precondition"
+      (is (thrown? #?(:clj AssertionError :cljs :default)
+                   (sut/oklab->rgb (sut/->Oklab nil 0 0 1.0)))))
+    (testing "other maps and Color records are not Oklab coordinates"
+      (doseq [x [{:L 0.5 :a 0.1 :b 0.1} (sut/color "#336699")]]
+        (is (thrown? #?(:clj AssertionError :cljs :default)
+                     (sut/oklab->hex x))
+            (pr-str x))
+        (is (thrown? #?(:clj AssertionError :cljs :default)
+                     (sut/in-gamut? x))
+            (pr-str x))))))
+
+(deftest colorspace-record-accepted-by-color-fns
+  (let [ok (sut/->oklab-space (sut/color 51 102 153 0.5))]
+    (testing "color conversions read the record through ->rgb-space"
+      (is (= (sut/->rgb-space ok) (sut/color ok)))
+      (is (= (sut/->rgb (sut/->rgb-space ok)) (sut/->rgb ok)))
+      (is (= (sut/->rgba (sut/->rgb-space ok)) (sut/->rgba ok)))
+      (is (= "#336699" (sut/->hex ok)))
+      (is (= (sut/->css (sut/->rgb-space ok)) (sut/->css ok))))
+    (testing "out-of-gamut records are clamped"
+      (is (= "#ff0000" (sut/->hex (sut/->Oklab 0.9 0.3 0.3 1.0)))))
+    (testing "unrelated maps still fail"
+      (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs :default)
+                   (sut/->hex {:L 0.5 :a 0.1 :b 0.1}))))))
+
+(deftest colorspace-matches-clamped-conversion
+  (doseq [oklab (conj out-of-gamut-oklab [0.5 0.1 -0.1])
+          :let [c (sut/->rgb-space (apply sut/->Oklab (conj oklab 1.0)))]]
+    (is (close? (sut/clamp-rgb (sut/oklab->rgb oklab)) (sut/->rgb c))
+        (pr-str oklab))))
+
+(deftest colorspace-overflow
+  (testing "coordinates too large to convert throw instead of clamping"
+    (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs :default)
+                 (sut/->rgb-space (sut/->Oklab 1e103 0.0 0.0 1.0))))))
+
+(deftest oklab-constructor
+  (testing "alpha defaults to opaque"
+    (is (= (sut/->Oklab 0.5 0.1 -0.1 1.0) (sut/oklab 0.5 0.1 -0.1))))
+  (testing "alpha is kept as a double"
+    (is (= 0.0 (:alpha (sut/oklab 0.5 0 0 0))))
+    (is (double? (:alpha (sut/oklab 0.5 0 0 1)))))
+  (testing "invalid coordinates and alpha fail the precondition"
+    (doseq [args [[nil 0 0] [0.5 ##NaN 0] [0.5 0 ##Inf] [0.5 0 0 2]
+                  [0.5 0 0 -0.1] [0.5 0 0 nil] [0.5 0 0 "1"]]]
+      (is (thrown? #?(:clj AssertionError :cljs :default)
+                   (apply sut/oklab args))
+          (pr-str args)))))
+
+(deftest colorspace-record-through-color-operations
+  (let [ok (sut/->oklab-space "#336699")
+        c  (sut/color "#336699")
+        ops {"lighten"        #(sut/lighten % 0.1)
+             "darken"         #(sut/darken % 0.1)
+             "saturate"       #(sut/saturate % 0.1)
+             "adjust-hue"     #(sut/adjust-hue % 30)
+             "invert"         sut/invert
+             "grayscale"      sut/grayscale
+             "mix"            #(sut/mix % "#ffffff")
+             "blend-multiply" #(sut/blend-multiply % "#ffffff")
+             "blend-screen"   #(sut/blend-screen % "#ffffff")
+             "blend-overlay"  #(sut/blend-overlay % "#ffffff")
+             "alpha-blend"    #(sut/alpha-blend % "#ffffff")
+             "with-alpha"     #(sut/with-alpha % 0.5)
+             "complementary"  sut/complementary}]
+    (testing "an Oklab record gives the Color the equivalent Color gives"
+      (doseq [[op f] ops
+              :let [expected (f c)
+                    actual   (f ok)]]
+        (is (= expected actual) op)))
+    (testing "Color-returning operations keep returning Color records"
+      (doseq [op ["lighten" "darken" "adjust-hue" "invert" "mix"
+                  "blend-multiply" "blend-screen" "blend-overlay"
+                  "alpha-blend" "with-alpha" "complementary"]]
+        (is (sut/color? ((ops op) ok)) op)))
+    (testing "palettes return Color records"
+      (doseq [palette [sut/triadic sut/analogous sut/tetradic
+                       sut/split-complementary]
+              :let [colors (palette ok)]]
+        (is (seq colors))
+        (is (every? sut/color? colors))
+        (is (= (palette c) colors))))
+    (testing "monochromatic gives what it gives for the equivalent Color"
+      (is (= (sut/monochromatic c) (sut/monochromatic ok))))))
+
+(deftest colorspace-identity
+  (let [ok (sut/->Oklab 0.5 0.1 -0.1 0.8)
+        c  (sut/color 10 20 30)]
+    (is (identical? ok (sut/->oklab-space ok)))
+    (is (identical? c (sut/->rgb-space c)))))

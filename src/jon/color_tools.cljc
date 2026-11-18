@@ -498,6 +498,29 @@
     (throw (ex-info "Invalid CSS RGBA format" {:input css-str}))))
 
 ;; =============================================================================
+;; Colorspace protocol
+;; =============================================================================
+
+(defprotocol Colorspace
+  "Convert a value into another colorspace. Implementations follow the
+   -><colorspace>-space naming convention."
+  (->rgb-space [c]
+    "Convert c to a Color record, keeping fractional channels.
+
+     Oklab can describe colors outside the sRGB gamut, and Color cannot
+     hold channels below 0 or above 255. Oklab input is clamped per
+     channel with clamp-rgb, which shifts the hue and lightness of
+     out-of-gamut colors. Throws when the coordinates are so large that
+     the conversion overflows.
+
+     Channels keep full precision, except that a channel within 1e-9 of a
+     whole number snaps to it, so an 8-bit color survives a round trip
+     through another colorspace. Round the result with round-coords, or
+     pass :decimal-places to ->css, for display.")
+  (->oklab-space [c]
+    "Convert c to an Oklab record."))
+
+;; =============================================================================
 ;; Color Record Type
 ;; =============================================================================
 
@@ -547,6 +570,8 @@
     (if (= a 1.0)
       (rgb->hex [r g b])
       (css-rgba [r g b a] {}))))
+
+(defrecord Oklab [L a b alpha])
 
 (defn color?
   "Check if value is a Color record"
@@ -616,6 +641,7 @@
     (vector? color-input) (if (= 4 (count color-input))
                             (color-from-rgba color-input)
                             (color-from-rgb color-input))
+    (satisfies? Colorspace color-input) (->rgb-space color-input)
     :else (throw (ex-info "Invalid color input" {:input color-input
                                                  :reason :unknown-format}))))
 
@@ -705,10 +731,11 @@
   (->> (hsl-coords color) f hsl->rgb-coords (mapv round-coord)))
 
 (defn- like-input
-  "Return 8-bit `rgb` as a Color, hex string or vector, following `color`."
+  "Return 8-bit `rgb` as a Color, hex string or vector, following `color`.
+   Any record, such as an Oklab, gets a Color."
   [color rgb]
   (cond
-    (color? color) (color-from-rgb rgb)
+    (record? color) (color-from-rgb rgb)
     (string? color) (rgb->hex rgb)
     (vector? color) rgb))
 
@@ -752,7 +779,7 @@
         [r g b] (->rgb color-record)
         inverted [(- 255 r) (- 255 g) (- 255 b)]]
     (cond
-      (color? color) (color-from-rgb inverted)
+      (record? color) (color-from-rgb inverted)
       (string? color) (rgb->hex inverted)
       (vector? color) inverted)))
 
@@ -798,7 +825,7 @@
          rgb2 (->rgb color2)
          mixed (mapv #(+ %1 (* (- %2 %1) ratio)) rgb1 rgb2)]
      (cond
-       (color? color1) (color-from-rgb (mapv round-int mixed))
+       (record? color1) (color-from-rgb (mapv round-int mixed))
        (string? color1) (rgb->hex mixed)
        (vector? color1) mixed))))
 
@@ -1252,7 +1279,7 @@
                 (blend-channel g1 g2 blend-fn)
                 (blend-channel b1 b2 blend-fn)]]
     (cond
-      (color? base-color) (color-from-rgb result)
+      (record? base-color) (color-from-rgb result)
       (string? base-color) (rgb->hex result)
       (vector? base-color) result)))
 
@@ -1266,7 +1293,7 @@
                 (blend-channel g1 g2 blend-fn)
                 (blend-channel b1 b2 blend-fn)]]
     (cond
-      (color? base-color) (color-from-rgb result)
+      (record? base-color) (color-from-rgb result)
       (string? base-color) (rgb->hex result)
       (vector? base-color) result)))
 
@@ -1283,7 +1310,7 @@
                 (blend-channel g1 g2 blend-fn)
                 (blend-channel b1 b2 blend-fn)]]
     (cond
-      (color? base-color) (color-from-rgb result)
+      (record? base-color) (color-from-rgb result)
       (string? base-color) (rgb->hex result)
       (vector? base-color) result)))
 
@@ -1371,7 +1398,7 @@
                  (blend-channel g1 g2)
                  (blend-channel b1 b2)]]
      (cond
-       (or (color? base-color) (color? overlay-color))
+       (or (record? base-color) (record? overlay-color))
        (color-from-rgba (conj (mapv round-int result) a-out))
 
        (string? base-color)
@@ -1389,7 +1416,7 @@
    {:pre [(and (>= alpha 0) (<= alpha 1))]}
    (let [[r g b] (->rgb color)]
      (cond
-       (color? color) (->color r g b alpha)
+       (record? color) (->color r g b alpha)
        (string? color) (if (== alpha 1)
                          (rgb->hex [r g b])
                          (css-rgba [r g b alpha] options))
@@ -1680,9 +1707,29 @@
        (= 3 (count oklab))
        (every? finite? oklab)))
 
+(defn oklab
+  "Create an Oklab record from Oklab coordinates, with alpha from 0 to 1
+   that defaults to 1.0. The fields are :L, :a, :b and :alpha; :a is the
+   green-red axis, not alpha as on Color. Checks the input with an
+   assertion precondition."
+  ([l a b] (oklab l a b 1.0))
+  ([l a b alpha]
+   {:pre [(valid-oklab? [l a b]) (number? alpha) (<= 0 alpha 1)]}
+   (->Oklab l a b (double alpha))))
+
+(defn- oklab-coords
+  "Return [l a b] for an Oklab record, dropping alpha, or for a vector.
+   Checks the shape with an assertion."
+  [oklab]
+  (let [lab (cond-> oklab
+              (instance? Oklab oklab) ((juxt :L :a :b)))]
+    (assert (valid-oklab? lab) "Oklab must be a record or [l a b]")
+    lab))
+
 (defn oklab->rgb
-  "Convert Oklab coordinates [l a b] to an sRGB vector [r g b] on the 0 to
-   255 scale. The inverse of rgb->oklab.
+  "Convert Oklab coordinates [l a b], or an Oklab record, to an sRGB vector
+   [r g b] on the 0 to 255 scale. The inverse of rgb->oklab. A record's
+   alpha is dropped; use ->rgb-space to keep it.
 
    Returns unrounded floats and does not clamp. Colors outside the sRGB
    gamut produce channels below 0 or above 255; check with in-gamut?. Use
@@ -1693,8 +1740,7 @@
    (oklab->rgb (rgb->oklab rgb)) returns rgb to within float error. Checks
    the input shape with an assertion precondition."
   [oklab]
-  {:pre [(valid-oklab? oklab)]}
-  (let [[l a b] oklab
+  (let [[l a b] (oklab-coords oklab)
         l-root (+ (* 0.9999999984505198 l)
                   (* 0.39633779217376786 a)
                   (* 0.2158037580607588 b))
@@ -1728,17 +1774,18 @@
   1e-4)
 
 (defn in-gamut?
-  "Check whether Oklab coordinates [l a b] fall inside the sRGB gamut, so
-   that oklab->rgb returns every channel between 0 and 255. Allows a small
-   tolerance for float error, so colors converted from valid RGB stay in
-   gamut."
+  "Check whether Oklab coordinates [l a b], or an Oklab record, fall inside
+   the sRGB gamut, so that oklab->rgb returns every channel between 0 and
+   255. Allows a small tolerance for float error, so colors converted from
+   valid RGB stay in gamut."
   [oklab]
   (every? #(<= (- gamut-tolerance) % (+ 255 gamut-tolerance))
           (oklab->rgb oklab)))
 
 (defn oklab->hex
-  "Convert Oklab coordinates [l a b] to a hex string. Clamps channels
-   outside the sRGB gamut with clamp-rgb, then rounds each to 8 bits."
+  "Convert Oklab coordinates [l a b], or an Oklab record, to a hex string.
+   Clamps channels outside the sRGB gamut with clamp-rgb, then rounds each
+   to 8 bits. A record's alpha is dropped."
   [oklab]
   (rgb->hex (clamp-rgb (oklab->rgb oklab))))
 
@@ -1757,13 +1804,13 @@
        (not (neg? (second oklch)))))
 
 (defn oklab->oklch
-  "Convert Oklab coordinates [l a b] to OKLCh [l c h], the polar form:
-   l is unchanged, c is chroma (0 and up) and h is hue in degrees, from 0
-   up to 360. Colors with chroma below 1e-6 get hue 0; CSS calls that hue
-   `none`. Returns unrounded values."
+  "Convert Oklab coordinates [l a b], or an Oklab record, to OKLCh [l c h],
+   the polar form: l is unchanged, c is chroma (0 and up) and h is hue in
+   degrees, from 0 up to 360. Colors with chroma below 1e-6 get hue 0; CSS
+   calls that hue `none`. Returns unrounded values. A record's alpha is
+   dropped."
   [oklab]
-  {:pre [(valid-oklab? oklab)]}
-  (let [[l a b] oklab
+  (let [[l a b] (oklab-coords oklab)
         c (Math/sqrt (+ (* a a) (* b b)))
         h (if (< c achromatic-chroma)
             0.0
@@ -1798,3 +1845,38 @@
    gamut like oklab->hex."
   [oklch]
   (oklab->hex (oklch->oklab oklch)))
+
+;; =============================================================================
+;; Colorspace implementations
+;; =============================================================================
+
+(defn- snap-channel
+  "Round `x` to a whole number when float error leaves it within 1e-9 of
+   one, so an 8-bit channel survives a round trip through Oklab."
+  [x]
+  (let [x (double x)
+        n (Math/round x)]
+    (if (< (Math/abs (- x n)) 1e-9) n x)))
+
+(extend-protocol Colorspace
+  Oklab
+  (->rgb-space [ths]
+    (let [rgb (oklab->rgb ths)]
+      (when-not (every? finite? rgb)
+        (throw (ex-info "Oklab coordinates are too large to convert"
+                        {:oklab ths})))
+      (color (conj (mapv snap-channel (clamp-rgb rgb)) (:alpha ths))
+             {:full-precision? true})))
+  (->oklab-space [ths] ths)
+
+  Color
+  (->rgb-space [ths] ths)
+  (->oklab-space [c]
+    (let [[l a b] (rgb->oklab (->rgb c))]
+      (->Oklab l a b (:a c))))
+
+  #?(:clj String :cljs string)
+  (->rgb-space [ths]
+    (color ths {:full-precision? true}))
+  (->oklab-space [ths]
+    (->oklab-space (->rgb-space ths))))

@@ -396,6 +396,8 @@ which `valid-css-rgba?` accepts.
 Creates a `Color` record from any supported input, RGB channels, or RGBA
 channels. Existing arities truncate RGB channels. The two-argument options
 form can preserve fractions with `:full-precision? true`.
+An `Oklab` record is the exception: it converts through `->rgb-space`, which
+keeps fractional channels. Use `->hex` or `round-coords` for whole numbers.
 
 ```clojure
 (color "#ff0000")
@@ -515,6 +517,63 @@ Converts any supported color input to HSL.
 ```
 
 Converts any supported color input to HSV.
+
+### `->oklab-space`
+
+```clojure
+(->oklab-space color) => Oklab
+```
+
+Converts a color to an `Oklab` record with the fields `:L`, `:a`, `:b` and
+`:alpha`. Unlike the `[l a b]` vector from `rgb->oklab`, the record keeps the
+alpha channel. `:a` here is the green-red axis, not alpha as on `Color`.
+Passing an `Oklab` returns it unchanged.
+
+```clojure
+(let [ok (color/->oklab-space "#336699")]
+  (color/in-gamut? ok))
+;=> true
+```
+
+### `oklab`
+
+```clojure
+(oklab l a b) => Oklab
+(oklab l a b alpha) => Oklab
+```
+
+Creates an `Oklab` record from coordinates. `alpha` runs from `0` to `1` and
+defaults to `1.0`. Non-finite coordinates and alpha outside that range fail
+an assertion.
+
+```clojure
+(color/->hex (color/oklab 0.5 0.0 0.0))
+;=> "#636363"
+```
+
+### `->rgb-space`
+
+```clojure
+(->rgb-space color) => Color
+```
+
+Converts a color, such as an `Oklab` record, back to a `Color` record.
+Channels keep full precision, except that a channel within `1e-9` of a whole
+number snaps to it, so an 8-bit color survives a round trip through Oklab.
+Round the result with `round-coords`, or pass `:decimal-places` to `->css`,
+for display.
+
+An `Oklab` outside the sRGB gamut is clamped per channel with `clamp-rgb`,
+which shifts its hue and lightness. Coordinates so large that the conversion
+overflows throw an `ex-info`.
+
+The other color functions, such as `color`, `->rgb`, `->hex` and `->css`,
+call `->rgb-space` on an `Oklab`, so they accept the record too.
+
+```clojure
+(color/->hex (color/->oklab-space "#336699"))
+;=> "#336699"
+```
 
 ## Color Manipulation
 
@@ -1050,6 +1109,11 @@ channels to within `1e-9`.
 The result keeps full precision and is not clamped. Colors outside the sRGB
 gamut produce channels below `0` or above `255`; check them with
 [`in-gamut?`](#in-gamut).
+
+`oklab->rgb`, `oklab->hex`, `in-gamut?` and `oklab->oklch` also accept an
+`Oklab` record, such as one from [`->oklab-space`](#-oklab-space). Their
+results have no alpha, so the record's alpha is dropped; use
+[`->rgb-space`](#-rgb-space) to keep it.
 
 ```clojure
 (color/round-coords (color/oklab->rgb [0.628 0.2249 0.1258])

@@ -28,6 +28,19 @@ All notable changes to this project will be documented in this file. This change
     AA, AA for large text, or AAA
   - Every public function has a command; a test keeps the
     [coverage table](doc/cli.md#library-coverage) current
+- `oklab` builds an `Oklab` record from `l`, `a` and `b`. Alpha defaults
+  to 1.0 ([#7](https://github.com/jramosg/color-tools/issues/7)).
+- `->oklab-space` converts a color to an `Oklab` record, which keeps alpha.
+  `->rgb-space` converts it back to a `Color` and clamps out-of-gamut
+  channels ([#7](https://github.com/jramosg/color-tools/issues/7)).
+- `oklab->rgb`, `oklab->hex`, `in-gamut?` and `oklab->oklch` accept an
+  `Oklab` record as well as an `[l a b]` vector, and ignore its alpha.
+  `color`, `->rgb`, `->hex`, `->css` and the other color functions accept
+  an `Oklab` record too
+  ([#7](https://github.com/jramosg/color-tools/issues/7)).
+
+## [1.4.0] - 2026-11-17
+### Added
 - `rgb->hsl`, `rgb->hsv`, `hsl->rgb` and `hsv->rgb` accept
   `{:full-precision? true}` in a second argument to preserve computed
   doubles. `(color input options)` and `(->color r g b a options)` accept
