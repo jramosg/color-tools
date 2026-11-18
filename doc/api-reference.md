@@ -522,7 +522,7 @@ Converts any supported color input to HSV.
 (->oklab-space color) => Oklab
 ```
 
-Converts a color to an `Oklab` record with the fields `:l`, `:a`, `:b` and
+Converts a color to an `Oklab` record with the fields `:L`, `:a`, `:b` and
 `:alpha`. Unlike the `[l a b]` vector from `rgb->oklab`, the record keeps the
 alpha channel. `:a` here is the green-red axis, not alpha as on `Color`.
 Passing an `Oklab` returns it unchanged.

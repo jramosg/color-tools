@@ -2263,7 +2263,7 @@
           :let [c (sut/color rgb)
                 oklab (sut/->oklab-space c)]]
     (testing "Color -> Oklab matches rgb->oklab"
-      (is (close? (sut/rgb->oklab rgb) [(:l oklab) (:a oklab) (:b oklab)])
+      (is (close? (sut/rgb->oklab rgb) [(:L oklab) (:a oklab) (:b oklab)])
           (pr-str rgb)))
     (testing "Color -> Oklab -> Color returns the same channels"
       (is (close? (sut/->rgb c) (sut/->rgb (round-trip c))) (pr-str rgb)))))
@@ -2290,7 +2290,7 @@
 
 (deftest oklab-record-accepted-by-vector-fns
   (let [ok  (sut/->oklab-space "#336699")
-        lab [(:l ok) (:a ok) (:b ok)]]
+        lab [(:L ok) (:a ok) (:b ok)]]
     (testing "records give the same result as their [l a b] vector"
       (is (= (sut/oklab->rgb lab) (sut/oklab->rgb ok)))
       (is (= (sut/oklab->oklch lab) (sut/oklab->oklch ok)))
@@ -2313,7 +2313,7 @@
       (is (thrown? #?(:clj AssertionError :cljs :default)
                    (sut/oklab->rgb (sut/->Oklab nil 0 0 1.0)))))
     (testing "other maps and Color records are not Oklab coordinates"
-      (doseq [x [{:l 0.5 :a 0.1 :b 0.1} (sut/color "#336699")]]
+      (doseq [x [{:L 0.5 :a 0.1 :b 0.1} (sut/color "#336699")]]
         (is (thrown? #?(:clj AssertionError :cljs :default)
                      (sut/oklab->hex x))
             (pr-str x))
@@ -2333,7 +2333,7 @@
       (is (= "#ff0000" (sut/->hex (sut/->Oklab 0.9 0.3 0.3 1.0)))))
     (testing "unrelated maps still fail"
       (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs :default)
-                   (sut/->hex {:l 0.5 :a 0.1 :b 0.1}))))))
+                   (sut/->hex {:L 0.5 :a 0.1 :b 0.1}))))))
 
 (deftest colorspace-matches-clamped-conversion
   (doseq [oklab (conj out-of-gamut-oklab [0.5 0.1 -0.1])

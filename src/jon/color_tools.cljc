@@ -1698,7 +1698,7 @@
       (cond-> (- (* 1.055 (Math/pow abs-c (/ 1 2.4))) 0.055)
         (neg? c) -))))
 
-(defrecord Oklab [l a b alpha])
+(defrecord Oklab [L a b alpha])
 
 (defn- valid-oklab?
   [oklab]
@@ -1708,7 +1708,7 @@
 
 (defn oklab
   "Create an Oklab record from Oklab coordinates, with alpha from 0 to 1
-   that defaults to 1.0. The fields are :l, :a, :b and :alpha; :a is the
+   that defaults to 1.0. The fields are :L, :a, :b and :alpha; :a is the
    green-red axis, not alpha as on Color. Checks the input with an
    assertion precondition."
   ([l a b] (oklab l a b 1.0))
@@ -1721,7 +1721,7 @@
    Checks the shape with an assertion."
   [oklab]
   (let [lab (cond-> oklab
-              (instance? Oklab oklab) ((juxt :l :a :b)))]
+              (instance? Oklab oklab) ((juxt :L :a :b)))]
     (assert (valid-oklab? lab) "Oklab must be a record or [l a b]")
     lab))
 
@@ -1871,3 +1871,6 @@
     (color ths {:full-precision? true}))
   (->oklab-space [ths]
     (->oklab-space (->rgb-space ths))))
+
+(require
+ )
