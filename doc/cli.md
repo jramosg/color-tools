@@ -87,7 +87,9 @@ color-tools --version
 ### Shell completion
 
 `color-tools completions` prints a script that completes commands, options
-and their values, such as the formats of `--to`.
+and their values, such as the formats of `--to`. Suggestions use the selected
+command's options and modes. Aliases and global options before the command
+are supported.
 
 ```bash
 # bash: add to ~/.bashrc
