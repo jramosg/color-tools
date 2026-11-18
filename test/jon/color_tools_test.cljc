@@ -2303,6 +2303,22 @@
       (is (thrown? #?(:clj AssertionError :cljs :default)
                    (sut/oklab->rgb (sut/->Oklab nil 0 0 1.0)))))))
 
+(deftest colorspace-string-precision
+  (testing "->rgb-space keeps fractional CSS channels"
+    (is (= [10.5 20.5 30.5]
+           (sut/->rgb (sut/->rgb-space "rgb(10.5, 20.5, 30.5)"))))
+    (is (= 0.5 (:a (sut/->rgb-space "rgba(10.5, 20.5, 30.5, 0.5)")))))
+  (testing "->oklab-space reads the same channels as ->rgb"
+    (is (close? (sut/rgb->oklab [10.5 20.5 30.5])
+                (let [ok (sut/->oklab-space "rgb(10.5, 20.5, 30.5)")]
+                  [(:L ok) (:a ok) (:b ok)]))))
+  (testing "a Color's CSS string survives a round trip"
+    (let [c (sut/->rgb-space "rgba(10.5, 20.5, 30.5, 0.5)")]
+      (is (close? (sut/->rgb c)
+                  (sut/->rgb (round-trip (sut/->css c)))))))
+  (testing "hex strings give the Color they name"
+    (is (= (sut/color "#336699") (sut/->rgb-space "#336699")))))
+
 (deftest colorspace-identity
   (let [ok (sut/->Oklab 0.5 0.1 -0.1 0.8)
         c  (sut/color 10 20 30)]
