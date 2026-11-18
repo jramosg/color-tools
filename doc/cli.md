@@ -147,8 +147,15 @@ results. HSL adjustments and the library's other 8-bit operations still
 return whole channels; their intermediate calculations use the library's
 current precision rules.
 
-Oklab and OKLCh can describe colors a screen cannot show. Those are clamped
-into sRGB with a warning on stderr; `color-tools gamut` tells you beforehand.
+Oklab and OKLCh can describe colors outside sRGB. Converting between these
+two spaces preserves the original coordinates, including colors a screen
+cannot show. An sRGB output clamps those colors and warns on stderr;
+`color-tools gamut` checks the unclamped coordinates.
+
+```console
+$ color-tools convert 'oklab(0.7 0.4 0.4)' --to oklch
+oklch(0.7 0.5657 45)
+```
 
 ```console
 $ color-tools convert 'oklch(0.7 0.4 150)'
@@ -176,6 +183,11 @@ oklch(0.8169 0.2003 129.6267)
 Without `--to`, colors print as hex. A translucent color prints as `rgba()`
 so its alpha isn't lost. `--to hex8` keeps it in hex form and `--to hex`
 drops it on purpose.
+
+Coordinate output (`rgb`, `hsl`, `hsv`, `lab`, `oklab`, `oklch`)
+contains three coordinates and omits alpha. Use `rgba` or `hex8` when the
+output must carry opacity. Native Oklab/OKLCh conversion retains alpha
+internally while formatting its three coordinates.
 
 ```console
 $ color-tools alpha '#3498db' 0.5
