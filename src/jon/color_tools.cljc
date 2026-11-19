@@ -1397,9 +1397,10 @@
                          (if (zero? a-out)
                            0
                            (/ (+ (* c2 a2) (* c1 a1 (- 1 a2))) a-out)))
-         result [(blend-channel r1 r2)
-                 (blend-channel g1 g2)
-                 (blend-channel b1 b2)]]
+         ;; Floating-point error can move a blended channel past 255.
+         result (clamp-rgb [(blend-channel r1 r2)
+                            (blend-channel g1 g2)
+                            (blend-channel b1 b2)])]
      (cond
        (or (record? base-color) (record? overlay-color))
        (color-from-rgba (conj (mapv round-int result) a-out))
