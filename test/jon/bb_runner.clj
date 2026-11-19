@@ -21,6 +21,9 @@
 
 (defn run-tests! []
   (let [namespaces (test-namespaces)]
+    (when (empty? namespaces)
+      (throw (ex-info "No shared .cljc test namespaces found"
+                      {:babashka/exit 1})))
     (doseq [namespace namespaces] (require namespace))
     (let [{:keys [fail error]} (apply test/run-tests namespaces)]
       (when (pos? (+ fail error))
