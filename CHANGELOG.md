@@ -21,6 +21,8 @@ All notable changes to this project will be documented in this file. This change
   rounding. The HSV midpoint of `#001801` and `#003002` is now `#002402`
   on every runtime; vector results keep their full precision
   ([#142](https://github.com/jramosg/color-tools/issues/142)).
+- `with-alpha` converts JVM Ratio opacities to doubles in vector results
+  ([#158](https://github.com/jramosg/color-tools/issues/158)).
 
 ## [1.4.0] - 2026-11-17
 ### Added
