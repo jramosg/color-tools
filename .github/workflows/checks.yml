@@ -68,6 +68,9 @@ jobs:
 
       - name: Run Babashka tests
         run: bb test
+        
+      - name: Compare JVM and Node results
+        run: clojure -M:test-parity
 
   demo-build:
     name: Build demo
