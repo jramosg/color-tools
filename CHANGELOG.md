@@ -15,6 +15,8 @@ All notable changes to this project will be documented in this file. This change
   ([#7](https://github.com/jramosg/color-tools/issues/7)).
 
 ### Fixed
+- `mix` preserves fractional RGB channels at a ratio of 0 or 1 before
+  output rounding ([#156](https://github.com/jramosg/color-tools/issues/156)).
 - Hex and Color interpolation stabilize computed half-channel ties before
   rounding. The HSV midpoint of `#001801` and `#003002` is now `#002402`
   on every runtime; vector results keep their full precision

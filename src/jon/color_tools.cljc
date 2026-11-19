@@ -823,7 +823,10 @@
    (let [ratio (inexact (or ratio 0.5))
          rgb1 (->rgb color1)
          rgb2 (->rgb color2)
-         mixed (mapv #(+ %1 (* (- %2 %1) ratio)) rgb1 rgb2)]
+         mixed (cond
+                 (zero? ratio) (mapv inexact rgb1)
+                 (== ratio 1) (mapv inexact rgb2)
+                 :else (mapv #(+ %1 (* (- %2 %1) ratio)) rgb1 rgb2))]
      (cond
        (record? color1) (color-from-rgb (mapv round-int mixed))
        (string? color1) (rgb->hex mixed)
