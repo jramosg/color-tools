@@ -1417,7 +1417,8 @@
   ([color alpha] (with-alpha color alpha {}))
   ([color alpha options]
    {:pre [(and (>= alpha 0) (<= alpha 1))]}
-   (let [[r g b] (->rgb color)]
+   (let [[r g b] (->rgb color)
+         alpha (inexact alpha)]
      (cond
        (record? color) (->color r g b alpha)
        (string? color) (if (== alpha 1)

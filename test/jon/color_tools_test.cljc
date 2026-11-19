@@ -1397,6 +1397,9 @@
   (testing "Whole-number ratios keep whole-number channels"
     (is (= [255 255 255] (sut/mix [0 0 0] [255 255 255] 1)))
     (is (= [0 0 0] (sut/mix [0 0 0] [255 255 255] 0))))
+  (testing "Setting a ratio opacity produces a plain numeric channel"
+    (let [alpha #?(:clj 1/1000 :cljs 0.001)]
+      (is (= [0 0 0 0.001] (sut/with-alpha [0 0 0] alpha)))))
   (testing "An integer alpha of 1 is opaque, as 1.0 is"
     (is (= "#ff0000" (sut/with-alpha "#ff0000" 1)))
     (is (= "#ff0000" (sut/with-alpha "#ff0000" 1.0)))
