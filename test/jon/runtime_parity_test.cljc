@@ -2,42 +2,43 @@
 ;; SPDX-License-Identifier: EPL-1.0
 
 (ns jon.runtime-parity-test
-  (:require #?(:clj [clojure.edn :as edn]
-               :cljs [cljs.reader :as edn])
-            #?(:clj [clojure.java.io :as io])
-            [clojure.test :refer [deftest is testing]]
-            [jon.runtime-fixture :as fixture]))
+  (:require [clojure.test :refer [deftest is testing]]
+            [jon.runtime-parity :as parity]))
 
-(def ^:private cases
-  (:cases
-   (edn/read-string
-    #?(:clj (slurp (io/resource "fixtures/runtime_parity.edn"))
-       :cljs (js-invoke (js/require "fs") "readFileSync"
-                        "test/fixtures/runtime_parity.edn" "utf8")))))
+(def ^:private case-input {:op :rgb->hsl :args [[0 24 1]]})
 
-(defn- same-result? [expected actual]
-  (cond
-    (number? expected)
-    (and (number? actual)
-         (<= (Math/abs (double (- expected actual)))
-             (* 1.0E-9 (max 1.0 (Math/abs (double expected))))))
+(deftest runtime-difference-report-test
+  (testing "a platform regression reports its input and both results"
+    (is (= [(assoc case-input :index 0
+                   :jvm [123 100 5] :node [122 100 5])]
+           (parity/differences [case-input]
+                               [[123 100 5]] [[122 100 5]]))))
+  (testing "strings and booleans must match exactly"
+    (doseq [[jvm node] [["#d6fde1" "#d5fde1"] [true false] [false "false"]]]
+      (is (= 1 (count (parity/differences [case-input] [jvm] [node])))))))
 
-    (map? expected)
-    (and (map? actual)
-         (= (set (keys expected)) (set (keys actual)))
-         (every? (fn [[k v]] (same-result? v (get actual k))) expected))
+(deftest runtime-number-tolerance-test
+  (testing "floating point noise is tolerated at small and large scales"
+    (doseq [[jvm node] [[0.5 (+ 0.5 5.0E-10)] [1.0E8 (+ 1.0E8 0.05)]]]
+      (is (empty? (parity/differences [case-input] [jvm] [node])))))
+  (testing "larger numeric changes fail, including inside theme data"
+    (is (seq (parity/differences [case-input] [0.5] [0.500001])))
+    (is (seq (parity/differences [case-input]
+                                 [{:scale [0.5]}] [{:scale [0.500001]}]))))
+  (testing "nonfinite results cannot pass through an infinite tolerance"
+    (doseq [[jvm node] [[0.0 ##Inf] [##-Inf 1.0]
+                        [##NaN 0.0] [1.0 ##NaN]]]
+      (is (seq (parity/differences [case-input] [jvm] [node])))))
+  (testing "map order and whole-number representations do not matter"
+    (is (empty? (parity/differences [case-input]
+                                    [{:a 1.0 :b [0.5]}]
+                                    [{:b [0.5] :a 1}])))))
 
-    (sequential? expected)
-    (and (sequential? actual)
-         (= (count expected) (count actual))
-         (every? true? (map same-result? expected actual)))
-
-    :else (= expected actual)))
-
-(deftest shared-expected-values-test
-  (testing "committed JVM values agree on every supported runtime"
-    (is (< 2000 (count cases) 4000))
-    (doseq [{:keys [op args expected] :as case} cases
-            :let [actual (fixture/evaluate case)]]
-      (is (same-result? expected actual)
-          (pr-str {:op op :args args :expected expected :actual actual})))))
+(deftest incomplete-runtime-run-test
+  (testing "empty or truncated runs cannot pass by comparing a prefix"
+    (doseq [[cases jvm node] [[[] [] []]
+                              [[case-input] [] []]
+                              [[case-input] [1] []]
+                              [[case-input] [1] [1 2]]]]
+      (is (thrown? #?(:clj clojure.lang.ExceptionInfo :cljs js/Error)
+                   (parity/differences cases jvm node))))))

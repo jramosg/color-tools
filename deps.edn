@@ -12,6 +12,11 @@
                 olical/cljs-test-runner {:mvn/version "3.8.1"}}
    :main-opts ["-m" "cljs-test-runner.main"
                "--out" "target/cljs-test"]}
+  ;; Execute and compare the same cases on the JVM and compiled Node.js.
+  :test-parity
+  {:extra-paths ["test"]
+   :extra-deps {org.clojure/clojurescript {:mvn/version "1.12.145"}}
+   :main-opts ["-m" "jon.runtime-parity-check"]}
   :build {:deps {io.github.clojure/tools.build
                  {:mvn/version "0.10.14"}
                  slipset/deps-deploy {:mvn/version "0.2.5"}}

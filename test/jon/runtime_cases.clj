@@ -1,13 +1,13 @@
 ;; Copyright (c) 2025 Jon Ramos
 ;; SPDX-License-Identifier: EPL-1.0
 
-(ns jon.generate-runtime-fixture
-  "Regenerate committed expected values on the JVM, never during tests."
-  (:require [clojure.pprint :as pprint]
-            [jon.color-tools :as ct]
-            [jon.runtime-fixture :as fixture]))
+(ns jon.runtime-cases
+  "Generate one set of inputs for the JVM and Node parity runners."
+  (:require [jon.color-tools :as ct]))
 
-(def ^:private seed 141113)
+(def seed
+  "The fixed seed used to reproduce the generated parity inputs."
+  141113)
 
 (defn- input [op & args]
   {:op op :args (vec args)})
@@ -68,20 +68,16 @@
    (input :accessible? "#006ffb" "#ffffff" :aa)
    (input :luminance [10.1 10.1 10.1])])
 
-(defn -main [& _]
+(defn cases
+  "Return the deterministic inputs; no expected results are generated."
+  []
   (let [rgb (colors)
         pairs (map vector rgb (concat (rest rgb) [(first rgb)]))
         themes (for [color (take 6 rgb)
                      mode [:light :dark]
                      level [:aa :aa-large :aaa]]
                  (input :accessible-theme (ct/rgb->hex color)
-                        {:mode mode :level level}))
-        cases (concat (regression-cases)
-                      (mapcat #(apply color-cases %) pairs)
-                      themes)
-        data {:seed seed
-              :cases (mapv #(assoc % :expected (fixture/evaluate %)) cases)}]
-    (spit "test/fixtures/runtime_parity.edn"
-          (binding [pprint/*print-right-margin* 78]
-            (with-out-str (pprint/pprint data))))
-    (println "Wrote" (count (:cases data)) "runtime parity cases")))
+                        {:mode mode :level level}))]
+    (vec (concat (regression-cases)
+                 (mapcat #(apply color-cases %) pairs)
+                 themes))))
