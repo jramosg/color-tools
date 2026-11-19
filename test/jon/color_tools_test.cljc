@@ -1417,6 +1417,12 @@
       (is (vector? result))
       (is (= 4 (count result)))))
 
+  (testing "Compositing two translucent blues keeps the blue channel in range"
+    (let [base [0 0 255 0.003]
+          overlay [0 0 255 0.104]
+          result (sut/alpha-blend base overlay)]
+      (is (== 255 (nth result 2)))))
+
   (testing "Alpha blend with hex strings"
     (let [result (sut/alpha-blend "#ff0000" "#0000ff")]
       (is (string? result))))

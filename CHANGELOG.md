@@ -20,6 +20,10 @@ All notable changes to this project will be documented in this file. This change
   on every runtime; vector results keep their full precision
   ([#142](https://github.com/jramosg/color-tools/issues/142)).
 
+- `alpha-blend` keeps RGB channels in range when floating-point
+  compositing would otherwise push a channel above 255
+  ([#159](https://github.com/jramosg/color-tools/issues/159)).
+
 ## [1.4.0] - 2026-11-17
 ### Added
 - `rgb->hsl`, `rgb->hsv`, `hsl->rgb` and `hsv->rgb` accept
