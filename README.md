@@ -461,6 +461,23 @@ clojure -M:test-cljs
 
 The ClojureScript run needs Node.js on your `PATH`.
 
+CI also compares JVM results directly with ClojureScript compiled for Node:
+
+```bash
+clojure -M:test-parity
+```
+
+The command generates deterministic cases with seed `141113`, runs the same
+inputs on both runtimes and compares their outputs. Strings and booleans must
+match exactly; numeric results allow a relative and absolute tolerance of
+`1e-9`. It covers conversions, adjustments, palettes, gradients, blending,
+themes and contrast, including the regressions from #134 and #137.
+
+Inputs, results and any differences are written under `target/runtime-parity/`.
+They are generated for each run and are not committed. A mismatch fails the
+command and the CI job with the input and both results. Existing tests with
+known expected values continue to check mathematical correctness.
+
 ### Code Quality
 
 #### Formatting

@@ -65,6 +65,9 @@ jobs:
       - name: Run ClojureScript tests
         run: clojure -M:test-cljs
 
+      - name: Compare JVM and Node results
+        run: clojure -M:test-parity
+
   demo-build:
     name: Build demo
     runs-on: ubuntu-latest
