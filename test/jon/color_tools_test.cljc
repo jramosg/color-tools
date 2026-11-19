@@ -321,7 +321,13 @@
             blue "#0000ff"
             mixed-25 (sut/mix red blue 0.25)
             mixed-75 (sut/mix red blue 0.75)]
-        (is (not= mixed-25 mixed-75))))))
+        (is (not= mixed-25 mixed-75)))))
+
+  (testing "Mix endpoints preserve fractional vector channels"
+    (let [rgb [0.001 0.001 0.001]
+          other [0 1 0]]
+      (is (= rgb (sut/mix rgb other 0)))
+      (is (= rgb (sut/mix other rgb 1))))))
 
 (deftest luminance-srgb-cutoff-test
   (testing "WCAG luminance uses the current sRGB transfer cutoff"
