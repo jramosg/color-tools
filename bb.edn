@@ -1,0 +1,6 @@
+{:paths ["src"]
+ :tasks
+ {test {:doc "Run the shared .cljc test suite on Babashka"
+        :extra-paths ["test"]
+        :requires ([jon.bb-runner :as runner])
+        :task (runner/run-tests!)}}}
