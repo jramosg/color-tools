@@ -171,10 +171,10 @@ Use tint, shade, and tone series for design system scales:
 palette
 ;=> {:primary "#2ecc71"
 ;    :primary-light "#58d68d"
-;    :primary-lighter "#82e0a9"
-;    :primary-dark "#25a25a"
-;    :primary-darker "#1c7943"
-;    :primary-muted "#4db67a"}
+;    :primary-lighter "#82e0aa"
+;    :primary-dark "#25a35a"
+;    :primary-darker "#1c7a44"
+;    :primary-muted "#47b576"}
 ```
 
 ## Alpha Blending and Compositing
@@ -236,7 +236,7 @@ Alpha blending controls how transparent colors stack.
      :border "1px solid rgba(255,255,255,0.18)"}))
 
 (create-glass-effect "#1a1a1a" 0.1 0.15 10)
-;=> {:background "rgba(37,37,37,0.15)"
+;=> {:background "rgba(49,49,49,0.15)"
 ;    :backdrop-filter "blur(10px)"
 ;    :border "1px solid rgba(255,255,255,0.18)"}
 ```
@@ -585,7 +585,7 @@ The temperature functions accept values from 1000K to 40000K:
    :slider-value kelvin})
 
 (create-light-controls 3000)
-;=> {:color "#ffd6aa"
+;=> {:color "#ffb16e"
 ;    :label "Neutral Warm"
 ;    :slider-value 3000}
 ```
@@ -616,10 +616,10 @@ The temperature functions accept values from 1000K to 40000K:
    :energizing (color/kelvin->hex 6500)}) ; Daylight
 
 mood-presets
-;=> {:romantic "#ff9329"
-;    :relaxing "#ffc58f"
-;    :productive "#ffeef0"
-;    :energizing "#fff9fd"}
+;=> {:romantic "#ff7e00"
+;    :relaxing "#ffa757"
+;    :productive "#ffe4ce"
+;    :energizing "#fffefa"}
 ```
 
 ## Accessible Theme Generation
@@ -640,7 +640,7 @@ numeric scale.
 ;    :surface "#e9f3f9"
 ;    :primary "#1f86c7"
 ;    :on-primary "#000000"
-;    :focus-ring "#6d1fc7"}
+;    :focus-ring "#6e1fc7"}
 ```
 
 The `:on-*` tokens are foreground colors for their matching background

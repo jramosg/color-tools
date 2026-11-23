@@ -1,6 +1,7 @@
 (ns jon.doc-examples-test
-  "Evaluates the examples in the README and doc/ and checks every `;=>`
-   result, so the documentation can't drift from the code."
+  "Evaluates Clojure examples in the README and doc/ and checks literal
+   `;=>` results, including multiline collections. Prose and partial results
+   remain illustrative."
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]))
@@ -16,8 +17,8 @@
   (map second (re-seq #"(?s)```clojure\n(.*?)```" text)))
 
 (defn- read-forms
-  "Reads each top-level form in `block` with the `;=>` comment that
-   follows it on its own line or the same line, if any."
+  "Read forms with their inline or following `;=>` result comments,
+   including single-semicolon continuation lines for collections."
   [block]
   (let [rdr (java.io.PushbackReader. (java.io.StringReader. block)
                                      (inc (count block)))
@@ -30,6 +31,17 @@
                                                     (str sb))
                            :else (do (.append consumed (char c))
                                      (recur (.append sb (char c))))))))
+        read-result!
+        (fn [first-line]
+          (loop [lines [first-line]]
+            (let [consumed (StringBuilder.)
+                  line (read-line! consumed)]
+              (if-let [[_ continuation]
+                       (some->> line (re-matches #"\s*;(?![;=]) ?(.*)"))]
+                (recur (conj lines continuation))
+                (do
+                  (.unread rdr (.toCharArray (str consumed)))
+                  (str/join "\n" lines))))))
         ;; Looks past blank lines and plain comments, including one on the
         ;; form's own line, for a ;=> line. If the next code line comes
         ;; first, unreads everything so the next form stays intact.
@@ -43,7 +55,7 @@
                   (do (.unread rdr (.toCharArray (str consumed))) nil)
 
                   (re-find #"^\s*;=>" line)
-                  (second (re-find #"^\s*;=>\s*(.*)$" line))
+                  (read-result! (second (re-find #"^\s*;=>\s*(.*)$" line)))
 
                   (or (str/blank? line) (re-find #"^\s*;" line))
                   (recur)
@@ -95,6 +107,23 @@
          (every? #(matches? (get expected %) (get actual %)) (keys expected)))
 
     :else (= expected actual)))
+
+(deftest multiline-results-test
+  (let [block (str "(identity {:a 1 :b [2 3]})\n"
+                   ";=> {:a 1\n"
+                   ";    :b [2 3]}\n"
+                   "(+ 2 3) ;=> 5\n"
+                   ";; An explanation before the next form.\n"
+                   "(identity [1 2])\n"
+                   ";=> [1\n"
+                   ";    2]\n")
+        entries (read-forms block)
+        expected (mapv (comp parse-expected :expected) entries)]
+    (is (= [{:a 1 :b [2 3]} 5 [1 2]] expected))
+    (is (= '[(identity {:a 1 :b [2 3]}) (+ 2 3) (identity [1 2])]
+           (mapv :form entries)))
+    (is (matches? (first expected) {:a 1 :b [2 3]}))
+    (is (not (matches? (first expected) {:a 1 :b [2 4]})))))
 
 (defn- check-file [path]
   (let [doc-ns (create-ns (gensym "doc-example"))]
