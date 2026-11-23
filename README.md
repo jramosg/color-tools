@@ -175,7 +175,7 @@ strings through your code:
 (color/->hsl "rgb(255, 0, 0)")  ;=> [0 100 50]
 
 (color/->rgba red-color)        ;=> [255 0 0 1.0]
-(color/->rgba [255 0 0 128])    ;=> [255 0 0 128] (RGBA passthrough)
+(color/->rgba [255 0 0 0.5])    ;=> [255 0 0 0.5] ; RGBA passthrough
 (color/->rgba "rgba(255, 0, 0, 0.5)") ;=> [255 0 0 0.5]
 
 ;; Color records work with the same functions as strings and vectors
