@@ -72,6 +72,14 @@ jobs:
       - name: Compare JVM and Node results
         run: clojure -M:test-parity
 
+      - name: Smoke-test the CLI on Babashka
+        run: test/cli-smoke.sh bin/color-tools
+
+      - name: Build and smoke-test the CLI for Node.js
+        run: |
+          clojure -M:npm
+          test/cli-smoke.sh node npm/color-tools.js
+
   demo-build:
     name: Build demo
     runs-on: ubuntu-latest
