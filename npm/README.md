@@ -12,10 +12,12 @@ color-tools gradient '#ff0000' '#0000ff' --steps 10 --space hsl
 color-tools theme '#3498db' --mode both --format css > theme.css
 ```
 
-Or run it without installing: `npx @jramosg/color-tools help`.
+You can run it without a global installation: `npx @jramosg/color-tools help`.
 
-One file, no dependencies. Text output for people, `--json` for scripts,
-and exit codes for CI: `0` success, `1` a check failed, `2` invalid input.
+Use Node.js 18 or newer. The package contains one compiled file and has no
+runtime package dependencies. Add `--json` for structured output in scripts.
+Exit codes are `0` for success, `1` for a failed check and `2` for invalid
+input or usage.
 
 Run `color-tools help` for the commands, or read the
 [CLI guide](https://github.com/jramosg/color-tools/blob/master/doc/cli.md).

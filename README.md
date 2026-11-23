@@ -125,9 +125,8 @@ Or for Leiningen, add to your `project.clj`:
 
 ## Command Line
 
-The whole library is also a command, `color-tools`, for terminals, shell
-scripts and CI. It needs no Clojure code and runs on Node.js, Babashka or
-the JVM.
+Use `color-tools` on Node.js, Babashka or the JVM to convert colors, generate
+palettes and themes, or check contrast from shell scripts and CI.
 
 ```bash
 color-tools contrast '#3498db' '#ffffff' --level aa   # exits 1: 3.15:1
@@ -137,9 +136,8 @@ color-tools gradient '#ff0000' '#0000ff' --steps 10 --space hsl
 color-tools theme '#3498db' --mode dark --format css > theme.css
 ```
 
-It prints text with color swatches on a terminal, JSON or EDN for scripts,
-and reads colors from stdin. See the [CLI guide](doc/cli.md) for
-installation, every command and CI recipes.
+Choose terminal text, JSON or EDN output, and pass `-` to read colors from
+stdin. See the [CLI guide](doc/cli.md) for installation and command examples.
 
 ## Usage Examples
 
@@ -653,13 +651,13 @@ clojure -T:build deploy
 
 ### Publishing to npm
 
-The CLI is published manually as `@jramosg/color-tools`. You need the
+Publish the CLI as `@jramosg/color-tools`. You need the
 Clojure CLI, Java, Node.js 18 or newer, npm, and an npm account with
 publishing access to the `jramosg` organization.
 
 Check that the version in `npm/package.json` matches `build.clj` and the
 `version` definition in `src/jon/color_tools/cli.cljc`. For later releases,
-update all three together. Each published package version must be unique.
+update all three together. Choose a version you have not published before.
 
 From the repository root, build and smoke-test the CLI:
 

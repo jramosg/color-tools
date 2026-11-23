@@ -1,11 +1,11 @@
 # Command-Line Interface
 
-`color-tools` puts the whole library in your terminal: convert formats,
-adjust and mix colors, build palettes, gradients and accessible themes, and
-check WCAG contrast. You don't need to write Clojure to use it.
+Use `color-tools` to convert colors, adjust them, generate palettes and
+gradients, check WCAG contrast, or export theme CSS. Run commands on
+Node.js, Babashka or the JVM.
 
-It prints plain text for people, JSON or EDN for scripts, CSS for themes,
-and sets an exit code that CI jobs can act on.
+Choose terminal text, JSON or EDN output. In scripts and CI, use exit codes
+to check contrast, validate input or test color properties.
 
 ```console
 $ color-tools contrast '#3498db' '#ffffff'
@@ -22,10 +22,12 @@ $ color-tools palette '#3498db' --type triadic
 
 ## Installation
 
-Pick whichever runtime you already have. Node.js, Babashka and the JVM use
-the same commands and color calculations. Hex results and WCAG decisions
-match; full-precision numeric output can differ in its final floating-point
-bits.
+Use the runtime you have installed. The commands and color calculations
+match across runtimes; full-precision numeric output can differ in its final
+floating-point bits.
+
+For unreleased CLI changes, use [a checkout](#from-a-checkout). Registry
+installation requires a package release that includes the CLI.
 
 ### Node.js
 
@@ -37,8 +39,8 @@ color-tools contrast '#3498db' '#ffffff'
 npx @jramosg/color-tools contrast '#3498db' '#ffffff'
 ```
 
-The package is scoped, but the command it installs is plain `color-tools`.
-It is one file with no dependencies and starts in about 30 ms.
+You need Node.js 18 or newer. The package installs the `color-tools` command
+from one compiled file and has no runtime package dependencies.
 
 ### Babashka
 
@@ -46,8 +48,8 @@ It is one file with no dependencies and starts in about 30 ms.
 bbin install io.github.jramosg/color-tools
 ```
 
-[bbin](https://github.com/babashka/bbin) puts a `color-tools` command on
-your `PATH`. It starts in about 50 ms.
+Install [bbin](https://github.com/babashka/bbin) and add its bin directory to
+your `PATH` before installing the command.
 
 ### Clojure CLI
 
@@ -65,8 +67,6 @@ Or add an alias to your `deps.edn` and run `clojure -M:color-tools`:
    :main-opts ["-m" "jon.color-tools.main"]}}}
 ```
 
-The JVM takes about a second to start.
-
 ### From a checkout
 
 ```bash
@@ -80,7 +80,7 @@ otherwise. You can symlink it into a directory on your `PATH`.
 ## Getting help
 
 ```bash
-color-tools help            # every command, option and exit code
+color-tools help            # command list, global options and exit codes
 color-tools help contrast   # arguments, options and examples of a command
 color-tools contrast --help # the same
 color-tools --version
@@ -88,10 +88,9 @@ color-tools --version
 
 ### Shell completion
 
-`color-tools completions` prints a script that completes commands, options
-and their values, such as the formats of `--to`. Suggestions use the selected
-command's options and modes. Aliases and global options before the command
-are supported.
+Load the completion script for your shell to complete command names,
+options and values such as the formats of `--to`. You can use command
+aliases and place global options before the command.
 
 ```bash
 # bash: add to ~/.bashrc
@@ -115,7 +114,7 @@ Run 'color-tools help' for the list of commands.
 
 ## Writing colors
 
-Every command accepts the same notations:
+Use these notations wherever a command takes a color:
 
 | Notation | Examples |
 | --- | --- |
@@ -132,7 +131,7 @@ Every command accepts the same notations:
 
 Quote colors. In most shells `#` starts a comment and parentheses start a
 subshell, so `color-tools info #3498db` runs `color-tools info` with no
-color at all. Single quotes are the safe choice:
+color. Use single quotes for literal colors:
 
 ```bash
 color-tools info '#3498db'
@@ -186,13 +185,12 @@ oklch(0.8169 0.2003 129.6267)
 ```
 
 Without `--to`, colors print as hex. A translucent color prints as `rgba()`
-so its alpha isn't lost. `--to hex8` keeps it in hex form and `--to hex`
-drops it on purpose.
+to retain alpha. Use `--to hex8` for hex with alpha, or `--to hex` to omit it.
 
 Coordinate output (`rgb`, `hsl`, `hsv`, `lab`, `oklab`, `oklch`)
 contains three coordinates and omits alpha. Use `rgba` or `hex8` when the
 output must carry opacity. Native Oklab/OKLCh conversion retains alpha
-internally while formatting its three coordinates.
+while printing its three coordinates.
 
 Conversions and one-color adjustments carry input alpha. Mixing, color
 series, palettes, accessibility search and theme generation use RGB results
@@ -215,9 +213,10 @@ match CSS.
 
 ### Structured output: `--json` and `--edn`
 
-`--json` and `--edn` (or `--format json`, `--format edn`) print data instead
-of text. Hex colors and names are strings; other formats are arrays of
-numbers.
+Use `--json` or `--edn` (also `--format json` or `--format edn`) for
+structured output. Hex colors and names are strings. Coordinate formats use
+JSON arrays or EDN vectors. Kelvin output is a number, or `null`/`nil` when
+the color has no meaningful temperature.
 
 ```console
 $ color-tools convert '#3498db' --to hsl --json
@@ -238,9 +237,10 @@ $ color-tools similar '#3498db' '#3499dc' --edn
  :similar true}
 ```
 
-The shape is stable: a command given one color prints one value, and a
-command given several colors, or colors from stdin, prints an array. Object
-keys keep the order shown in the text output.
+For commands such as `convert` and `info`, one color argument produces one
+result; multiple arguments or stdin produce a list of results. Generators
+such as `gradient` produce their own lists. Object keys follow the order in
+text output.
 
 ### Rounding
 
@@ -265,9 +265,9 @@ $ color-tools convert '#3498db' --to oklch --json
 
 ### Color swatches
 
-On a terminal, each color gets a small swatch in front of it. Swatches are
-left out when the output goes to a pipe or a file, and in JSON, EDN and CSS,
-so redirected output is always clean.
+On a terminal, you see a swatch beside each color. With automatic detection,
+pipes and files contain text without swatches. JSON, EDN and CSS output omit
+swatches regardless of `--color`.
 
 - `--color always` and `--color never` (or `--no-color`) override the
   detection.
@@ -307,9 +307,9 @@ as that list.
 
 ## Exit codes
 
-Command options are checked before stdin is read. An empty input file still
-reports invalid modes, missing required options and conflicting settings as
-usage errors (exit 2), including with `--quiet`.
+Before reading stdin, the CLI checks command options. You get a usage error
+(exit 2) for invalid modes, missing required options and conflicting settings,
+including with empty input or `--quiet`.
 
 | Code | Meaning |
 | --- | --- |
@@ -334,8 +334,8 @@ fi
 
 ### Inspect and convert
 
-`info` shows everything about a color. A color on its own is shorthand for
-it: `color-tools '#3498db'`.
+Use `info` to inspect a color's formats, alpha, luminance and other
+properties. You can omit the command name: `color-tools '#3498db'`.
 
 ```console
 $ color-tools info '#3498db'
@@ -374,8 +374,8 @@ $ color-tools convert '#ffffff' --to kelvin
 `--to kelvin` prints `none` for colors with no meaningful temperature, such
 as pure red.
 
-`validate` answers "is this a color?" with an exit code, and reports the
-detected format. `--as` also requires a format.
+Use `validate` to check input and inspect its detected format. Add `--as`
+to require a specific format.
 
 Validation uses CLI notation rules, including HSV, Kelvin and flexible
 separators. Success confirms the CLI can read the color; it does not
@@ -587,7 +587,7 @@ aa-large  true
 aaa       false
 ```
 
-With `--level` it becomes a check that exits 1 on failure:
+Add `--level` to exit 1 when the pair fails that level:
 
 ```console
 $ color-tools contrast '#3498db' '#ffffff' --level aa
@@ -600,12 +600,12 @@ pass      false
 ```
 
 The check compares the unrounded ratio, so a pair at 4.4999:1 fails `aa`
-even though the ratio displays as 4.5. Translucent text is composited onto
-the background before measuring.
+even though the ratio displays as 4.5. For translucent text, the CLI measures
+the color after compositing it onto the background.
 
 `accessible` finds the nearest whole HSL lightness that meets `--level`
-(default `aa`) on a background, keeping hue and saturation. A color that
-already passes is returned unchanged.
+(default `aa`) on a background, keeping hue and saturation. If your color
+passes, you get it unchanged.
 
 `text-color` picks white when it meets `--level` (default `aa`), black when
 only black does, and the one with more contrast when neither does. Use
@@ -659,10 +659,10 @@ scale
   900  #153d58
 ```
 
-Text always meets `--level` on the background and the surfaces. The brand
-color stays as you gave it, and on a mid-tone color no text reaches `aaa`
-(7:1): black is too dark and white too light. The theme then uses whichever
-has more contrast and a warning on stderr names the pair:
+The generated text colors meet `--level` on backgrounds and surfaces.
+Your brand color stays unchanged. Some mid-tone brand colors cannot support
+`aaa` contrast (7:1), even with black or white text. For those colors, you get
+the text color with more contrast and a warning on stderr naming the pair:
 
 ```console
 $ color-tools theme '#3498db' --level aaa --quiet
@@ -703,7 +703,7 @@ $ color-tools theme '#3498db' --mode dark --format css --prefix brand --selector
 ```
 
 - `--prefix brand` names the properties `--brand-primary` and so on. A
-  prefix that starts with `--` is used exactly as given. The default is
+  prefix that starts with `--` keeps its spelling. The default is
   `--ct-`.
 - `--selector` sets the selector of the rule. The default is `:root`.
 - `--to` takes the formats CSS understands: `hex`, `hex8`, `rgb`, `rgba`,
@@ -744,10 +744,9 @@ As text, JSON or EDN, `--mode both` gives a map with `light` and `dark`.
 
 ### Analyze and compare
 
-`distance` measures how different two colors are. `--metric rgb` is the
-straight-line distance between RGB channels; `--metric delta-e` is the CIE76
-difference, which is closer to what the eye sees. Under 1 is invisible,
-2 to 10 is noticeable and over 10 is clearly different.
+Use `distance` to compare colors. `--metric rgb` measures straight-line
+distance between RGB channels; `--metric delta-e` measures CIE76 distance in
+CIE L*a*b*. Smaller values mean a closer match under the chosen metric.
 
 ```console
 $ color-tools distance '#3498db' '#2980b9'
@@ -774,6 +773,9 @@ similar    false
 
 `is` tests one property and answers with the exit code: `warm`, `cool`,
 `light`, `dark`, `vibrant` or `muted`.
+
+For `vibrant` and `muted`, set a saturation threshold from 0 to 100 with
+`--threshold`. The default is 60. Other properties do not take a threshold.
 
 ```console
 $ color-tools is dark '#2c3e50'
@@ -854,9 +856,10 @@ echo "background: linear-gradient(to right, $stops);"
 
 ## Library coverage
 
-Every public function of `jon.color-tools` is reachable from the CLI. This
-table is checked by a test, so a function added to the library must get a
-command or a reason before the build passes.
+Use this table to find the command for a library operation. Internal number
+helpers and the colorspace protocol have no separate commands; their entries
+explain where the CLI uses them. The coverage test requires an entry for each
+public var, including new additions to the library.
 
 <!-- coverage:start -->
 | Library function | Command |
