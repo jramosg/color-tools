@@ -763,7 +763,10 @@
       (when (and threshold (seq args)
                  (not (#{"vibrant" "muted"} (str/lower-case (first args)))))
         (throw (parse/usage-error
-                "--threshold applies only to vibrant and muted"))))
+                "--threshold applies only to vibrant and muted")))
+      (when (some-> threshold (> 100))
+        (throw (parse/usage-error
+                "--threshold must be from 0 to 100 for vibrant and muted"))))
     :opts [[:threshold "Saturation, from 0 to 100, that counts as vibrant"]]
     :examples ["is dark '#2c3e50'"
                "is vibrant '#3498db' --threshold 80"

@@ -726,6 +726,10 @@
       ["vibrant" "#3498db"] 0 "true\n"
       ["vibrant" "#3498db" "--threshold" "80"] 1 "false\n"
       ["muted" "#3498db" "--threshold" "80"] 0 "true\n"
+      ["vibrant" "red" "--threshold" "99.5"] 0 "true\n"
+      ["vibrant" "red" "--threshold" "100"] 1 "false\n"
+      ["muted" "red" "--threshold" "100"] 0 "true\n"
+      ["muted" "black" "--threshold" "0"] 0 "true\n"
       ["warm" "red" "blue" "--json"] 1 "[true, false]\n"
       ["dark" "#000" "--quiet"] 0 "")
     (is (fails-with? 2 "PROPERTY must be one of warm, cool, light, dark"
@@ -875,6 +879,10 @@
            [["accessible" "-"] "--on BACKGROUND is required"]
            [["is" "dark" "-" "--threshold" "3"]
             "--threshold applies only to vibrant and muted"]
+           [["is" "vibrant" "-" "--threshold" "100.1"]
+            "--threshold must be from 0 to 100"]
+           [["is" "muted" "-" "--threshold" "101"]
+            "--threshold must be from 0 to 100"]
            [["theme" "-" "--prefix" "bad prefix"]
             "--prefix may contain only"]
            [["theme" "-" "--dark-selector" ".dark"]
