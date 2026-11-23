@@ -582,12 +582,11 @@
     (case fmt
       :json (out/json resolved)
       :edn (out/edn resolved)
-      :css (let [theme (single-theme resolved)
-                 selector (:selector opts ":root")]
-             (if (:dark theme)
-               (out/css-light-dark (:light theme) (:dark theme) selector
+      :css (let [selector (:selector opts ":root")]
+             (if (:dark resolved)
+               (out/css-light-dark (:light resolved) (:dark resolved) selector
                                    (:dark-selector opts))
-               (out/css theme selector)))
+               (out/css resolved selector)))
       (out/text resolved (ansi-mode opts process)))))
 
 ;; =============================================================================
@@ -600,12 +599,11 @@
         results (mapv #(run-once command % opts stdin) runs)
         [value passed?] (unwrap (if (= :per-line stdin)
                                   results
-                                  (first results)))]
-    ;; Render even when --quiet discards the text, so that a bad
-    ;; combination of output options is an error either way.
+                                  (first results)))
+        output (cond-> value
+                 (= :css (output-format opts)) single-theme)]
     {:exit (if passed? exit-ok exit-check-failed)
-     :out (let [text (render value opts process)]
-            (if (:quiet opts) "" text))
+     :out (if (:quiet opts) "" (render output opts process))
      :err ""}))
 
 (defn- completion-options [command]

@@ -319,7 +319,10 @@ usage errors (exit 2), including with `--quiet`.
 
 Results go to stdout. Errors and warnings go to stderr, prefixed with
 `color-tools:`. A failed check still prints its result, so you can see why
-it failed; add `--quiet` (or `-q`) when you only want the exit code:
+it failed; add `--quiet` (or `-q`) when you only want the exit code.
+
+Quiet mode skips output conversion and formatting. It still checks all
+inputs and output options, computes verdicts, and reports errors and warnings.
 
 ```bash
 if color-tools is dark "$BACKGROUND" --quiet; then

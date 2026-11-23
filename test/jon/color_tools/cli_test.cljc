@@ -130,6 +130,19 @@
     (is (= 2 (:exit (run "theme" "fff" "--format" "css" "--to" "hsv"
                          "--quiet"))))))
 
+(deftest quiet-result-test
+  (testing "quiet keeps verdicts, input validation, CSS checks and warnings"
+    (doseq [args [["convert" "red" "--to" "oklch"]
+                  ["convert" "oklab(0.7 0.4 0.4)"]
+                  ["validate" "nope"]
+                  ["contrast" "gray" "white" "--level" "aaa"]
+                  ["convert" "nope"]
+                  ["theme" "-" "--format" "css"]]
+            stdin ["" "red\nblue\n"]]
+      (is (= (assoc (apply run {:stdin stdin} args) :out "")
+             (apply run {:stdin stdin} (conj args "--quiet")))
+          (pr-str [args stdin])))))
+
 (deftest swatch-test
   (let [swatch? #(str/includes? (:out %) "\u001b[48;")]
     (testing "off unless stdout is a terminal"
