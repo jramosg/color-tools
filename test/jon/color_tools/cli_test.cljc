@@ -878,14 +878,21 @@
            [["theme" "-" "--prefix" "bad prefix"]
             "--prefix may contain only"]
            [["theme" "-" "--dark-selector" ".dark"]
-            "--dark-selector needs --mode both"]]]
+            "--dark-selector needs --mode both"]
+           [["convert" "-" "--format" "css"]
+            "--format css is not available for 'convert'"]
+           [["theme" "-" "--format" "css" "--to" "lab"]
+            "--to lab is not a CSS color"]]]
     (doseq [stdin ["" "red\n"]]
       (let [{:keys [exit out err]} (apply run {:stdin stdin} args)]
         (is (= [2 ""] [exit out]) (pr-str args))
         (is (str/includes? err message) err)))
-    (let [result (cli/run
-                  args {:stdin #(throw (ex-info "stdin was read" {}))})]
-      (is (str/includes? (:err result) message) (pr-str result)))))
+    (doseq [quiet [[] ["--quiet"]]]
+      (let [result (cli/run!
+                    (into args quiet)
+                    {:stdin #(throw (ex-info "stdin was read" {}))})]
+        (is (= [2 ""] ((juxt :exit :out) result)) (pr-str result))
+        (is (str/includes? (:err result) message) (pr-str result))))))
 
 (deftest option-color-warning-test
   (doseq [quiet [[] ["--quiet"]]]

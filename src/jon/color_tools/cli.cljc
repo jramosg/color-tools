@@ -354,7 +354,16 @@
               (str (:long (option-by-id id)) " is not an option of '"
                    (:name command) "'")
               (str "Run '" program " help " (:name command)
-                   "' for its options."))))))
+                   "' for its options.")))))
+  (when (= :css (:format opts))
+    (when-not (:css? command)
+      (throw (parse/usage-error
+              (str "--format css is not available for '"
+                   (:name command) "'"))))
+    (when-not (out/css-color-formats (:to opts :hex))
+      (throw (parse/usage-error
+              (str "--to " (name (:to opts)) " is not a CSS color;"
+                   " use hex, hex8, rgb, rgba, hsl, oklab or oklch"))))))
 
 ;; =============================================================================
 ;; Binding arguments
@@ -567,30 +576,18 @@
                   (str "--format css takes one color; got "
                        (count resolved))))))
 
-(defn- render [command value opts process]
+(defn- render [value opts process]
   (let [fmt (output-format opts)
         resolved (out/resolve value (assoc opts :format fmt))]
     (case fmt
       :json (out/json resolved)
       :edn (out/edn resolved)
-      :css (cond
-             (not (:css? command))
-             (throw (parse/usage-error
-                     (str "--format css is not available for '"
-                          (:name command) "'")))
-
-             (not (out/css-color-formats (:to opts :hex)))
-             (throw (parse/usage-error
-                     (str "--to " (name (:to opts)) " is not a CSS color;"
-                          " use hex, hex8, rgb, rgba, hsl, oklab or oklch")))
-
-             :else
-             (let [theme (single-theme resolved)
-                   selector (:selector opts ":root")]
-               (if (:dark theme)
-                 (out/css-light-dark (:light theme) (:dark theme) selector
-                                     (:dark-selector opts))
-                 (out/css theme selector))))
+      :css (let [theme (single-theme resolved)
+                 selector (:selector opts ":root")]
+             (if (:dark theme)
+               (out/css-light-dark (:light theme) (:dark theme) selector
+                                   (:dark-selector opts))
+               (out/css theme selector)))
       (out/text resolved (ansi-mode opts process)))))
 
 ;; =============================================================================
@@ -607,7 +604,7 @@
     ;; Render even when --quiet discards the text, so that a bad
     ;; combination of output options is an error either way.
     {:exit (if passed? exit-ok exit-check-failed)
-     :out (let [text (render command value opts process)]
+     :out (let [text (render value opts process)]
             (if (:quiet opts) "" text))
      :err ""}))
 
