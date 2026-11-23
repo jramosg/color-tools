@@ -112,7 +112,7 @@
 (def ^:private inspect-commands
   [{:name "info"
     :group :inspect
-    :summary "Show every format and property of a color"
+    :summary "Show color formats and properties"
     :doc (str "Prints the color in each supported format, its closest name,\n"
               "WCAG luminance, brightness, warmth, approximate temperature\n"
               "and black or white text for --level (default aa).")
@@ -692,8 +692,8 @@
 (def ^:private metric-doc
   (str "--metric rgb is the straight-line distance between the RGB\n"
        "channels, from 0 to about 441.67. --metric delta-e is the CIE76\n"
-       "difference in LAB, closer to what the eye sees: under 1 is\n"
-       "invisible, 2 to 10 noticeable, over 10 clearly different."))
+       "difference in CIE L*a*b*. Smaller values mean a closer match\n"
+       "under the chosen metric."))
 
 (defn- similar [{:keys [color other]} {:keys [metric threshold]}]
   (let [metric (or metric :rgb)

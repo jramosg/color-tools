@@ -616,6 +616,9 @@ results and differences. A mismatch fails the command and CI job and reports
 the input with both results. Tests with known expected values check the
 mathematical results. Keep generated parity files out of commits.
 
+Run the CLI from the checkout with `bin/color-tools` or `clojure -M:cli`.
+Compile the Node.js entry point with `clojure -M:npm`.
+
 ### Code Quality
 
 #### Formatting
