@@ -23,6 +23,8 @@ All notable changes to this project will be documented in this file. This change
   ([#142](https://github.com/jramosg/color-tools/issues/142)).
 - `with-alpha` converts JVM Ratio opacities to doubles in vector results
   ([#158](https://github.com/jramosg/color-tools/issues/158)).
+- `hex->rgba` converts JVM Ratio opacities to doubles in RGBA vectors
+  ([#164](https://github.com/jramosg/color-tools/issues/164)).
 
 - `alpha-blend` keeps RGB channels in range when floating-point
   compositing would otherwise push a channel above 255

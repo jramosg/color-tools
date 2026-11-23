@@ -173,6 +173,14 @@
     (is (= [255 0 0 1] (sut/hex->rgba "#ff0000")))
     (is (= [255 0 0 0.5] (sut/hex->rgba "#ff0000" 0.5))))
 
+  (testing "Rational hex opacities become doubles"
+    (let [alpha #?(:clj 2/3 :cljs (/ 2 3))]
+      (is (= [255 0 0 (/ 2.0 3.0)] (sut/hex->rgba "#f00" alpha))))
+    #?(:clj
+       (let [large (reduce *' (repeat 320 10))
+             alpha (/ large (inc large))]
+         (is (= [255 0 0 1.0] (sut/hex->rgba "#f00" alpha))))))
+
   (testing "RGBA to Hex conversion"
     (is (= "#ff0000" (sut/rgba->hex [255 0 0 1])))
     (is (= "#ff0000" (sut/rgba->hex [255 0 0 0.5]))))
