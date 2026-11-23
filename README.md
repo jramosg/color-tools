@@ -76,7 +76,7 @@ npx http-server demo/public -p 8000
 Add the following dependency to your `deps.edn`:
 
 ```clojure
-{:deps com.github.jramosg/color-tools {:mvn/version "1.4.0"}}
+{:deps {com.github.jramosg/color-tools {:mvn/version "1.4.0"}}}
 ```
 
 Or for Leiningen, add to your `project.clj`:
