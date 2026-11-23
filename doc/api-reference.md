@@ -13,10 +13,11 @@ accept hex strings, RGB vectors, RGBA vectors, CSS `rgb()`/`rgba()` strings, or
 - CSS RGBA strings: `"rgba(255, 0, 0, 0.5)"`, `"rgba(255 0 0 0.5)"`
 - `Color` records created with `color`
 
-Manipulation functions generally preserve the input shape. A hex string returns
-a hex string, an RGB vector returns a vector, and a `Color` record returns a
-`Color` record. For `Color` input, `saturate`, `desaturate`, and `grayscale`
-return an RGB vector. The `monochromatic` palette contains RGB vectors.
+For operations that preserve input shape, pass hex to get hex, an RGB vector
+to get a vector, or a `Color` record to get a record. Check the function's
+return type for exceptions. For `Color` input, `saturate`, `desaturate` and
+`grayscale` return an RGB vector. The `monochromatic` palette contains RGB
+vectors.
 
 ## Precision
 
@@ -123,9 +124,9 @@ tolerance. Clojure's `=` also distinguishes integers from integral doubles.
 Vector results of `mix`, `interpolate`, `gradient` and `alpha-blend`, and
 fractional inputs to `->rgb` and `->rgba`, retain precision instead of
 rounding or truncating. Results can change from `128` to `127.5`, including
-colors produced by HSL/HSV interpolation. This corrects premature rounding,
-but can affect callers that compare exact results or require integer channels.
-Use `mapv round-int` at an integration boundary when integers are required.
+colors produced by HSL/HSV interpolation. Update callers that compare exact
+results or require integer channels. Use `mapv round-int` at an integration
+boundary to produce integers.
 CSS parsers now accept decimal channels. Hex and legacy record results keep
 their 8-bit output behavior. Coordinate ranges and vector/record shapes stay
 the same.
@@ -138,8 +139,8 @@ the same.
 color-names => map
 ```
 
-Map of supported CSS color names to hex values. It is used by `name->hex`,
-`hex->name`, and `->name`.
+Map of supported CSS color names to hex values. Look up colors with
+`name->hex`, `hex->name` or `->name`.
 
 ### `valid-hex?`
 
@@ -191,8 +192,8 @@ and value are between 0 and 100.
 (valid-css-rgb? css-str) => boolean
 ```
 
-Returns true for supported CSS `rgb()` strings. Comma-separated,
-space-separated, case-insensitive, and extra-whitespace forms are accepted.
+Returns true for supported CSS `rgb()` strings. You can use commas or spaces
+between channels, vary the case, or add whitespace.
 It checks the format, not the range of the numbers: a channel above 255 is
 still valid format, and `parse-css-color-components` returns `nil` for it.
 
@@ -564,9 +565,9 @@ number snaps to it, so an 8-bit color survives a round trip through Oklab.
 Round the result with `round-coords`, or pass `:decimal-places` to `->css`,
 for display.
 
-An `Oklab` outside the sRGB gamut is clamped per channel with `clamp-rgb`,
-which shifts its hue and lightness. Coordinates so large that the conversion
-overflows throw an `ex-info`.
+For an `Oklab` outside sRGB, conversion clamps each channel with `clamp-rgb`
+and can shift hue and lightness. Coordinates large enough to overflow the
+conversion throw `ex-info`.
 
 The other color functions, such as `color`, `->rgb`, `->hex` and `->css`,
 call `->rgb-space` on an `Oklab`, so they accept the record too.
@@ -636,7 +637,7 @@ Converts a color to grayscale using luminance weights.
 
 ## Contrast and Accessibility
 
-Which function to use:
+Choose a function for the input and result you need:
 
 | You have | You want | Use |
 | --- | --- | --- |
@@ -849,9 +850,9 @@ Returned tokens:
 - `:scale` with `:50` through `:900`
 - `:mode` and `:level`
 
-`:on-background`, `:on-surface` and `:on-muted` always meet the requested
+`:on-background`, `:on-surface` and `:on-muted` meet the requested
 level. `:on-primary`, `:on-secondary` and `:on-accent` meet `:aa` and
-`:aa-large` for every color. At `:aaa` they fall short on a mid-tone brand
+`:aa-large`. At `:aaa` they fall short on a mid-tone brand
 color, on which no text color reaches 7:1; they are then black or white,
 whichever has more contrast.
 
@@ -892,9 +893,9 @@ to `"--ct-"`.
 (mix color1 color2 ratio) => color
 ```
 
-Linearly mixes two colors. `ratio` defaults to `0.5`; `0` returns `color1`
-and `1` returns `color2`. Vector results retain fractional channels. Hex and
-`Color` results round once to 8-bit channels.
+Mixes two colors by a weighted average. `ratio` defaults to `0.5`; `0`
+returns `color1` and `1` returns `color2`. Vector results retain fractional
+channels. Hex and `Color` results round once to 8-bit channels.
 
 ### `blend-multiply`
 
@@ -1163,7 +1164,7 @@ Clamping moves an out-of-gamut color's hue and lightness. Check
 Checks whether Oklab coordinates fall inside the sRGB gamut, so that
 `oklab->rgb` returns every channel between `0` and `255`. It allows `1e-4` on
 the `0` to `255` scale for float error: Ottosson's 10-digit constants put sRGB
-white at `l = 0.99999999`, so `[1 0 0]` lands just above `255`.
+white at `l = 0.99999999`, so `[1 0 0]` yields a channel above `255`.
 
 ```clojure
 (color/in-gamut? (color/rgb->oklab [51 102 153]))
@@ -1458,7 +1459,7 @@ Pass exactly one option:
 ;=> [123.0 0.00123]
 ```
 
-The function always returns doubles, even at `0` decimal places; use
+`round-coords` returns doubles, including at `0` decimal places; use
 `round-int` for integers. Ties round toward positive infinity, as
 `Math/round` does: `1.25` becomes `1.3` and `-1.25` becomes `-1.2` at one
 place. Rounding works on the stored binary value, so `1.005` rounds to `1.0`

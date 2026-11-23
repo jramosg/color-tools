@@ -4,23 +4,23 @@
 
 ## Library Scope
 
-Clojure apps often need format conversion, palette generation, contrast checks,
-and theme tokens. `jon/color-tools` puts those operations in one namespace.
+Convert color formats, generate palettes, check contrast and build theme
+tokens from the `jon.color-tools` namespace.
 
 ## Design Philosophy
 
-The library follows these core principles:
+### Color Operations
 
-### Functional and Pure
-Every function is pure: it takes colors and returns new colors without side
-effects.
+Transform colors without mutating the input. Random color and palette
+generation use runtime randomness; other color calculations are deterministic.
 
 ### Cross-Platform
-The same API runs in Clojure (JVM) and ClojureScript (browser and Node.js).
+Run the API on Clojure (JVM), ClojureScript (browser or Node.js), or Babashka.
 
 ### Format Agnostic
-Functions accept colors in multiple formats, including hex strings and RGB
-vectors, and return the same shape when the operation can preserve it.
+Pass hex strings, CSS RGB/RGBA strings, vectors or colorspace records.
+Manipulation functions preserve the input shape where their return type
+allows it; see each function's API entry for exceptions.
 
 ### Broad API
 One namespace covers format conversions, color theory, accessibility, blending,
@@ -30,7 +30,7 @@ gradients, and theme tokens.
 
 ### Color Formats
 
-The library supports several color formats:
+Choose the representation that matches your input:
 
 - **HEX**: Strings like `"#ff5733"` or `"#f53"`
 - **RGB**: Vectors like `[255, 87, 51]` with values 0-255
@@ -39,6 +39,10 @@ The library supports several color formats:
 - **CSS RGBA**: CSS color strings like `"rgba(255, 87, 51, 0.8)"` or `"rgba(255 87 51 0.8)"`
 - **HSL**: Vectors like `[9, 100, 60]` (Hue 0-360, Saturation/Lightness 0-100)
 - **HSV**: Vectors like `[9, 80, 100]` (Hue 0-360, Saturation/Value 0-100)
+
+Convert HSL and HSV vectors with `hsl->rgb` and `hsv->rgb` before using
+functions that take RGB input. For Oklab and OKLCh coordinates and records,
+see the [API reference](api-reference.md#rgb-oklab).
 
 ### Format-Preserving Operations
 
@@ -54,7 +58,7 @@ Most manipulation functions preserve the input format:
 
 ### Color Theory Integration
 
-The library implements color theory concepts like:
+Generate color relationships with these palette functions:
 
 - **Complementary colors**: Colors opposite on the color wheel
 - **Triadic harmonies**: Three colors equally spaced on the color wheel
@@ -64,7 +68,7 @@ The library implements color theory concepts like:
 
 ### Accessibility Focus
 
-Built-in support for WCAG (Web Content Accessibility Guidelines) compliance:
+Use WCAG contrast calculations to check text and choose foreground colors:
 
 - Contrast ratio calculations
 - Accessibility checking for AA and AAA standards
@@ -74,26 +78,9 @@ Built-in support for WCAG (Web Content Accessibility Guidelines) compliance:
 
 ## Common Use Cases
 
-### Web Development
-- Theme generation and color scheme management
-- Accessibility compliance checking
-- Dynamic color manipulation based on user preferences
-- CSS variable generation for app-wide design tokens
-
-### Data Visualization
-- Generating color scales and palettes
-- Ensuring sufficient contrast for readability
-- Creating harmonious color schemes for charts and graphs
-
-### Design Tools
-- Color picker implementations
-- Palette generation and management
-- Color format conversions for different design software
-
-### Accessibility
-- Ensuring text meets contrast requirements
-- Finding accessible alternatives for problematic color combinations
-- Automated accessibility testing
+Build theme CSS from a brand color, generate chart palettes, or check text
+against a background. The [workflow guide](workflow-guide.md) includes
+examples for UI themes, lighting controls and color matching.
 
 ## Getting Started
 
@@ -130,7 +117,7 @@ Require the namespace and call the functions:
 (color/contrast-ratio "#3498db" "#ffffff")  
 ;=> 3.15  ; Needs 4.5 for AA
 
-;; Generate app-ready accessible theme tokens
+;; Generate theme tokens
 (def theme (color/accessible-theme "#3498db" {:mode :light :level :aa}))
 
 (:on-primary theme)
@@ -140,48 +127,15 @@ Require the namespace and call the functions:
 ;=> {"--ct-primary" "#3498db", "--ct-on-primary" "#000000", ...}
 ```
 
-## Architecture
-
-The namespace groups functions by task:
-
-### Validation and Normalization
-Validate color formats and normalize values, such as expanding 3-digit hex
-codes.
-
-### Format Conversions
-Convert between supported color formats.
-
-### Color Manipulation
-Modify colors with `lighten`, `darken`, `saturate`, `adjust-hue`, `invert`,
-and related functions.
-
-### Color Analysis
-Analyze brightness, warmth, vibrancy, and related properties.
-
-### Palette Generation
-Generate color harmonies and palette variants.
-
-### Accessibility
-Check WCAG contrast and find accessible alternatives.
-
-### Design Tokens
-Generate accessible UI theme tokens and export CSS custom properties.
-
-### Color Mixing and Blending
-Combine colors with mixing, blending, and alpha compositing.
-
 ## Performance Considerations
 
-The implementation keeps runtime overhead low:
-
-- Pure functions work well with caching and memoization
-- Minimal external dependencies
-- Direct algorithms for color space conversions
-- No unnecessary object creation
+Keep intermediate color coordinates at full precision and round at display
+or export. Measure repeated conversions and palette generation with your
+own inputs before adding a cache. Cache deterministic calculations when the
+same inputs recur; random generators produce new samples on each call.
 
 ## Examples and Tutorials
 
-For examples and installation notes, see [README.md](../README.md).
-
-For design system, accessibility, and lighting workflows, see the workflow
-guide. The test suite has more examples.
+- [README](../README.md): installation and quick start.
+- [Tutorial](tutorial.md): conversions, adjustments and contrast checks.
+- [API reference](api-reference.md): input types, return values and precision.

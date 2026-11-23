@@ -12,9 +12,9 @@ Add the library to your project and require it:
 
 ## Chapter 1: Color Formats and Conversions
 
-### Understanding Color Formats
+### Color Formats
 
-The library accepts the color formats Clojure apps tend to pass around:
+Choose a color representation for the task:
 
 ```clojure
 ;; HEX - Web standard, strings starting with #
@@ -46,8 +46,8 @@ The library accepts the color formats Clojure apps tend to pass around:
 
 ### Basic Conversions
 
-Use universal conversion functions for application code. Use format-specific
-functions when you know the input format.
+Convert strings, RGB vectors or records with `->rgb`, `->hex` and `->hsl`.
+For a known input space, call its converter, such as `hsl->rgb`.
 
 #### Universal Conversion Functions
 
@@ -87,7 +87,7 @@ These functions accept any supported color input:
 
 #### Format-Specific Functions
 
-Format-specific conversions stay useful at API boundaries:
+Parse CSS strings or convert known coordinate formats:
 
 ```clojure
 ;; HEX to RGB
@@ -213,7 +213,7 @@ Rotate colors around the color wheel:
 
 ## Chapter 3: Accessibility and Contrast
 
-### Understanding Contrast Ratios
+### Contrast Thresholds
 
 WCAG defines minimum contrast ratios for accessibility:
 - **AA Normal**: 4.5:1 minimum
@@ -268,9 +268,8 @@ Find accessible alternatives by adjusting lightness:
 
 ### Generating Accessible Theme Tokens
 
-Use `accessible-theme` instead of hand-picking foreground colors. It generates
-semantic tokens, foreground pairs, a focus ring, borders, and a 50-900 scale
-from one brand color.
+Generate foreground/background pairs, a focus ring, borders and a 50–900
+scale from one brand color with `accessible-theme`.
 
 ```clojure
 (def theme
@@ -316,7 +315,7 @@ For frontend apps, export the generated tokens as CSS custom properties:
 
 ### Color Harmony
 
-Generate harmonious color combinations based on color theory:
+Generate complementary, triadic, split-complementary or analogous palettes:
 
 ```clojure
 (def base-color "#e74c3c")
@@ -347,9 +346,9 @@ Create palettes using variations of a single hue:
 ;=> ["#0f3a57" "#1f6594" "#328fcd" "#73b0d8" "#b1d1e7"]
 ```
 
-### Theme Generation
+### Palette Strategies
 
-Use the palette generator for different strategies:
+Select a harmony and pass its options to `generate-palette`:
 
 ```clojure
 ;; Generate a triadic theme
@@ -417,7 +416,7 @@ Measure RGB distance between two colors:
 ;=> false  ; Too different
 ```
 
-## Chapter 6: Real-World Examples
+## Chapter 6: Application Examples
 
 ### Example 1: Accessible App Theme
 
@@ -468,19 +467,11 @@ Measure RGB distance between two colors:
 ;=> ["#3498db" "#6185b3" "#8e728c" "#ba5f64" "#e74c3c"]
 ```
 
-## Next Steps
+## More Examples
 
-- Explore the complete API reference
-- Try building your own color utilities
-- Experiment with different color harmonies
-- Build accessibility checking into your applications
-- Create dynamic themes based on user preferences
+See the [API reference](api-reference.md) for supported inputs, precision
+options and return types. The [workflow guide](workflow-guide.md) covers
+blending, gradients, lighting controls and theme CSS.
 
-## Tips and Best Practices
-
-1. **Always validate user input** when accepting colors from external sources
-2. **Consider accessibility** from the start of your design process
-3. **Use generated theme tokens** for app surfaces, text, focus, and borders
-4. **Test color combinations** across different devices and lighting conditions
-5. **Provide fallbacks** for color-blind users
-6. **Cache expensive operations** like palette generation when possible
+Validate external input before conversion. For contrast checks, use
+`accessible?` rather than comparing the rounded `contrast-ratio` value.

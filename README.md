@@ -11,28 +11,22 @@ colors, generate palettes, check contrast, and build accessible theme tokens.
 Try the color picker, format converter, gradient generator, WCAG contrast
 checker, and color harmonies.
 
-## Overview
+## Features
 
-`jon/color-tools` gives Clojure apps one namespace for common color work:
-format conversion, color adjustment, palettes, contrast checks, gradients, and
-theme tokens.
+- Convert hex, RGB, RGBA, HSL, HSV, Lab, Oklab and OKLCh colors.
+- Adjust lightness, saturation and hue, or mix and blend colors.
+- Generate harmonies, tint/shade scales and multi-stop gradients.
+- Check WCAG contrast, find accessible colors and generate theme tokens.
+- Compare colors with RGB distance or CIE76 Delta E.
+- Convert color temperatures between Kelvin and RGB.
 
-### Demo
+Run the same API on Clojure (JVM), ClojureScript (browser or Node.js),
+or Babashka.
 
-**[Live Demo](https://color-tools.jonramos.dev/)**
+## Run the Demo
 
-Run the demo from the `demo` directory:
-
-Options:
-
-Prerequisites
-
-- Node.js + npm
-- Java (for the ClojureScript build tool)
-
-Quick local options
-
-- Development (recommended for live-reload during editing):
+You need Node.js, npm and Java. From the repository root, start the
+server with live reloading:
 
 ```bash
 # from the repository root
@@ -42,7 +36,7 @@ npx shadow-cljs watch app
 # open http://localhost:8080
 ```
 
-- Production build (generates `demo/public`):
+For a production build:
 
 ```bash
 # from the repository root
@@ -56,20 +50,7 @@ npx http-server public -p 8000
 # open http://localhost:8000
 ```
 
-- **Accessible Theme Generator**: WCAG-aware UI tokens from one brand color
-- **CSS Variable Export**: Turn generated tokens into frontend-ready custom properties
-- **Blending Modes**: Multiply, screen, overlay (Photoshop-style blending)
-- **Tints/Shades/Tones**: Design system color scale generation
-- **Alpha Blending**: Porter-Duff compositing for transparent colors
-- **Color Interpolation**: Gradients in RGB, HSL, or HSV
-- **Perceptual Difference**: Delta E calculations in CIE LAB color space
-- **Oklab and OKLCh**: Convert between sRGB, Oklab and OKLCh,
-  with gamut checks
-- **Color Temperature**: Kelvin to RGB conversions for lighting UIs
-- **Palette Generation**: Color harmonies from color theory
-- **Accessibility**: WCAG-compliant contrast checking and accessible color finding
-- **Color Analysis**: Brightness, warmth, and vibrancy checks
-- **Cross-platform**: Clojure (JVM), ClojureScript (browser/Node.js), and Babashka
+See the [demo README](demo/README.md) for its file layout.
 
 ## Installation
 
@@ -144,8 +125,8 @@ Or for Leiningen, add to your `project.clj`:
 
 ### Working with the Color Record Type
 
-Use `Color` records when you want type safety instead of passing raw vectors or
-strings through your code:
+Use `Color` records for named channel fields (`:r`, `:g`, `:b`, `:a`) and
+constructor validation:
 
 ```clojure
 ;; Create Color records from various inputs
@@ -439,98 +420,6 @@ The parser accepts common CSS color string formats:
 ;=> "#bf0040"
 ```
 
-## API Documentation
-
-Key namespaces:
-
-- `jon.color-tools` - Main API with all color manipulation functions
-
-## Development
-
-### Running Tests
-
-The shared `.cljc` tests run on Clojure, ClojureScript and Babashka:
-
-```bash
-# Clojure (JVM)
-clojure -T:build test
-
-# ClojureScript (Node.js)
-clojure -M:test-cljs
-
-# Babashka
-bb test
-```
-
-The ClojureScript run needs Node.js on your `PATH`.
-
-CI also compares JVM results directly with ClojureScript compiled for Node:
-
-```bash
-clojure -M:test-parity
-```
-
-The command generates deterministic cases with seed `141113`, runs the same
-inputs on both runtimes and compares their outputs. Strings and booleans must
-match exactly; numeric results allow a relative and absolute tolerance of
-`1e-9`. It covers conversions, adjustments, palettes, gradients, blending,
-themes and contrast, including the regressions from #134 and #137.
-
-Inputs, results and any differences are written under `target/runtime-parity/`.
-They are generated for each run and are not committed. A mismatch fails the
-command and the CI job with the input and both results. Existing tests with
-known expected values continue to check mathematical correctness.
-
-### Code Quality
-
-#### Formatting
-
-Format all Clojure files using cljfmt:
-
-```bash
-clojure -Tcljfmt fix
-```
-
-#### Linting
-
-Lint the codebase using clj-kondo:
-
-```bash
-clojure -Sdeps '{:deps {clj-kondo/clj-kondo {:mvn/version "RELEASE"}}}' -M -m clj-kondo.main --lint src test
-```
-
-### Building
-
-```bash
-# Run CI pipeline and build JAR
-clojure -T:build ci
-
-# Install locally
-clojure -T:build install
-
-# Deploy to Clojars (requires CLOJARS_USERNAME and CLOJARS_PASSWORD)
-clojure -T:build deploy
-```
-
-## Supported Platforms
-
-- **Clojure (JVM)**: Supports the full API
-- **ClojureScript**: Supports the full API in browsers and Node.js
-- **Babashka**: Supports the full API; `bb test` runs the shared suite in CI
-
-## Contributing
-
-Open issues, feature requests, or pull requests on
-[GitHub](https://github.com/jramosg/color-tools).
-
-## Acknowledgements
-
-These projects influenced the API:
-
-- [Sass color functions](https://sass-lang.com/documentation/modules/color) - Color manipulation and modern color spaces
-- [Chroma.js](https://gka.github.io/chroma.js/) for JavaScript - Color scales, interpolation, and Delta E calculations
-- [colorsys](https://github.com/vaab/colour) for Python - Color space conversions and color picking algorithms
-
 ### Color Blending and Transparency
 
 ```clojure
@@ -665,18 +554,104 @@ for axis definitions, gamut handling, and input requirements.
 ;=> 1806  ; Close to the original 1800K
 ```
 
-### Planned Features (Inspired by these libraries)
+## API Documentation
 
-**Color Spaces:**
+Key namespaces:
 
-- Lab/CIE Lab color space for perceptually uniform calculations (added in
-  v1.1.0)
-- LCH (Lightness, Chroma, Hue) cylindrical color space
-- CMYK for print applications
-- HWB (Hue, Whiteness, Blackness) color space
+- `jon.color-tools` - Main API with all color manipulation functions
 
-Thanks to the Clojure community for the tooling and libraries behind this
-project.
+## Development
+
+### Running Tests
+
+The shared `.cljc` tests run on Clojure, ClojureScript and Babashka:
+
+```bash
+# Clojure (JVM)
+clojure -T:build test
+
+# ClojureScript (Node.js)
+clojure -M:test-cljs
+
+# Babashka
+bb test
+```
+
+The ClojureScript run needs Node.js on your `PATH`.
+
+CI also compares JVM results directly with ClojureScript compiled for Node:
+
+```bash
+clojure -M:test-parity
+```
+
+The command generates deterministic cases with seed `141113`, runs the same
+inputs on both runtimes and compares their outputs. Strings and booleans must
+match exactly; numeric results allow a relative and absolute tolerance of
+`1e-9`. It covers conversions, adjustments, palettes, gradients, blending,
+themes and contrast, including the regressions from #134 and #137.
+
+After each run, inspect `target/runtime-parity/` for the generated inputs,
+results and differences. A mismatch fails the command and CI job and reports
+the input with both results. Tests with known expected values check the
+mathematical results. Keep generated parity files out of commits.
+
+### Code Quality
+
+#### Formatting
+
+Install [cljfmt](https://github.com/weavejester/cljfmt), then format the
+Clojure source and tests:
+
+```bash
+cljfmt fix
+```
+
+#### Linting
+
+Install [clj-kondo](https://github.com/clj-kondo/clj-kondo), then lint the
+source and tests:
+
+```bash
+clj-kondo --lint src test
+```
+
+### Building
+
+```bash
+# Run CI pipeline and build JAR
+clojure -T:build ci
+
+# Install locally
+clojure -T:build install
+
+# Deploy to Clojars (requires CLOJARS_USERNAME and CLOJARS_PASSWORD)
+clojure -T:build deploy
+```
+
+## Supported Platforms
+
+- **Clojure (JVM)**: Supports the full API
+- **ClojureScript**: Supports the full API in browsers and Node.js
+- **Babashka**: Supports the full API; `bb test` runs the shared suite in CI
+
+## Contributing
+
+Open issues, feature requests, or pull requests on
+[GitHub](https://github.com/jramosg/color-tools).
+
+## Acknowledgements
+
+The API draws on these projects:
+
+- [Sass color functions](https://sass-lang.com/documentation/modules/color) - Color manipulation and modern color spaces
+- [Chroma.js](https://gka.github.io/chroma.js/) for JavaScript - Color scales, interpolation, and Delta E calculations
+- [colorsys](https://github.com/vaab/colour) for Python - Color space conversions and color picking algorithms
+
+## Roadmap
+
+See [the roadmap](https://github.com/jramosg/color-tools/issues/81) for
+planned color spaces, CLI tools and API changes.
 
 ## Changelog
 
@@ -692,7 +667,8 @@ The Eclipse Public License is available at http://www.eclipse.org/legal/epl-v10.
 
 ## CI / Deployment
 
-The repository runs GitHub Actions checks on every branch. Deployments to Clojars are triggered in two ways:
+GitHub Actions runs checks on each branch. To deploy to Clojars, use a
+`[deploy]` commit on `master` or run the deployment workflow from GitHub.
 
 ### Automatic Deployment
 
