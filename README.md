@@ -50,9 +50,9 @@ cd demo
 npm install
 npx shadow-cljs release app
 # then serve the generated files:
-python3 -m http.server --directory demo/public 8000
+python3 -m http.server --directory public 8000
 # or
-npx http-server demo/public -p 8000
+npx http-server public -p 8000
 # open http://localhost:8000
 ```
 
