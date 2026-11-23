@@ -40,6 +40,24 @@
 (defn- finite? [x]
   (and (number? x) (not (NaN? x)) (not (infinite? x))))
 
+#?(:clj
+   (defn- ratio->double
+     "Use floating-point division to match JavaScript. Clojure's
+      (double 2/3) rounds through a decimal and differs by one ulp.
+      Use that decimal conversion when either component overflows a double."
+     [r]
+     (let [n (double (numerator r))
+           d (double (denominator r))]
+       (if (or (infinite? n) (infinite? d))
+         (double r)
+         (/ n d)))))
+
+(defn- inexact
+  "Turn JVM Ratios into doubles and preserve other numbers."
+  [n]
+  #?(:clj (cond-> n (ratio? n) ratio->double)
+     :cljs n))
+
 (def ^:private max-fractional-double
   "2^52. Doubles at or above this magnitude have no fractional part."
   4503599627370496.0)
@@ -283,11 +301,12 @@
   (mapv #(clamp % 0.0 255.0) rgb))
 
 (defn hex->rgba
-  "Convert hex color to RGBA vector with optional alpha"
+  "Convert hex color to RGBA vector with optional alpha.
+   JVM Ratio opacities are converted to doubles."
   ([hex] (hex->rgba hex 1))
   ([hex alpha]
    {:pre [(valid-hex? hex)]}
-   (conj (hex->rgb hex) (or alpha 1))))
+   (conj (hex->rgb hex) (inexact (or alpha 1)))))
 
 (defn rgba->hex
   "Convert RGBA vector to hex string (ignoring alpha)"
@@ -797,22 +816,6 @@
 ;; =============================================================================
 ;; Color Mixing and Blending
 ;; =============================================================================
-
-#?(:clj
-   (defn- ratio->double
-     "The double nearest to the ratio `r`, from one division of two exact
-      doubles. Clojure's own (double 2/3) goes through 16 decimal digits and
-      is 0.6666666666666667, one ulp above the 0.6666666666666666 that
-      JavaScript computes, which flips a rounding tie."
-     [r]
-     (/ (double (numerator r)) (double (denominator r)))))
-
-(defn- inexact
-  "Turn a JVM Ratio into a double and leave other numbers alone, so exact
-   rational arithmetic does not leak Ratios and BigInts into results."
-  [n]
-  #?(:clj (cond-> n (ratio? n) ratio->double)
-     :cljs n))
 
 (defn mix
   "Mix two colors with optional ratio (0-1, default 0.5).
