@@ -8,7 +8,7 @@
 
 (def ^:private process (js* "process"))
 
-(defn- read-stdin []
+(defn- read-stdin! []
   (js-invoke (js/require "fs") "readFileSync" 0 "utf8"))
 
 (defn- environment []
@@ -30,7 +30,7 @@
   (let [stdout (unchecked-get process "stdout")
         _ (ignore-closed-pipe! stdout)
         {:keys [exit out err]}
-        (cli/run! (vec args) {:stdin read-stdin
+        (cli/run! (vec args) {:stdin read-stdin!
                               :tty? (boolean (unchecked-get stdout "isTTY"))
                               :env (environment)})]
     (js-invoke stdout "write" out)

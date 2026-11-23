@@ -364,29 +364,29 @@
 (def palette-types
   (conj harmonies :random))
 
-(defn- palette-of [type color {:keys [count angle]}]
+(defn- palette-of! [type color {:keys [count angle]}]
   (mapv ct/color
         (ct/generate-palette type color (cond-> {}
                                           count (assoc :count count)
                                           angle (assoc :angle angle)))))
 
-(defn- palette [{:keys [color]} {:keys [type] :as opts}]
+(defn- palette! [{:keys [color]} {:keys [type] :as opts}]
   (cond
-    (= :random type) (palette-of :random nil opts)
+    (= :random type) (palette-of! :random nil opts)
 
     (nil? color)
     (throw (parse/usage-error
             "missing COLOR"
             "Only --type random works without a color."))
 
-    type (palette-of type color opts)
+    type (palette-of! type color opts)
 
     :else (apply array-map
                  (mapcat (fn [harmony]
-                           [harmony (palette-of harmony color opts)])
+                           [harmony (palette-of! harmony color opts)])
                          harmonies))))
 
-(defn- random-colors [_ {:keys [count]}]
+(defn- random-colors! [_ {:keys [count]}]
   (let [random #(ct/color (ct/random-color))]
     (if count
       (vec (repeatedly count random))
@@ -425,7 +425,7 @@
                "palette --type random --count 8 --json"]
     :api '[generate-palette complementary triadic tetradic analogous
            monochromatic split-complementary]
-    :run palette}
+    :run palette!}
 
    {:name "random"
     :group :generate
@@ -434,7 +434,7 @@
     :opts [:count]
     :examples ["random" "random --count 5 --to hsl"]
     :api '[random-color]
-    :run random-colors}
+    :run random-colors!}
 
    {:name "gradient"
     :group :generate
@@ -482,7 +482,7 @@
 
 (def ^:private levels [:aa :aa-large :aaa])
 
-(defn- contrast
+(defn- contrast!
   "WCAG contrast of text on a background. Translucent text is composited
    onto the background first, since that is the color a reader sees."
   [{:keys [color background]} {:keys [level]}]
@@ -501,7 +501,7 @@
                  pass?))
       (apply array-map result))))
 
-(defn- accessible [{:keys [color]} {:keys [on level]}]
+(defn- accessible! [{:keys [color]} {:keys [on level]}]
   (let [level (or level :aa)
         found (ct/find-accessible-color on color level)]
     (when-not found
@@ -558,7 +558,7 @@
 (def ^:private level-ratios
   {:aa-large "3:1" :aa "4.5:1" :aaa "7:1"})
 
-(defn- warn-below-level
+(defn- warn-below-level!
   "Warn about each text token of `theme` that misses the requested level.
    It happens at aaa on mid-tone brand colors, where no text color has
    enough contrast."
@@ -576,13 +576,13 @@
                    "; no text color reaches " (name level) " ("
                    (level-ratios level) ") on it")))))
 
-(defn- theme
+(defn- theme!
   "One theme, or with --mode both a map of the :light and the :dark one."
   [{:keys [color]} {:keys [mode level prefix vars format]}]
   (let [build (fn [mode]
                 (let [theme (ct/accessible-theme
                              color {:mode mode :level (or level :aa)})]
-                  (warn-below-level theme)
+                  (warn-below-level! theme)
                   (if (or vars (= :css format))
                     (theme-vars theme prefix)
                     (theme-tokens-map theme))))]
@@ -605,7 +605,7 @@
                "contrast '#3498db' '#ffffff' --level aa"
                "contrast - '#ffffff' --level aa --json < palette.txt"]
     :api '[contrast-ratio accessible?]
-    :run contrast}
+    :run contrast!}
 
    {:name "luminance"
     :group :accessibility
@@ -629,7 +629,7 @@
     :examples ["accessible '#3498db' --on '#ffffff'"
                "accessible '#3498db' --on '#ffffff' --level aaa"]
     :api '[find-accessible-color]
-    :run accessible}
+    :run accessible!}
 
    {:name "text-color"
     :aliases ["contrast-text"]
@@ -677,7 +677,7 @@
                "theme '#3498db' --mode both --format css > theme.css"
                "theme '#3498db' --mode both --format css --dark-selector .dark"]
     :api '[accessible-theme theme->css-vars]
-    :run theme}])
+    :run theme!}])
 
 ;; =============================================================================
 ;; Analyze and compare

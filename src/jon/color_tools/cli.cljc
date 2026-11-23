@@ -281,13 +281,13 @@
        (not= "-" token)
        (not (re-matches #"-\.?\d.*" token))))
 
-(defn- add-option [opts {:keys [id parse multi?]} raw]
+(defn- add-option! [opts {:keys [id parse multi?]} raw]
   (let [value ((or parse identity) raw)]
     (if multi?
       (update opts id (fnil into []) value)
       (assoc opts id value))))
 
-(defn- parse-argv
+(defn- parse-argv!
   "Split argv into options and positional arguments. Options may come
    anywhere; -- ends them."
   [argv]
@@ -323,14 +323,14 @@
             (recur more (assoc opts (:id spec) true) positional)
 
             (some? inline)
-            (recur more (add-option opts spec inline) positional)
+            (recur more (add-option! opts spec inline) positional)
 
             (empty? more)
             (throw (parse/usage-error
                     (str flag " needs a value: " flag " " (:arg spec))))
 
             :else
-            (recur (rest more) (add-option opts spec (first more))
+            (recur (rest more) (add-option! opts spec (first more))
                    positional)))
 
         :else
@@ -410,9 +410,9 @@
       (check args prepared))
     prepared))
 
-(declare bind)
+(declare bind!)
 
-(defn- stdin-entries
+(defn- stdin-entries!
   "The non-blank lines of stdin, each tagged with its line number."
   [stdin]
   (->> (str/split-lines (stdin))
@@ -422,7 +422,7 @@
                           :source (str "stdin line " (inc i))})))
        vec))
 
-(defn- expand-stdin
+(defn- expand-stdin!
   "Replace a - argument with the lines of stdin. In a variadic position
    the lines join the arguments of a single run. In a fixed position the
    command runs once per line. Returns the runs with how stdin was used."
@@ -439,20 +439,20 @@
 
       :else
       (let [i (first dashes)
-            lines (stdin-entries stdin)
+            lines (stdin-entries! stdin)
             before (subvec entries 0 i)
             after (subvec entries (inc i))]
         (if (< i fixed-count)
           (do
             ;; With no lines there is no run to check the other arguments.
             (when (empty? lines)
-              (bind command (assoc entries i {:stdin? true}) :per-line))
+              (bind! command (assoc entries i {:stdin? true}) :per-line))
             {:stdin :per-line
              :runs (mapv #(into (conj before %) after) lines)})
           {:stdin :inline
            :runs [(into (into before lines) after)]})))))
 
-(defn- parse-entry
+(defn- parse-entry!
   "Parse one argument. Errors in stdin input say which line."
   [param {:keys [text source]}]
   (try
@@ -489,7 +489,7 @@
                      (:label rest-param) " arguments"))
               usage)))))
 
-(defn- bind
+(defn- bind!
   "Match the entries of one run to the command's parameters. Returns the
    fixed arguments as a map and the variadic ones as a vector. An entry
    marked :stdin? stands for stdin lines that never came and is skipped."
@@ -500,16 +500,16 @@
         extra (drop (count fixed) entries)]
     [(into {} (keep (fn [[param entry]]
                       (when-not (:stdin? entry)
-                        [(:key param) (parse-entry param entry)])))
+                        [(:key param) (parse-entry! param entry)])))
            (map vector fixed entries))
      (when rest-param
-       (mapv #(parse-entry rest-param %) extra))]))
+       (mapv #(parse-entry! rest-param %) extra))]))
 
-(defn- run-once
+(defn- run-once!
   "Run the command on one set of arguments. A command marked :each? runs
    once per variadic argument; a single argument gives a single result."
   [command entries opts stdin-mode]
-  (let [[fixed more] (bind command entries stdin-mode)
+  (let [[fixed more] (bind! command entries stdin-mode)
         rest-key (:key (first (filter :rest? (:params command))))
         handler (:run command)]
     (cond
@@ -593,10 +593,10 @@
 ;; Entry point
 ;; =============================================================================
 
-(defn- run-command [command args opts process]
+(defn- run-command! [command args opts process]
   (let [opts (prepare-options command args opts)
-        {:keys [runs stdin]} (expand-stdin command args (:stdin process))
-        results (mapv #(run-once command % opts stdin) runs)
+        {:keys [runs stdin]} (expand-stdin! command args (:stdin process))
+        results (mapv #(run-once! command % opts stdin) runs)
         [value passed?] (unwrap (if (= :per-line stdin)
                                   results
                                   (first results)))
@@ -659,8 +659,8 @@
   (or (= "-" word)
       (nil? (:error (parse/try-color word)))))
 
-(defn- dispatch [argv process]
-  (let [{:keys [opts args]} (parse-argv argv)
+(defn- dispatch! [argv process]
+  (let [{:keys [opts args]} (parse-argv! argv)
         [word & more] args]
     (cond
       (:version opts)
@@ -683,10 +683,10 @@
 
       ;; A color where a command goes is shorthand for info.
       (and (not (command-by-name word)) (color-word? word))
-      (run-command (command-by-name "info") (vec args) opts process)
+      (run-command! (command-by-name "info") (vec args) opts process)
 
       :else
-      (run-command (find-command word) (vec more) opts process))))
+      (run-command! (find-command word) (vec more) opts process))))
 
 (defn run!
   "Run the CLI, reading stdin or generating random colors when requested.
@@ -703,7 +703,7 @@
   (try
     (let [warnings (volatile! [])
           result (binding [commands/*warn* #(vswap! warnings conj %)]
-                   (dispatch argv process))]
+                   (dispatch! argv process))]
       (assoc result :err
              (str (:err result)
                   (str/join (map #(str program ": warning: " % "\n")
