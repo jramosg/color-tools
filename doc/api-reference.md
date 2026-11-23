@@ -15,7 +15,8 @@ accept hex strings, RGB vectors, RGBA vectors, CSS `rgb()`/`rgba()` strings, or
 
 Manipulation functions generally preserve the input shape. A hex string returns
 a hex string, an RGB vector returns a vector, and a `Color` record returns a
-`Color` record.
+`Color` record. For `Color` input, `saturate`, `desaturate`, and `grayscale`
+return an RGB vector. The `monochromatic` palette contains RGB vectors.
 
 ## Precision
 
