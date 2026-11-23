@@ -1,7 +1,8 @@
 # Workflow Guide
 
-Use these workflows for design systems, data visualization, accessibility, and
-lighting interfaces.
+Build theme CSS, blend layers, generate gradients, compare colors or model
+lighting controls. For argument types and return values, see the
+[API reference](api-reference.md).
 
 ## Table of Contents
 
@@ -15,8 +16,7 @@ lighting interfaces.
 
 ## Color Blending Modes
 
-Blending modes combine two colors with the same rules designers use in tools
-like Photoshop or Figma.
+Combine a base color and an overlay with multiply, screen or overlay blending.
 
 ### Multiply
 
@@ -105,9 +105,9 @@ Blending functions preserve the base color's input format:
 
 ## Tints, Shades, and Tones
 
-Tints, shades, and tones create related colors from one base color.
+Mix a base color with white for tints, black for shades or gray for tones.
 
-### Understanding the Difference
+### Definitions
 
 - **Tint**: Color + White (lightens while preserving hue)
 - **Shade**: Color + Black (darkens while preserving hue)  
@@ -243,7 +243,7 @@ Alpha blending controls how transparent colors stack.
 
 ## Color Interpolation and Gradients
 
-Create smooth color transitions for animations, data visualizations, and UI effects.
+Interpolate between color stops for animations, chart scales or UI transitions.
 
 ### Basic Interpolation
 
@@ -276,9 +276,10 @@ Create smooth color transitions for animations, data visualizations, and UI effe
 ;=> "#0000ff"
 ```
 
-### Color Space Matters
+### Choosing an Interpolation Space
 
-Different color spaces produce different results:
+Choose `:rgb` to mix channels or `:hsl` to interpolate hue, saturation and
+lightness:
 
 ```clojure
 (def red "#ff0000")
@@ -292,7 +293,7 @@ Different color spaces produce different results:
 (color/interpolate [red yellow] 0.5 :hsl)
 ;=> "#ff8000"  ; Orange through hue 0 to 60
 
-;; For colors across the hue wheel, HSL is more natural
+;; HSL follows the hue circle between these colors
 (def red "#ff0000")
 (def cyan "#00ffff")
 
@@ -348,8 +349,8 @@ Different color spaces produce different results:
 
 ## Perceptual Color Difference
 
-RGB distance does not match human color perception. CIE Delta E measures
-perceived difference in LAB color space.
+Compare RGB channel differences with `color-distance`, or CIE L*a*b*
+coordinates with the CIE76 `delta-e` function.
 
 ### Delta E
 
@@ -369,12 +370,12 @@ perceived difference in LAB color space.
 ;=> 0.08  ; Also imperceptible
 ```
 
-### Understanding Delta E Values
+### Choosing a Similarity Threshold
 
-- **< 1.0**: Imperceptible difference (colors appear identical)
-- **1.0 - 2.0**: Barely perceptible (experts might notice)
-- **2.0 - 10.0**: Noticeable difference (most people can see it)
-- **> 10.0**: Very different colors
+Smaller Delta E values indicate a closer match in CIE L*a*b*. The
+`perceptually-similar?` default threshold is `2.3`. Choose a threshold for
+your application and compare sample colors under the intended viewing
+conditions.
 
 ### Checking Similarity
 
@@ -422,15 +423,14 @@ Sort swatches from dark to light:
 ;=> ("#000000" "#336699" "#ffffff")
 ```
 
-For the other axes and numeric examples, see
-[`rgb->oklab` in the API reference](api-reference.md#rgb-oklab).
-Use `delta-e` for CIE76 differences in CIE L*a*b*; adding Oklab conversion
-does not change that calculation.
+See [`rgb->oklab` in the API reference](api-reference.md#rgb-oklab) for
+the other axes and numeric examples. Use `delta-e` for CIE76 differences in
+CIE L*a*b*.
 
 ### Lightness Ramps in Oklab
 
-Oklab lightness steps look even, so you can build a ramp by changing `l` and
-keeping `a` and `b`. Convert each step back with `oklab->hex`:
+Build an Oklab lightness ramp by changing `l` while keeping `a` and `b`.
+Convert each step back with `oklab->hex`:
 
 ```clojure
 (let [[_ a b] (color/rgb->oklab (color/->rgb "#336699"))]
@@ -438,8 +438,8 @@ keeping `a` and `b`. Convert each step back with `oklab->hex`:
 ;=> ["#023c6b" "#24588a" "#4275a9" "#5f93c9" "#7db3ea"]
 ```
 
-Lighter steps eventually leave the sRGB gamut, and `oklab->hex` clamps them.
-Check each step with `in-gamut?` to catch that:
+Some steps leave the sRGB gamut, and `oklab->hex` clamps them. Check each
+step with `in-gamut?` before exporting:
 
 ```clojure
 (let [[_ a b] (color/rgb->oklab (color/->rgb "#336699"))]
@@ -456,9 +456,8 @@ These functions also take the `Oklab` record that `->oklab-space` returns:
 
 ### Hue and Chroma in OKLCh
 
-OKLCh splits Oklab into lightness, chroma and hue. Rotating the hue keeps
-lightness and chroma, so every color in the palette has the same perceived
-lightness:
+Rotate OKLCh hue while keeping Oklab lightness and chroma fixed. Check the
+gamut before exporting; sRGB clamping can change those coordinates:
 
 ```clojure
 (let [[l c h] (color/rgb->oklch (color/->rgb "#336699"))]
@@ -466,8 +465,7 @@ lightness:
 ;=> ["#336699" "#924956" "#4f6e2e"]
 ```
 
-Changing only the chroma moves a color from gray to fully saturated at the
-same lightness and hue:
+Change chroma to vary saturation while keeping the OKLCh lightness and hue:
 
 ```clojure
 (let [[l _ h] (color/rgb->oklch (color/->rgb "#336699"))]
@@ -475,8 +473,8 @@ same lightness and hue:
 ;=> ["#636363" "#4d657f" "#32669a" "#0064b4"]
 ```
 
-High chroma leaves the sRGB gamut quickly. Check with
-`(color/in-gamut? (color/oklch->oklab lch))` before relying on the hex.
+Check high-chroma colors with `(color/in-gamut? (color/oklch->oklab lch))`
+before exporting to hex.
 
 ### Practical Applications
 
@@ -508,7 +506,7 @@ High chroma leaves the sRGB gamut quickly. Check with
 
 ## Color Temperature (Kelvin)
 
-Color temperature represents the color of light emitted by a black body at a given temperature, measured in Kelvin.
+Model the color of a black-body light source from its temperature in Kelvin.
 
 ### Common Color Temperatures
 
@@ -624,10 +622,8 @@ mood-presets
 
 ## Accessible Theme Generation
 
-`accessible-theme` turns one brand color into production UI tokens. It is
-designed for app themes where color roles need to work together: surfaces,
-text, primary actions, secondary actions, accents, borders, focus rings, and a
-numeric scale.
+Generate surfaces, foregrounds, brand colors, borders, a focus ring and a
+numeric scale from one brand color with `accessible-theme`.
 
 ### Creating a Light Theme
 
@@ -644,9 +640,9 @@ numeric scale.
 ```
 
 The `:on-*` tokens are foreground colors for their matching background
-token. On the generated surfaces (`:background`, `:surface`, `:muted`) they
-always meet the requested WCAG level. On the brand tokens (`:primary`,
-`:secondary`, `:accent`) they meet `:aa` and `:aa-large` for every color.
+token. On generated surfaces (`:background`, `:surface`, `:muted`), these
+foreground colors meet the requested WCAG level. On brand tokens
+(`:primary`, `:secondary`, `:accent`), they meet `:aa` and `:aa-large`.
 
 ```clojure
 (color/accessible? (:primary theme) (:on-primary theme) (:level theme))
@@ -661,11 +657,10 @@ always meet the requested WCAG level. On the brand tokens (`:primary`,
 Use `:mode :dark` to derive dark surfaces from the same brand color. Use
 `:level :aaa` when normal body text needs the stricter AAA threshold.
 
-No text color reaches AAA (7:1) on a mid-tone background: black is too dark
-and white too light when the relative luminance is between about 0.1 and
-0.3. The brand color stays as you gave it, so for such a color `:on-primary`
-is black or white, whichever has more contrast, and falls short of AAA. Check
-the pair when you need the guarantee:
+Some mid-tone backgrounds cannot support AAA contrast (7:1), even with black
+or white text. Your brand color stays unchanged, so `:on-primary` uses the
+text color with more contrast and can fall short of AAA. Check the pair
+against your required level:
 
 ```clojure
 (def strict (color/accessible-theme "#3498db" {:level :aaa}))
@@ -693,8 +688,7 @@ the pair when you need the guarantee:
 
 ### Exporting CSS Variables
 
-`theme->css-vars` converts theme maps into CSS custom properties. Use it to
-apply Clojure/ClojureScript token generation in browser CSS.
+Export the theme map as CSS custom properties with `theme->css-vars`:
 
 ```clojure
 (color/theme->css-vars theme {:prefix "--brand-"})
@@ -724,13 +718,6 @@ apply Clojure/ClojureScript token generation in browser CSS.
 
 ### Palettes vs Themes
 
-Use palette functions such as `analogous`, `triadic`, and `monochromatic` when
-you need color ideas or data visualization ranges. Use `accessible-theme` when
-you need app-ready roles with contrast-aware foreground colors and CSS export.
-
-## Conclusion
-
-These workflows show how the color-tools API fits into design systems, data
-visualization, lighting applications, and frontend UI work.
-
-For complete API documentation, see [api-reference.md](api-reference.md).
+Choose `analogous`, `triadic` or `monochromatic` for color harmonies and chart
+palettes. Choose `accessible-theme` for named UI roles with foreground colors
+and CSS export.

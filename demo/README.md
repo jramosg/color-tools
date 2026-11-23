@@ -1,6 +1,7 @@
 # color-tools Demo (ClojureScript)
 
-This is a ClojureScript demo application for the `color-tools` library. It demonstrates the library's features using a reactive UI built with Reagent.
+Try color conversions, palettes and contrast checks in a Reagent UI. The
+demo calls `jon.color-tools` in the browser.
 
 ## Prerequisites
 
@@ -9,24 +10,26 @@ This is a ClojureScript demo application for the `color-tools` library. It demon
 
 ## Setup
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+From the repository root:
+
+```bash
+cd demo
+npm install
+```
 
 ## Development
 
-To start the development server with hot reloading:
+Start the development server with live reloading:
 
 ```bash
 npx shadow-cljs watch app
 ```
 
-This will compile the application and serve it at `http://localhost:8080`.
+Open `http://localhost:8080` after compilation.
 
 ## Building for Production
 
-To build a minified release version:
+Build the minified application in `public/`:
 
 ```bash
 npx shadow-cljs release app
@@ -36,7 +39,7 @@ npx shadow-cljs release app
 
 - `src/demo/core.cljs`: Main application logic using Reagent and `jon.color-tools`
 - `public/index.html`: Entry point HTML
-- `public/css/styles_hash.css`: Application styles
+- `public/css/`: Application styles
 - `deps.edn`: Clojure dependencies (includes local `color-tools` reference)
 - `shadow-cljs.edn`: Build configuration
 
@@ -51,5 +54,3 @@ npx shadow-cljs release app
 - **Kelvin**: Color temperature visualization
 - **Accessibility**: Contrast ratio checking
 - **Harmony**: Color harmony generation
-
-All logic is performed using the `jon.color-tools` library directly in the browser.
