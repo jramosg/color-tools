@@ -179,11 +179,24 @@
 ;; Text
 ;; =============================================================================
 
+(def ^:private ansi-cube-levels [0 95 135 175 215 255])
+
 (defn- ansi-256
-  "The closest color in the 6x6x6 cube of the 256-color palette."
-  [[r g b]]
-  (let [level #(ct/round-int (* 5 (/ % 255.0)))]
-    (+ 16 (* 36 (level r)) (* 6 (level g)) (level b))))
+  "The closest RGB match in xterm's color cube and grayscale ramp.
+   The first 16 colors depend on the terminal's theme and are skipped."
+  [rgb]
+  (let [level (fn [channel]
+                (apply min-key
+                       #(Math/abs (- channel (ansi-cube-levels %)))
+                       (range 6)))
+        [r g b :as indices] (mapv level rgb)
+        cube (mapv ansi-cube-levels indices)
+        gray-index (ct/clamp (ct/round-int (/ (- (/ (reduce + rgb) 3) 8) 10))
+                             0 23)
+        gray (vec (repeat 3 (+ 8 (* 10 gray-index))))]
+    (if (< (ct/color-distance rgb gray) (ct/color-distance rgb cube))
+      (+ 232 gray-index)
+      (+ 16 (* 36 r) (* 6 g) b))))
 
 (defn- swatch
   "Two spaces on a background of `rgb`, for terminals. :ansi is :truecolor

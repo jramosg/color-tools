@@ -79,9 +79,24 @@
   (let [resolved (out/resolve blue {:format :text})]
     (is (= "\u001b[48;2;52;152;219m  \u001b[0m #3498db\n"
            (out/text resolved :truecolor)))
-    (is (= "\u001b[48;5;74m  \u001b[0m #3498db\n"
+    (is (= "\u001b[48;5;68m  \u001b[0m #3498db\n"
            (out/text resolved :256)))
     (is (not (str/includes? (out/text resolved nil) "\u001b")))))
+
+(deftest ansi-palette-test
+  (testing "every fixed xterm color uses its exact RGB match"
+    (doseq [[index rgb]
+            (concat
+             (for [r (range 6) g (range 6) b (range 6)
+                   :let [levels [0 95 135 175 215 255]]]
+               [(+ 16 (* 36 r) (* 6 g) b) (mapv levels [r g b])])
+             (for [i (range 24)]
+               [(+ 232 i) (vec (repeat 3 (+ 8 (* 10 i))))]))]
+      (let [color (ct/color rgb)
+            resolved (out/resolve color {:format :text})]
+        (is (= (str "\u001b[48;5;" index "m  \u001b[0m " (ct/->hex color) "\n")
+               (out/text resolved :256))
+            (pr-str rgb))))))
 
 (deftest json-test
   (testing "colors follow --to; numbers keep full precision"

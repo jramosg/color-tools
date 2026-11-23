@@ -274,7 +274,10 @@ so redirected output is always clean.
 - `NO_COLOR=1` turns swatches off and `FORCE_COLOR=1` turns them on, when
   `--color` isn't given.
 - Swatches use 24-bit color when `COLORTERM` is `truecolor` or `24bit`, and
-  the closest of 256 colors otherwise.
+  the closest RGB match in the fixed
+  [xterm color cube and grayscale ramp](https://invisible-island.net/xterm/xterm.faq.html#color_by_number)
+  otherwise. The first 16 colors depend on your terminal theme and are
+  excluded from matching.
 
 ## Reading colors from stdin
 

@@ -154,7 +154,7 @@
                       "convert" "#3498db"))
            "\u001b[48;2;52;152;219m"))
       (is (str/includes? (:out (run {:tty? true} "convert" "#3498db"))
-                         "\u001b[48;5;74m")))
+                         "\u001b[48;5;68m")))
     (testing "never in structured output"
       (is (not (swatch? (run "convert" "fff" "--json" "--color"
                              "always")))))))
