@@ -80,6 +80,14 @@
     (check! (valid-result? kind result)
             {:operation operation :expected kind :result result})))
 
+(defn- check-palette! [kind operation expected-count colors]
+  (let [actual-count (when (sequential? colors) (count colors))]
+    (check! (= expected-count actual-count)
+            {:operation operation :expected-count expected-count
+             :actual-count actual-count}))
+  (doseq [color colors]
+    (check-results! kind {operation color})))
+
 (defn- near-rgb? [expected actual tolerance]
   (and (vector? actual)
        (= 3 (count actual))
@@ -192,23 +200,22 @@
                      :grayscale (sut/grayscale color)})
     (when (some? target)
       (check-results! hex-or-rgb {:find-accessible-color target}))
-    (doseq [result (sut/generate-palette :monochromatic color {:count steps})]
-      (check-results! hex-or-rgb {:monochromatic result})))
-  (doseq [[operation palette] {:triadic (sut/triadic color)
-                               :tetradic (sut/tetradic color)
-                               :analogous (sut/analogous color steps degrees)
-                               :split-complementary
-                               (sut/split-complementary color degrees)
-                               :tints (sut/tints color steps)
-                               :shades (sut/shades color steps)
-                               :tones (sut/tones color steps)}
-          result palette]
-    (check-results! kind {operation result}))
+    (check-palette! hex-or-rgb :monochromatic steps
+                    (sut/generate-palette :monochromatic color {:count steps})))
+  (doseq [[operation expected-count palette]
+          [[:triadic 2 (sut/triadic color)]
+           [:tetradic 3 (sut/tetradic color)]
+           [:analogous steps (sut/analogous color steps degrees)]
+           [:split-complementary 2 (sut/split-complementary color degrees)]
+           [:tints steps (sut/tints color steps)]
+           [:shades steps (sut/shades color steps)]
+           [:tones steps (sut/tones color steps)]]]
+    (check-palette! kind operation expected-count palette))
   (doseq [space [:rgb :hsl :hsv]]
     (check-results! kind {:interpolate
                           (sut/interpolate [color other] amount space)})
-    (doseq [result (sut/gradient [color other] steps space)]
-      (check-results! kind {:gradient result})))
+    (check-palette! kind :gradient steps
+                    (sut/gradient [color other] steps space)))
   (check-results! :color {:color (sut/color color)})
   (check-results! :rgb {:->rgb (sut/->rgb color)})
   (check-results! :rgba {:->rgba (sut/->rgba color)})
@@ -258,9 +265,9 @@
 
 (deftest conversion-results-have-valid-ranges-and-formats
   (check-property!
-   [rgb-input (gen/choose 1000 40000)
+   [rgb-input (gen/choose 1000 40000) unit-interval
     (gen/tuple (gen/choose 0 360) (gen/choose 0 100) (gen/choose 0 100))]
-   (fn [rgb kelvin coords]
+   (fn [rgb kelvin opacity coords]
      (let [hex (sut/rgb->hex rgb)
            oklab (sut/rgb->oklab rgb)
            oklch (sut/rgb->oklch rgb)
@@ -278,7 +285,9 @@
                              (sut/hsv->rgb coords full-precision)
                              :parse-css-rgb (sut/parse-css-rgb css)
                              :kelvin->rgb (sut/kelvin->rgb kelvin)})
-       (check-results! :rgba {:hex->rgba (sut/hex->rgba hex)})
+       (check-results! :rgba {:hex->rgba (sut/hex->rgba hex)
+                              :hex->rgba-explicit-alpha
+                              (sut/hex->rgba hex opacity)})
        (check-results! :hsl {:hex->hsl (sut/hex->hsl hex)
                              :rgb->hsl (sut/rgb->hsl rgb full-precision)})
        (check-results! :hsv {:rgb->hsv (sut/rgb->hsv rgb full-precision)})
